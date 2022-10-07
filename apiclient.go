@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync/atomic"
 )
 
 const (
@@ -45,24 +46,27 @@ func (c *Client) apiRequest(ctx context.Context, method string, path string, dat
 	return req, nil
 }
 
-func (c *Client) doAPI(ctx context.Context, req *http.Request) ([]byte, error) {
+func (c *Client) doAPI(ctx context.Context, req *http.Request, depth int32) ([]byte, error) {
 
-	if !c.versionChecked {
-		c.versionChecked = true
-		c.compatibilityErr = c.versionCheck(ctx)
+	if c.state.get() == stateInitial {
+		c.state.set(stateCheckVersion)
+		c.compatibilityErr = c.versionCheck(ctx, depth)
+		c.state.set(stateAuthRequired)
 	}
 	if c.compatibilityErr != nil {
 		return nil, c.compatibilityErr
 	}
-	if !c.authChecked {
-		c.authChecked = true
-		if err := c.jsonGet(ctx, authokAPI, nil); err != nil {
+
+	if c.state.get() != stateAuthenticated && c.authRequired(req.URL) {
+		log.Println("needs auth")
+		c.state.set(stateAuthenticating)
+		if err := c.jsonGet(ctx, authokAPI, nil, depth); err != nil {
 			return nil, err
 		}
 	}
 
 retry:
-	if c.authChecked && len(c.apiToken) > 0 {
+	if c.state.get() == stateAuthenticated && len(c.apiToken) > 0 {
 		setTokenHeader(req, c.apiToken)
 	}
 	res, err := c.httpClient.Do(req)
@@ -77,9 +81,9 @@ retry:
 	// no authorization and not retrying already
 	if res.StatusCode == http.StatusUnauthorized {
 		invalid_token := len(c.apiToken) > 0
-		// unconditionally remove API token
 		c.apiToken = ""
 		log.Println("need to authenticate")
+		c.state.set(stateAuthRequired)
 		if !c.userpass.valid() {
 			errmsg := "no credentials provided"
 			if invalid_token {
@@ -87,11 +91,12 @@ retry:
 			}
 			return nil, errors.New(errmsg)
 		}
-		err = c.authenticate(ctx, c.userpass)
+		err = c.authenticate(ctx, c.userpass, depth)
 		if err != nil {
+			c.state.set(stateAuthRequired)
 			return nil, err
 		}
-		setTokenHeader(req, c.apiToken)
+		c.state.set(stateAuthenticated)
 		goto retry
 	}
 	if res.StatusCode == http.StatusOK || res.StatusCode == http.StatusNoContent {
@@ -101,28 +106,48 @@ retry:
 	}
 }
 
-func (c *Client) jsonGet(ctx context.Context, api string, result interface{}) error {
-	return c.jsonReq(ctx, http.MethodGet, api, nil, result)
+/* technically, only jsonGet and jsonPost need the depth as they are the only
+ones being called recursively in doAPI.  For consistency, they are added to the
+other functions as well.
+*/
+
+func (c *Client) jsonGet(ctx context.Context, api string, result any, depth int32) error {
+	return c.jsonReq(ctx, http.MethodGet, api, nil, result, depth)
 }
 
-func (c *Client) jsonPut(ctx context.Context, api string) error {
-	return c.jsonReq(ctx, http.MethodPut, api, nil, nil)
+func (c *Client) jsonPut(ctx context.Context, api string, depth int32) error {
+	return c.jsonReq(ctx, http.MethodPut, api, nil, nil, depth)
 }
 
-func (c *Client) jsonPost(ctx context.Context, api string, data io.Reader, result interface{}) error {
-	return c.jsonReq(ctx, http.MethodPost, api, data, result)
+func (c *Client) jsonPost(ctx context.Context, api string, data io.Reader, result any, depth int32) error {
+	return c.jsonReq(ctx, http.MethodPost, api, data, result, depth)
 }
 
-func (c *Client) jsonPatch(ctx context.Context, api string, data io.Reader, result interface{}) error {
-	return c.jsonReq(ctx, http.MethodPatch, api, data, result)
+func (c *Client) jsonPatch(ctx context.Context, api string, data io.Reader, result any, depth int32) error {
+	return c.jsonReq(ctx, http.MethodPatch, api, data, result, depth)
 }
 
-func (c *Client) jsonReq(ctx context.Context, method, api string, data io.Reader, result interface{}) error {
+func (c *Client) jsonDelete(ctx context.Context, api string, depth int32) error {
+	return c.jsonReq(ctx, http.MethodDelete, api, nil, nil, depth)
+}
+
+func (c *Client) jsonReq(ctx context.Context, method, api string, data io.Reader, result any, depth int32) error {
+
+	// during initialization, the API client does API calls recursively which
+	// leads to all sorts of nasty race problems.  The below basically prevents
+	// any additional API calls when recursion happens during initialization or
+	// re-authentication.
+	if c.state.get() != stateAuthenticated && depth == 0 {
+		atomic.AddInt32(&depth, 1)
+		c.mu.Lock()
+		defer c.mu.Unlock()
+	}
+
 	req, err := c.apiRequest(ctx, method, api, data)
 	if err != nil {
 		return err
 	}
-	res, err := c.doAPI(ctx, req)
+	res, err := c.doAPI(ctx, req, depth)
 	if err != nil {
 		return err
 	}

@@ -58,27 +58,75 @@ const (
 	NodeStateBooted  = "BOOTED"
 )
 
-type Node struct {
-	ID              string       `json:"id"`
-	Label           string       `json:"label"`
-	X               int          `json:"x"`
-	Y               int          `json:"y"`
-	NodeDefinition  string       `json:"node_definition"`
-	ImageDefinition string       `json:"image_definition"`
-	Configuration   string       `json:"configuration"`
-	CPUs            int          `json:"cpus"`
-	CPUlimit        int          `json:"cpu_limit"`
-	RAM             int          `json:"ram"`
-	State           string       `json:"state"`
-	DataVolume      int          `json:"data_volume"`
-	BootDiskSize    int          `json:"boot_disk_size"`
-	HideLinks       bool         `json:"hide_links"`
-	Interfaces      InterfaceMap `json:"interfaces"`
-	Tags            []string     `json:"tags"`
-	BootProgress    string       `json:"boot_progress"`
+type SerialDevice struct {
+	ConsoleKey   string `json:"console_key"`
+	DeviceNumber int    `json:"device_number"`
+}
 
-	// extra
+type Node struct {
+	ID              string         `json:"id"`
+	LabID           string         `json:"lab_id"`
+	Label           string         `json:"label"`
+	X               int            `json:"x"`
+	Y               int            `json:"y"`
+	NodeDefinition  string         `json:"node_definition"`
+	ImageDefinition string         `json:"image_definition"`
+	Configuration   string         `json:"configuration"`
+	CPUs            int            `json:"cpus"`
+	CPUlimit        int            `json:"cpu_limit"`
+	RAM             int            `json:"ram"`
+	State           string         `json:"state"`
+	DataVolume      int            `json:"data_volume"`
+	BootDiskSize    int            `json:"boot_disk_size"`
+	Interfaces      InterfaceList  `json:"interfaces,omitempty"`
+	Tags            []string       `json:"tags"`
+	VNCkey          string         `json:"vnc_key"`
+	SerialDevices   []SerialDevice `json:"serial_devices"`
+	ComputeID       string         `json:"compute_id"`
+
+	// not exported, needed for internal linking
 	lab *Lab
+}
+
+type nodePatchPostAlias struct {
+	Label           string   `json:"label,omitempty"`
+	X               int      `json:"x"`
+	Y               int      `json:"y"`
+	NodeDefinition  string   `json:"node_definition,omitempty"`
+	ImageDefinition string   `json:"imagee_definition,omitempty"`
+	Configuration   string   `json:"configuration,omitempty"`
+	CPUs            int      `json:"cpus,omitempty"`
+	CPUlimit        int      `json:"cpu_limit,omitempty"`
+	RAM             int      `json:"ram,omitempty"`
+	DataVolume      int      `json:"data_volume,omitempty"`
+	BootDiskSize    int      `json:"boot_disk_size,omitempty"`
+	Tags            []string `json:"tags,omitempty"`
+}
+
+func newNodeAlias(node *Node, update bool) nodePatchPostAlias {
+	npp := nodePatchPostAlias{}
+
+	npp.Label = node.Label
+	npp.X = node.X
+	npp.Y = node.Y
+	npp.Tags = node.Tags
+
+	if !update {
+		// these can be changed but only when the node VM doesn't exist
+		if node.State == NodeStateDefined {
+			npp.Configuration = node.Configuration
+			npp.CPUs = node.CPUs
+			npp.CPUlimit = node.CPUlimit
+			npp.RAM = node.RAM
+			npp.DataVolume = node.DataVolume
+			npp.BootDiskSize = node.BootDiskSize
+		}
+		// these can only be changed at create time (eg. Post)
+		npp.NodeDefinition = node.NodeDefinition
+		npp.ImageDefinition = node.ImageDefinition
+	}
+
+	return npp
 }
 
 func (nmap NodeMap) MarshalJSON() ([]byte, error) {
@@ -94,11 +142,90 @@ func (nmap NodeMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nodeList)
 }
 
+func (c *Client) updateCachedNode(existingNode, node *Node) *Node {
+	// only copy fields which can be updated
+	existingNode.Label = node.Label
+	existingNode.X = node.X
+	existingNode.Y = node.Y
+	existingNode.Tags = node.Tags
+
+	// these can be changed but only when the node VM doesn't exist
+	if node.State == NodeStateDefined {
+		existingNode.Configuration = node.Configuration
+		existingNode.CPUs = node.CPUs
+		existingNode.CPUlimit = node.CPUlimit
+		existingNode.RAM = node.RAM
+		existingNode.DataVolume = node.DataVolume
+		existingNode.BootDiskSize = node.BootDiskSize
+		existingNode.ImageDefinition = node.ImageDefinition
+	}
+	// these can never be updated:
+	// - existingNode.NodeDefinition
+	return existingNode
+}
+
+func (c *Client) cacheNode(node *Node, err error) (*Node, error) {
+	if !c.useCache || err != nil {
+		return node, err
+	}
+
+	c.mu.RLock()
+	lab, ok := c.labCache[node.LabID]
+	c.mu.RUnlock()
+	if !ok {
+		return node, err
+	}
+
+	c.mu.RLock()
+	existingNode, ok := lab.Nodes[node.ID]
+	c.mu.RUnlock()
+	if ok {
+		return c.updateCachedNode(existingNode, node), nil
+	}
+
+	c.mu.Lock()
+	lab.Nodes[node.ID] = node
+	c.mu.Unlock()
+	return node, nil
+}
+
+func (c *Client) getCachedNode(lab_id, id string) (*Node, bool) {
+	if !c.useCache {
+		return nil, false
+	}
+	c.mu.RLock()
+	lab, ok := c.labCache[lab_id]
+	c.mu.RUnlock()
+	if !ok {
+		return nil, false
+	}
+	node, ok := lab.Nodes[id]
+	return node, ok
+}
+
+func (c *Client) deleteCachedNode(node *Node, err error) error {
+	if !c.useCache || err != nil {
+		return err
+	}
+
+	c.mu.RLock()
+	lab, ok := c.labCache[node.LabID]
+	c.mu.RUnlock()
+	if !ok {
+		return err
+	}
+
+	c.mu.Lock()
+	delete(lab.Nodes, node.ID)
+	c.mu.Unlock()
+	return nil
+}
+
 func (c *Client) getNodesForLab(ctx context.Context, lab *Lab) error {
 	api := fmt.Sprintf("labs/%s/nodes", lab.ID)
 
 	nodeIDlist := &IDlist{}
-	err := c.jsonGet(ctx, api, nodeIDlist)
+	err := c.jsonGet(ctx, api, nodeIDlist, 0)
 	if err != nil {
 		return err
 	}
@@ -107,7 +234,7 @@ func (c *Client) getNodesForLab(ctx context.Context, lab *Lab) error {
 	for _, nodeID := range *nodeIDlist {
 		api = fmt.Sprintf("labs/%s/nodes/%s", lab.ID, nodeID)
 		node := &Node{lab: lab}
-		err := c.jsonGet(ctx, api, node)
+		err := c.jsonGet(ctx, api, node, 0)
 		if err != nil {
 			return err
 		}
@@ -118,7 +245,7 @@ func (c *Client) getNodesForLab(ctx context.Context, lab *Lab) error {
 }
 
 func (c *Client) NodeSetConfig(ctx context.Context, node *Node, configuration string) error {
-	api := fmt.Sprintf("labs/%s/nodes/%s", node.lab.ID, node.ID)
+	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
 
 	type nodeConfig struct {
 		Configuration string `json:"configuration"`
@@ -133,41 +260,37 @@ func (c *Client) NodeSetConfig(ctx context.Context, node *Node, configuration st
 
 	// API returns the node ID of the updated node
 	nodeID := ""
-	err = c.jsonPatch(ctx, api, buf, &nodeID)
+	err = c.jsonPatch(ctx, api, buf, &nodeID, 0)
 	if err != nil {
 		return err
 	}
-	return nil
+	_, err = c.cacheNode(c.NodeGet(ctx, node, true))
+	return err
 }
 
-// NodeSetImageID sets the image ID / image definition id of the node to the one
-// provided in imageID.
-func (c *Client) NodeSetImageID(ctx context.Context, labID, nodeID, imageID string) error {
-	api := fmt.Sprintf("labs/%s/nodes/%s", labID, nodeID)
+func (c *Client) NodeUpdate(ctx context.Context, node *Node) (*Node, error) {
+	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
 
-	type nodeConfig struct {
-		ImageID string `json:"image_definition"`
-	}
-
+	postAlias := newNodeAlias(node, true)
 	buf := &bytes.Buffer{}
-	nodeCfg := nodeConfig{ImageID: imageID}
-	err := json.NewEncoder(buf).Encode(nodeCfg)
+	err := json.NewEncoder(buf).Encode(postAlias)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	node := Node{}
-	err = c.jsonPatch(ctx, api, buf, &node)
+	// API returns "just" the node ID of the updated node
+	nodeID := ""
+	err = c.jsonPatch(ctx, api, buf, &nodeID, 0)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return c.cacheNode(c.NodeGet(ctx, node, true))
 }
 
 // NodeStart the given node
 func (c *Client) NodeStart(ctx context.Context, node *Node) error {
-	api := fmt.Sprintf("labs/%s/nodes/%s/state/start", node.lab.ID, node.ID)
-	err := c.jsonPut(ctx, api)
+	api := fmt.Sprintf("labs/%s/nodes/%s/state/start", node.LabID, node.ID)
+	err := c.jsonPut(ctx, api, 0)
 	if err != nil {
 		return err
 	}
@@ -176,10 +299,89 @@ func (c *Client) NodeStart(ctx context.Context, node *Node) error {
 
 // NodeStop the given node
 func (c *Client) NodeStop(ctx context.Context, node *Node) error {
-	api := fmt.Sprintf("labs/%s/nodes/%s/state/stop", node.lab.ID, node.ID)
-	err := c.jsonPut(ctx, api)
+	api := fmt.Sprintf("labs/%s/nodes/%s/state/stop", node.LabID, node.ID)
+	err := c.jsonPut(ctx, api, 0)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// NodeCreate creates a new node on the controller
+func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
+
+	// TODO: inconsistent attributes lab_title vs title, ..
+	node.State = NodeStateDefined
+	postAlias := newNodeAlias(node, false)
+	buf := &bytes.Buffer{}
+	err := json.NewEncoder(buf).Encode(postAlias)
+	if err != nil {
+		return nil, err
+	}
+
+	newNode := Node{}
+
+	// return value of create is just
+	// {
+	// 	"id": "fe106ef1-cddc-49f7-9983-7ac461e96f47"
+	// }
+
+	// we want those "default" interfaces in the node
+	api := fmt.Sprintf("labs/%s/nodes?populate_interfaces=true", node.LabID)
+	err = c.jsonPost(ctx, api, buf, &newNode, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// FIX: Since the create does not use all possible values, we need to follow
+	// up with a patch (this is an API bug, imo)
+	// ram, cpu, ...
+
+	// NodeDefinition can't be set even when the node is DEFINED_ON_CORE (since
+	// the struct has them as "omitempty", this is OK)... So for the patch here,
+	// it's required to be set to empty from the struct
+	postAlias.NodeDefinition = ""
+
+	buf.Reset()
+	err = json.NewEncoder(buf).Encode(postAlias)
+	if err != nil {
+		return nil, err
+	}
+	api = fmt.Sprintf("labs/%s/nodes/%s", node.LabID, newNode.ID)
+	// the return of the patch API is simply the node ID as a string!
+	// FIX: inconsistency of patch API
+	err = c.jsonPatch(ctx, api, buf, nil, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	node.ID = newNode.ID
+	node.Interfaces = InterfaceList{}
+
+	// fetch the node again, with all data
+	return c.cacheNode(c.NodeGet(ctx, node, true))
+}
+
+func (c *Client) NodeGet(ctx context.Context, node *Node, nocache bool) (*Node, error) {
+
+	if !nocache {
+		if node, ok := c.getCachedNode(node.LabID, node.ID); ok {
+			return node, nil
+		}
+	}
+
+	newNode := &Node{}
+	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
+	err := c.jsonGet(ctx, api, newNode, 0)
+	return c.cacheNode(newNode, err)
+}
+
+func (c *Client) NodeDestroy(ctx context.Context, node *Node) error {
+	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
+	return c.deleteCachedNode(node, c.jsonDelete(ctx, api, 0))
+}
+
+func (c *Client) NodeWipe(ctx context.Context, node *Node) error {
+	api := fmt.Sprintf("labs/%s/nodes/%s/wipe_disks", node.LabID, node.ID)
+	return c.jsonPut(ctx, api, 0)
 }

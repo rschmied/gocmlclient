@@ -12,12 +12,7 @@ import (
 
 func TestClient_GetImageDefs(t *testing.T) {
 
-	c := NewClient("https://bla.bla", true)
-
-	mresp, ctx := mr.NewMockResponder()
-	c.httpClient = mresp
-	c.authChecked = true
-	c.versionChecked = true
+	tc := newAuthedTestAPIclient()
 
 	tests := []struct {
 		name      string
@@ -61,9 +56,9 @@ func TestClient_GetImageDefs(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		mresp.SetData(tt.responses)
+		tc.mr.SetData(tt.responses)
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := c.GetImageDefs(ctx)
+			got, err := tc.client.GetImageDefs(tc.ctx)
 			if err != nil {
 				if !tt.wantErr {
 					t.Errorf("Client.GetImageDefs() error = %v, wantErr %v", err, tt.wantErr)
@@ -71,7 +66,7 @@ func TestClient_GetImageDefs(t *testing.T) {
 				return
 			}
 			expected := []ImageDefinition{}
-			b := bytes.NewReader(mresp.LastData())
+			b := bytes.NewReader(tc.mr.LastData())
 			err = json.NewDecoder(b).Decode(&expected)
 			if err != nil {
 				t.Error("bad test data")
@@ -81,7 +76,7 @@ func TestClient_GetImageDefs(t *testing.T) {
 				t.Errorf("Client.GetImageDefs() = %v, want %v", got, expected)
 			}
 		})
-		if !mresp.Empty() {
+		if !tc.mr.Empty() {
 			t.Error("not all data in mock client consumed")
 		}
 	}

@@ -5,12 +5,12 @@ import "context"
 type definitionID string
 
 type NodeDefinition struct {
-	ID      definitionID           `json:"id"`
-	General map[string]interface{} `json:"general"`
-	Device  deviceData             `json:"device"`
-	UI      map[string]interface{} `json:"ui"`
-	Sim     simData                `json:"sim"`
-	Images  []string               `json:"image_definitions"`
+	ID      definitionID   `json:"id"`
+	General map[string]any `json:"general"`
+	Device  deviceData     `json:"device"`
+	UI      map[string]any `json:"ui"`
+	Sim     simData        `json:"sim"`
+	Images  []string       `json:"image_definitions"`
 }
 
 type simData struct {
@@ -47,7 +47,7 @@ func (nd NodeDefinition) serialPorts() int {
 
 func (c *Client) GetNodeDefs(ctx context.Context) ([]NodeDefinition, error) {
 	nd := []NodeDefinition{}
-	err := c.jsonGet(ctx, "simplified_node_definitions", &nd)
+	err := c.jsonGet(ctx, "simplified_node_definitions", &nd, 0)
 	if err != nil {
 		return nil, err
 	}

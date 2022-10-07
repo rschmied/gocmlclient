@@ -8,7 +8,9 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 )
 
 // {
@@ -34,14 +36,23 @@ func (up userPass) valid() bool {
 	return len(up.Username) > 0 && len(up.Password) > 0
 }
 
-func (c *Client) authenticate(ctx context.Context, userpass userPass) error {
+// technically, authokAPI requires auth, but it's used specifically
+// to test whether auth is OK, so it will take a different path
+func (c *Client) authRequired(api *url.URL) bool {
+	url := api.String()
+	return !(strings.HasSuffix(url, authAPI) ||
+		strings.HasSuffix(url, authokAPI) ||
+		strings.HasSuffix(url, systeminfoAPI))
+}
+
+func (c *Client) authenticate(ctx context.Context, userpass userPass, depth int32) error {
 	buf := &bytes.Buffer{}
 	err := json.NewEncoder(buf).Encode(userpass)
 	if err != nil {
 		return err
 	}
 	auth := &Auth{}
-	err = c.jsonPost(ctx, authAPI, buf, auth)
+	err = c.jsonPost(ctx, authAPI, buf, auth, depth)
 	if err != nil {
 		return err
 	}

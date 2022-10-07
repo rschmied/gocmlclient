@@ -38,7 +38,7 @@ type ImageDefinition struct {
 
 func (c *Client) GetImageDefs(ctx context.Context) ([]ImageDefinition, error) {
 	imgDef := []ImageDefinition{}
-	err := c.jsonGet(ctx, "image_definitions", &imgDef)
+	err := c.jsonGet(ctx, "image_definitions", &imgDef, 0)
 	if err != nil {
 		return nil, err
 	}
