@@ -38,7 +38,7 @@ type User struct {
 func (c *Client) getUser(ctx context.Context, id string) (*User, error) {
 	api := fmt.Sprintf("users/%s", id)
 	user := &User{}
-	err := c.jsonGet(ctx, api, user)
+	err := c.jsonGet(ctx, api, user, 0)
 	if err != nil {
 		return nil, err
 	}

@@ -26,10 +26,10 @@ func versionError(got string) error {
 	return fmt.Errorf("server not compatible, want %s, got %s", versionConstraint, got)
 }
 
-func (c *Client) versionCheck(ctx context.Context) error {
+func (c *Client) versionCheck(ctx context.Context, depth int32) error {
 
 	sv := systemVersion{}
-	if err := c.jsonGet(ctx, systeminfoAPI, &sv); err != nil {
+	if err := c.jsonGet(ctx, systeminfoAPI, &sv, depth); err != nil {
 		return err
 	}
 

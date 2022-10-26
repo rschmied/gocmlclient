@@ -1,10 +1,17 @@
 package cmlclient
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
+)
+
+const (
+	LinkStateDefined = "DEFINED_ON_CORE"
+	LinkStateStopped = "STOPPED"
+	LinkStateStarted = "STARTED"
 )
 
 // {
@@ -19,39 +26,33 @@ import (
 // 	"state": "STARTED"
 // }
 
-type linkAlias struct {
+// type linkAlias struct {
+// 	ID      string `json:"id"`
+// 	State   string `json:"state"`
+// 	Label   string `json:"label"`
+// 	PCAPkey string `json:"link_capture_key"`
+// 	SrcID   string `json:"interface_a"`
+// 	DstID   string `json:"interface_b"`
+// 	SrcNode string `json:"node_a"`
+// 	DstNode string `json:"node_b"`
+// }
+
+type Link struct {
 	ID      string `json:"id"`
+	LabID   string `json:"lab_id"`
 	State   string `json:"state"`
+	Label   string `json:"label"`
+	PCAPkey string `json:"link_capture_key"`
 	SrcID   string `json:"interface_a"`
 	DstID   string `json:"interface_b"`
 	SrcNode string `json:"node_a"`
 	DstNode string `json:"node_b"`
-	Label   string `json:"label"`
-	PCAPkey string `json:"link_capture_key"`
-}
+	SrcSlot *int   `json:"slot_a"`
+	DstSlot *int   `json:"slot_b"`
 
-type Link struct {
-	ID      string `json:"id"`
-	State   string `json:"state"`
-	Label   string `json:"label"`
-	PCAPkey string `json:"link_capture_key"`
-
+	// not exported, needed for internal linking
 	ifaceA *Interface
 	ifaceB *Interface
-}
-
-func (l Link) MarshalJSON() ([]byte, error) {
-	link := linkAlias{
-		ID:      l.ID,
-		State:   l.State,
-		SrcID:   l.ifaceA.ID,
-		DstID:   l.ifaceB.ID,
-		SrcNode: l.ifaceA.node.ID,
-		DstNode: l.ifaceB.node.ID,
-		Label:   l.Label,
-		PCAPkey: l.PCAPkey,
-	}
-	return json.Marshal(link)
 }
 
 func (llist linkList) MarshalJSON() ([]byte, error) {
@@ -67,7 +68,7 @@ func (llist linkList) MarshalJSON() ([]byte, error) {
 func (c *Client) getLinkIDsForLab(ctx context.Context, lab *Lab) (IDlist, error) {
 	api := fmt.Sprintf("labs/%s/links", lab.ID)
 	linkIDlist := &IDlist{}
-	err := c.jsonGet(ctx, api, linkIDlist)
+	err := c.jsonGet(ctx, api, linkIDlist, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -78,21 +79,181 @@ func (c *Client) getLinksForLab(ctx context.Context, lab *Lab, linkIDlist IDlist
 	linkList := linkList{}
 	for _, linkID := range linkIDlist {
 		api := fmt.Sprintf("labs/%s/links/%s", lab.ID, linkID)
-		link := &linkAlias{}
-		err := c.jsonGet(ctx, api, link)
+		link := &Link{}
+		err := c.jsonGet(ctx, api, link, 0)
 		if err != nil {
 			return err
 		}
-		realLink := &Link{
-			ID:      link.ID,
-			State:   link.State,
-			Label:   link.Label,
-			PCAPkey: link.PCAPkey,
-			ifaceA:  c.findInterface(lab.Nodes, link.SrcID),
-			ifaceB:  c.findInterface(lab.Nodes, link.DstID),
-		}
-		linkList = append(linkList, realLink)
+		link.LabID = lab.ID
+		linkList = append(linkList, link)
 	}
 	lab.Links = linkList
 	return nil
+}
+
+func (c *Client) LinkGet(ctx context.Context, labID, linkID string, deep bool) (*Link, error) {
+	api := fmt.Sprintf("labs/%s/links/%s", labID, linkID)
+	link := &Link{}
+	err := c.jsonGet(ctx, api, link, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	link.LabID = labID
+
+	if deep {
+		var (
+			err error
+			// ifaceA, ifaceB *Interface
+		)
+
+		ifaceA := &Interface{
+			ID:    link.SrcID,
+			LabID: labID,
+			Node:  link.SrcNode,
+			node:  &Node{ID: link.SrcNode, LabID: labID},
+		}
+		ifaceA, err = c.InterfaceGet(ctx, ifaceA)
+		if err != nil {
+			return nil, err
+		}
+		ifaceA.node, err = c.NodeGet(ctx, ifaceA.node, false)
+		if err != nil {
+			return nil, err
+		}
+
+		ifaceB := &Interface{
+			ID:    link.DstID,
+			LabID: labID,
+			Node:  link.DstNode,
+			node:  &Node{ID: link.DstNode, LabID: labID},
+		}
+		ifaceB, err = c.InterfaceGet(ctx, ifaceB)
+		if err != nil {
+			return nil, err
+		}
+		ifaceB.node, err = c.NodeGet(ctx, ifaceB.node, false)
+		if err != nil {
+			return nil, err
+		}
+
+		link.ifaceA = ifaceA
+		link.ifaceB = ifaceB
+		link.SrcSlot = &ifaceA.Slot
+		link.DstSlot = &ifaceB.Slot
+	}
+	return link, err
+}
+
+func (c *Client) LinkCreate(ctx context.Context, link *Link) (*Link, error) {
+	api := fmt.Sprintf("labs/%s/links", link.LabID)
+
+	var (
+		err          error
+		nodeA, nodeB *Node
+	)
+
+	if len(link.SrcNode) > 0 && len(link.DstNode) > 0 {
+
+		nodeA = &Node{LabID: link.LabID, ID: link.SrcNode}
+		// if c.useCache {
+		// 	nodeA, err = c.NodeGet(ctx, nodeA, false)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
+		// }
+		err = c.getInterfacesForNode(ctx, nodeA)
+		if err != nil {
+			return nil, err
+		}
+
+		nodeB = &Node{LabID: link.LabID, ID: link.DstNode}
+		// if c.useCache {
+		// 	nodeB, err = c.NodeGet(ctx, nodeB, false)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
+		// }
+		err = c.getInterfacesForNode(ctx, nodeB)
+		if err != nil {
+			return nil, err
+		}
+
+		matches := func(slot *int, iface *Interface) bool {
+			if !iface.IsPhysical() {
+				return false
+			}
+			if slot != nil {
+				if iface.Slot == *slot && !iface.IsConnected {
+					return true
+				}
+			} else {
+				if !iface.IsConnected {
+					return true
+				}
+			}
+			return false
+		}
+
+		for _, iface := range nodeA.Interfaces {
+			if matches(link.SrcSlot, iface) {
+				iface.IsConnected = true
+				link.ifaceA = iface
+				link.SrcID = iface.ID
+				break
+			}
+		}
+
+		for _, iface := range nodeB.Interfaces {
+			if matches(link.DstSlot, iface) {
+				iface.IsConnected = true
+				link.ifaceA = iface
+				link.DstID = iface.ID
+				break
+			}
+		}
+
+		if len(link.SrcID) == 0 {
+			iface, err := c.InterfaceCreate(ctx, link.LabID, link.SrcNode, link.SrcSlot)
+			if err != nil {
+				return nil, err
+			}
+			iface.IsConnected = true
+			link.SrcID = iface.ID
+			link.ifaceA = iface
+		}
+		if len(link.DstID) == 0 {
+			iface, err := c.InterfaceCreate(ctx, link.LabID, link.DstNode, link.DstSlot)
+			if err != nil {
+				return nil, err
+			}
+			iface.IsConnected = true
+			link.DstID = iface.ID
+			link.ifaceB = iface
+		}
+	}
+
+	newLink := struct {
+		SrcInt string `json:"src_int"`
+		DstInt string `json:"dst_int"`
+	}{
+		SrcInt: link.SrcID,
+		DstInt: link.DstID,
+	}
+
+	buf := &bytes.Buffer{}
+	err = json.NewEncoder(buf).Encode(newLink)
+	if err != nil {
+		return nil, err
+	}
+
+	newLinkResult := struct {
+		ID string `json:"id"`
+	}{}
+	err = c.jsonPost(ctx, api, buf, &newLinkResult, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.LinkGet(ctx, link.LabID, newLinkResult.ID, true)
 }

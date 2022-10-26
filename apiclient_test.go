@@ -8,9 +8,43 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const useCache bool = false
+
+type testClient struct {
+	client *Client
+	mr     *mr.MockResponder
+	ctx    context.Context
+}
+
+func newTestAPIclient() testClient {
+	c := NewClient("https://controller", true, useCache)
+	mrClient, ctx := mr.NewMockResponder()
+	c.httpClient = mrClient
+	c.SetUsernamePassword("user", "pass")
+	return testClient{c, mrClient, ctx}
+}
+
+func newAuthedTestAPIclient() testClient {
+	c := newTestAPIclient()
+	c.client.state.set(stateAuthenticated)
+	return c
+}
+
 func TestClient_methoderror(t *testing.T) {
-	c := NewClient("", true)
-	err := c.jsonReq(context.Background(), "ü", "###", nil, nil)
+	c := NewClient("", true, useCache)
+	err := c.jsonReq(context.Background(), "ü", "###", nil, nil, 0)
+	assert.Error(t, err)
+}
+
+func TestClient_compatibility(t *testing.T) {
+	response := mr.MockRespList{
+		mr.MockResp{Data: []byte(`{"version": "2.1.0","ready": true}`)},
+	}
+
+	tc := newTestAPIclient()
+	tc.mr.SetData(response)
+
+	err := tc.client.jsonGet(tc.ctx, "/api/v0/labs", nil, 0)
 	assert.Error(t, err)
 }
 
@@ -24,19 +58,15 @@ func TestClient_putpatch(t *testing.T) {
 		mr.MockResp{Data: []byte("\"OK\"")},
 	}
 
-	c := NewClient("", true)
-	mresp, ctx := mr.NewMockResponder()
-	c.httpClient = mresp
-	mresp.SetData(putResponse)
-	c.authChecked = true
-	c.versionChecked = true
+	tc := newAuthedTestAPIclient()
+	tc.mr.SetData(putResponse)
 
-	err := c.jsonPut(ctx, "###")
+	err := tc.client.jsonPut(tc.ctx, "###", 0)
 	assert.NoError(t, err)
 
-	mresp.SetData(patchResponse)
+	tc.mr.SetData(patchResponse)
 	var result string
-	err = c.jsonPatch(ctx, "###", nil, &result)
+	err = tc.client.jsonPatch(tc.ctx, "###", nil, &result, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, result, "OK")
 }

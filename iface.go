@@ -1,46 +1,58 @@
 package cmlclient
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
 )
 
-// {
-// 	"id": "20681832-36e8-4ba9-9d8d-0588e0f7b517",
-// 	"lab_id": "52d5c824-e10c-450a-b9c5-b700bd3bc17a",
-// 	"node": "9efb1503-7e2a-4d2a-959e-865209f1acc0",
-// 	"label": "port",
-// 	"slot": 0,
-// 	"type": "physical",
-// 	"device_name": "",
-// 	"dst_udp_port": null,
-// 	"src_udp_port": null,
-// 	"mac_address": null,
-// 	"is_connected": true,
-// 	"state": "STARTED"
-// }
+/*
+{
+	"id": "e87c811d-5459-4390-8e92-317bb9dc23e8",
+	"lab_id": "024fa9f4-5e5e-4e94-9f85-29f147e09689",
+	"node": "f902d112-2a93-4c9f-98e6-adea6dc16fef",
+	"label": "eth0",
+	"slot": 0,
+	"type": "physical",
+	"device_name": null,
+	"dst_udp_port": 21001,
+	"src_udp_port": 21000,
+	"mac_address": "52:54:00:1e:af:9b",
+	"is_connected": true,
+	"state": "STARTED"
+}
+*/
 
 const (
 	IfaceStateDefined = "DEFINED_ON_CORE"
 	IfaceStateStopped = "STOPPED"
 	IfaceStateStarted = "STARTED"
+
+	IfaceTypePhysical = "physical"
+	IfaceTypeLoopback = "loopback"
 )
 
 type Interface struct {
 	ID          string `json:"id"`
+	LabID       string `json:"lab_id"`
+	Node        string `json:"node"`
 	Label       string `json:"label"`
-	Type        string `json:"type"`
 	Slot        int    `json:"slot"`
-	State       string `json:"state"`
+	Type        string `json:"type"`
+	DeviceName  string `json:"device_name"`
+	SrcUDPport  int    `json:"src_udp_port"`
+	DstUDPport  int    `json:"dst_udp_port"`
 	MACaddress  string `json:"mac_address"`
 	IsConnected bool   `json:"is_connected"`
-	DeviceName  string `json:"device_name"`
+	State       string `json:"state"`
 
 	// extra
-	IP4  []string `json:"ip4"`
-	IP6  []string `json:"ip6"`
+	IP4 []string `json:"ip4"`
+	IP6 []string `json:"ip6"`
+
+	// needed for internal linking
 	node *Node
 }
 
@@ -52,46 +64,131 @@ func (iface Interface) Runs() bool {
 	return iface.State == IfaceStateStarted
 }
 
-func (imap InterfaceMap) MarshalJSON() ([]byte, error) {
-	ilist := []*Interface{}
-	for _, iface := range imap {
-		ilist = append(ilist, iface)
-	}
-	// we want this as a stable sort by interface UUID
-	sort.Slice(ilist, func(i, j int) bool {
-		return ilist[i].ID < ilist[j].ID
-	})
-	return json.Marshal(ilist)
+func (iface Interface) IsPhysical() bool {
+	return iface.Type == IfaceTypePhysical
 }
 
-func (c *Client) getInterfacesForNode(ctx context.Context, id string, node *Node) error {
-	api := fmt.Sprintf("labs/%s/nodes/%s/interfaces", id, node.ID)
-	interfaceIDlist := &IDlist{}
-	err := c.jsonGet(ctx, api, interfaceIDlist)
+func (c *Client) updateCachedIface(existingIface, iface *Interface) *Interface {
+	// this is a no-op at this point, we don't allow updating interfaces
+	return existingIface
+}
+
+func (c *Client) cacheIface(iface *Interface, err error) (*Interface, error) {
+	if !c.useCache || err != nil {
+		return iface, err
+	}
+
+	c.mu.RLock()
+	lab, ok := c.labCache[iface.LabID]
+	c.mu.RUnlock()
+	if !ok {
+		return iface, err
+	}
+
+	c.mu.RLock()
+	node, ok := lab.Nodes[iface.Node]
+	c.mu.RUnlock()
+	if !ok {
+		return iface, err
+	}
+
+	for _, nodeIface := range node.Interfaces {
+		if nodeIface.ID == iface.ID {
+			return c.updateCachedIface(nodeIface, iface), nil
+		}
+	}
+
+	iface.node = node // internal linking
+	c.mu.Lock()
+	node.Interfaces = append(node.Interfaces, iface)
+	c.mu.Unlock()
+	return iface, nil
+}
+
+func (c *Client) getCachedIface(iface *Interface) (*Interface, bool) {
+	if !c.useCache {
+		return nil, false
+	}
+	c.mu.RLock()
+	lab, ok := c.labCache[iface.LabID]
+	c.mu.RUnlock()
+	if !ok {
+		return nil, false
+	}
+
+	c.mu.RLock()
+	node, ok := lab.Nodes[iface.Node]
+	c.mu.RUnlock()
+	if !ok {
+		return iface, false
+	}
+
+	for _, nodeIface := range node.Interfaces {
+		if nodeIface != nil && nodeIface.ID == iface.ID {
+			if nodeIface.node == nil {
+				nodeIface.node = node
+			}
+			return nodeIface, true
+		}
+	}
+
+	return iface, false
+}
+
+func (c *Client) deleteCachedIface(iface *Interface, err error) error {
+	if !c.useCache || err != nil {
+		return err
+	}
+
+	c.mu.RLock()
+	lab, ok := c.labCache[iface.LabID]
+	c.mu.RUnlock()
+	if !ok {
+		return err
+	}
+
+	c.mu.RLock()
+	node, ok := lab.Nodes[iface.Node]
+	c.mu.RUnlock()
+	if !ok {
+		return err
+	}
+
+	c.mu.Lock()
+	newList := InterfaceList{}
+	for _, nodeIface := range node.Interfaces {
+		if nodeIface.ID != iface.ID {
+			newList = append(newList, nodeIface)
+		}
+	}
+	node.Interfaces = newList
+	c.mu.Unlock()
+	return nil
+}
+
+func (c *Client) getInterfacesForNode(ctx context.Context, node *Node) error {
+	api := fmt.Sprintf("labs/%s/nodes/%s/interfaces", node.LabID, node.ID)
+	interfaceIDlist := IDlist{}
+	err := c.jsonGet(ctx, api, &interfaceIDlist, 0)
 	if err != nil {
 		return err
 	}
 
-	interfaceMap := make(InterfaceMap)
-	for _, ifaceID := range *interfaceIDlist {
-		api = fmt.Sprintf("labs/%s/interfaces/%s", id, ifaceID)
-		iface := &Interface{node: node}
-		err := c.jsonGet(ctx, api, iface)
+	ifaceList := InterfaceList{}
+	for _, ifaceID := range interfaceIDlist {
+		iface := &Interface{ID: ifaceID, LabID: node.LabID, Node: node.ID}
+		iface, err = c.InterfaceGet(ctx, iface)
 		if err != nil {
 			return err
 		}
-		interfaceMap[ifaceID] = iface
+		ifaceList = append(ifaceList, iface)
 	}
-	node.Interfaces = interfaceMap
-	return nil
-}
 
-func (c *Client) findInterface(nodes NodeMap, id string) *Interface {
-	for _, node := range nodes {
-		if iface, found := node.Interfaces[id]; found {
-			return iface
-		}
-	}
+	// sort the interface list by slot
+	sort.Slice(ifaceList, func(i, j int) bool {
+		return ifaceList[i].Slot < ifaceList[j].Slot
+	})
+	node.Interfaces = ifaceList
 	return nil
 }
 
@@ -128,26 +225,67 @@ func (c *Client) findInterface(nodes NodeMap, id string) *Interface {
 // 	}
 // }
 
-type l3nodes map[string]*l3node
+func (c *Client) InterfaceGet(ctx context.Context, iface *Interface) (*Interface, error) {
 
-type l3node struct {
-	Name       string                 `json:"name"`
-	Interfaces map[string]l3interface `json:"interfaces"`
+	if iface, ok := c.getCachedIface(iface); ok {
+		return iface, nil
+	}
+
+	api := fmt.Sprintf("labs/%s/interfaces/%s", iface.LabID, iface.ID)
+	err := c.jsonGet(ctx, api, iface, 0)
+	return c.cacheIface(iface, err)
 }
 
-type l3interface struct {
-	ID    string   `json:"id"`
-	Label string   `json:"label"`
-	IP4   []string `json:"ip4"`
-	IP6   []string `json:"ip6"`
-}
+// InterfaceCreate creates an interface in the given lab and node.  If the slot
+// is not nil, the request creates all unallocated slots up to and including
+// that slot.
+func (c *Client) InterfaceCreate(ctx context.Context, labID, nodeID string, slot *int) (*Interface, error) {
 
-func (c *Client) getL3Info(ctx context.Context, id string) (*l3nodes, error) {
-	api := fmt.Sprintf("labs/%s/layer3_addresses", id)
-	l3n := &l3nodes{}
-	err := c.jsonGet(ctx, api, l3n)
+	newIface := struct {
+		Node string `json:"node"`
+		Slot *int   `json:"slot,omitempty"`
+	}{
+		Node: nodeID,
+		Slot: slot,
+	}
+
+	buf := &bytes.Buffer{}
+	err := json.NewEncoder(buf).Encode(newIface)
 	if err != nil {
 		return nil, err
 	}
-	return l3n, nil
+
+	// This is quite awkward, not even sure if it's a good REST design practice:
+	// "Returns a JSON object that identifies the interface that was created. In
+	// the case of bulk interface creation, returns a JSON array of such
+	// objects." <-- from the API documentation
+	// A list is returned when slot is defined, even if it's just creating
+	// one interface
+
+	api := fmt.Sprintf("labs/%s/interfaces", labID)
+	if slot == nil {
+		result := Interface{}
+		err = c.jsonPost(ctx, api, buf, &result, 0)
+		if err != nil {
+			return nil, err
+		}
+		return c.cacheIface(&result, err)
+	}
+
+	// this is when a slot has been provided; the API provides now a list of
+	// interfaces
+	result := []Interface{}
+	err = c.jsonPost(ctx, api, buf, &result, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	lastIface := &result[len(result)-1]
+	if len(result) == 1 {
+		return c.cacheIface(lastIface, nil)
+	}
+	for _, li := range result {
+		c.cacheIface(&li, nil)
+	}
+	return lastIface, nil
 }

@@ -9,11 +9,10 @@ import (
 
 func TestClient_VersionCheck(t *testing.T) {
 
-	c := NewClient("https://bla.bla", true)
+	c := NewClient("https://bla.bla", true, useCache)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
-	c.versionChecked = true
-	c.authChecked = true
+	c.state.set(stateAuthenticated)
 
 	tests := []struct {
 		name     string
@@ -31,7 +30,7 @@ func TestClient_VersionCheck(t *testing.T) {
 	for _, tt := range tests {
 		mrClient.SetData(mr.MockRespList{{Data: []byte(tt.wantJSON)}})
 		t.Run(tt.name, func(t *testing.T) {
-			if err := c.versionCheck(ctx); (err != nil) != tt.wantErr {
+			if err := c.versionCheck(ctx, 0); (err != nil) != tt.wantErr {
 				t.Errorf("Client.VersionCheck() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -43,17 +42,18 @@ func TestClient_VersionCheck(t *testing.T) {
 
 func TestClient_NotReady(t *testing.T) {
 
-	c := NewClient("https://bla.bla", true)
+	c := NewClient("https://bla.bla", true, useCache)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
-	c.versionChecked = false
-	c.authChecked = true
+	c.state.set(stateAuthenticated)
+	// c.versionChecked = false
+	// c.authChecked = true
 
 	mrClient.SetData(mr.MockRespList{
 		{Data: []byte(`{"version": "2.4.0.dev0","false": true}`)},
 	})
 
-	err := c.versionCheck(ctx)
+	err := c.versionCheck(ctx, 0)
 	assert.Error(t, err)
 
 	if !mrClient.Empty() {

@@ -3,6 +3,7 @@ package cmlclient
 import (
 	"crypto/tls"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -15,12 +16,14 @@ type Client struct {
 	apiToken         string
 	userpass         userPass
 	httpClient       apiClient
-	authChecked      bool
-	versionChecked   bool
 	compatibilityErr error
+	state            *apiClientState
+	mu               sync.RWMutex
+	labCache         map[string]*Lab
+	useCache         bool
 }
 
-func NewClient(host string, insecure bool) *Client {
+func NewClient(host string, insecure, useCache bool) *Client {
 	tr := http.DefaultTransport.(*http.Transport)
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: insecure,
@@ -34,8 +37,9 @@ func NewClient(host string, insecure bool) *Client {
 			Timeout:   15 * time.Second,
 			Transport: tr,
 		},
-		authChecked:      false,
-		versionChecked:   false,
 		compatibilityErr: nil,
+		state:            newState(),
+		labCache:         make(map[string]*Lab),
+		useCache:         useCache,
 	}
 }
