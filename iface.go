@@ -91,8 +91,10 @@ func (c *Client) cacheIface(iface *Interface, err error) (*Interface, error) {
 	if !ok {
 		return iface, err
 	}
-
-	for _, nodeIface := range node.Interfaces {
+	c.mu.RLock()
+	interfaces := node.Interfaces
+	c.mu.RUnlock()
+	for _, nodeIface := range interfaces {
 		if nodeIface.ID == iface.ID {
 			return c.updateCachedIface(nodeIface, iface), nil
 		}
@@ -281,9 +283,6 @@ func (c *Client) InterfaceCreate(ctx context.Context, labID, nodeID string, slot
 	}
 
 	lastIface := &result[len(result)-1]
-	if len(result) == 1 {
-		return c.cacheIface(lastIface, nil)
-	}
 	for _, li := range result {
 		c.cacheIface(&li, nil)
 	}

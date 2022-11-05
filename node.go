@@ -183,9 +183,11 @@ func (c *Client) cacheNode(node *Node, err error) (*Node, error) {
 		return c.updateCachedNode(existingNode, node), nil
 	}
 
-	c.mu.Lock()
-	lab.Nodes[node.ID] = node
-	c.mu.Unlock()
+	if lab.Nodes != nil {
+		c.mu.Lock()
+		lab.Nodes[node.ID] = node
+		c.mu.Unlock()
+	}
 	return node, nil
 }
 

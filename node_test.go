@@ -97,12 +97,21 @@ func TestClient_NodeSetConfig(t *testing.T) {
 func TestClient_NodeUpdate(t *testing.T) {
 	tc := newAuthedTestAPIclient()
 
+	node99bytes := []byte(`{
+		"id": "node99",
+		"lab_id": "lab99",
+		"label": "alpine-0",
+		"node_definition": "alpine",
+		"state": "DEFINED_ON_CORE",
+		"tags": [ "tag1", "tag2" ]
+	}`)
+
 	goodNodeData := mr.MockRespList{
-		mr.MockResp{Data: []byte("\"node1\""), URL: `/labs/lab1/nodes/node1$`},
-		mr.MockResp{Data: node1, URL: `/labs/lab1/nodes/node1$`},
+		mr.MockResp{Data: []byte("\"node99\""), URL: `/labs/lab99/nodes/node99$`},
+		mr.MockResp{Data: node99bytes, URL: `/labs/lab99/nodes/node99$`},
 	}
 	badNodeData := mr.MockRespList{
-		mr.MockResp{Code: 400, URL: `/labs/lab1/nodes/node1$`},
+		mr.MockResp{Code: 400, URL: `/labs/lab99/nodes/node99$`},
 	}
 
 	tests := []struct {
@@ -119,35 +128,31 @@ func TestClient_NodeUpdate(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tc.mr.SetData(tt.responses)
-			node := Node{
-				LabID: "lab1", ID: "node1", X: 100, Y: 100,
-				Tags: []string{
-					"newtag",
-				},
-			}
-			resultNode, err := tc.client.NodeUpdate(tc.ctx, &node)
-			_ = resultNode
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Client.NodeUpdate() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			assert.True(t, tc.mr.Empty())
-		})
+	// node99 := &Node{LabID: "lab99", ID: "node99"}
+	lab := &Lab{ID: "lab99", Nodes: make(NodeMap)}
+	// lab.Nodes["node99"] = node99
+	tc.client.labCache["lab99"] = lab
+
+	for _, useCache := range []bool{true, false} {
+		tc.client.useCache = useCache
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				tc.mr.SetData(tt.responses)
+				node := Node{
+					LabID: "lab99", ID: "node99", X: 100, Y: 100,
+					Tags: []string{"newtag"},
+				}
+				resultNode, err := tc.client.NodeUpdate(tc.ctx, &node)
+				_ = resultNode
+				if (err != nil) != tt.wantErr {
+					t.Errorf("Client.NodeUpdate() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+				assert.True(t, tc.mr.Empty())
+			})
+		}
 	}
 }
-
-// func TestClient_NodeDestroy(t *testing.T) {
-// 	tc := newAuthedTestAPIclient()
-// 	response := mr.MockRespList{
-// 		mr.MockResp{Code: 204},
-// 	}
-// 	tc.mr.SetData(response)
-// 	err := tc.client.NodeDestroy(tc.ctx, &Node{ID: "a", LabID: "l"})
-// 	assert.NoError(t, err)
-// }
 
 func TestClient_NodeFuncs(t *testing.T) {
 	tc := newAuthedTestAPIclient()
@@ -168,17 +173,25 @@ func TestClient_NodeFuncs(t *testing.T) {
 		{"bad", mr.MockRespList{mr.MockResp{Code: 404}}, true},
 	}
 
-	for tfname, tf := range funcs {
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				tc.mr.SetData(tt.responses)
-				err := tf(tc.ctx, &Node{ID: "a", LabID: "l"})
-				if (err != nil) != tt.wantErr {
-					t.Errorf("%s error = %v, wantErr %v", tfname, err, tt.wantErr)
-					return
-				}
-				assert.True(t, tc.mr.Empty())
-			})
+	node99 := &Node{LabID: "lab99", ID: "node99"}
+	lab := &Lab{ID: "lab99", Nodes: make(NodeMap)}
+	lab.Nodes["node99"] = node99
+	tc.client.labCache["lab99"] = lab
+
+	for _, useCache := range []bool{true, false} {
+		tc.client.useCache = useCache
+		for tfname, tf := range funcs {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					tc.mr.SetData(tt.responses)
+					err := tf(tc.ctx, &Node{ID: "node99", LabID: "lab99"})
+					if (err != nil) != tt.wantErr {
+						t.Errorf("%s error = %v, wantErr %v", tfname, err, tt.wantErr)
+						return
+					}
+					assert.True(t, tc.mr.Empty())
+				})
+			}
 		}
 	}
 }

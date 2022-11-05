@@ -119,10 +119,12 @@ type LabImport struct {
 
 func (c *Client) updateCachedLab(existingLab, updatedLab *Lab) *Lab {
 	// only copy fields which can be updated
+	c.mu.Lock()
 	existingLab.Title = updatedLab.Title
 	existingLab.Description = updatedLab.Description
 	existingLab.Nodes = updatedLab.Nodes
 	existingLab.State = updatedLab.State
+	c.mu.Unlock()
 	return existingLab
 }
 

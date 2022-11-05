@@ -501,18 +501,21 @@ func TestClient_StartStopWipeDestroy(t *testing.T) {
 		tc.client.LabDestroy,
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tc.mr.SetData(tt.data)
-			for _, f := range funcs {
-				err := f(tc.ctx, "bla")
-				if tt.want {
-					assert.Error(t, err)
-				} else {
-					assert.NoError(t, err)
+	for _, useCache := range []bool{true, false} {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				tc.client.useCache = useCache
+				tc.mr.SetData(tt.data)
+				for _, f := range funcs {
+					err := f(tc.ctx, "bla")
+					if tt.want {
+						assert.Error(t, err)
+					} else {
+						assert.NoError(t, err)
+					}
 				}
-			}
-		})
+			})
+		}
 	}
 }
 
@@ -633,6 +636,7 @@ func TestClient_LabCreate(t *testing.T) {
 
 func TestClient_LabUpdate(t *testing.T) {
 	tc := newAuthedTestAPIclient()
+	tc.client.useCache = true
 
 	data := mr.MockRespList{
 		mr.MockResp{
@@ -647,7 +651,25 @@ func TestClient_LabUpdate(t *testing.T) {
 				"owner_username": "admin",
 				"node_count": 0,
 				"link_count": 0,
-				"id": "375b41ae-dd90-41a2-858d-98948abbbd38",
+				"id": "lab99",
+				"groups": []
+			}`),
+		},
+	}
+	data2 := mr.MockRespList{
+		mr.MockResp{
+			Data: []byte(`{
+				"state": "DEFINED_ON_CORE",
+				"created": "2022-10-14T10:05:07+00:00",
+				"modified": "2022-10-14T12:05:07+00:00",
+				"lab_title": "new title",
+				"lab_description": "string",
+				"lab_notes": "string",
+				"owner": "00000000-0000-4000-a000-000000000000",
+				"owner_username": "admin",
+				"node_count": 0,
+				"link_count": 0,
+				"id": "lab99",
 				"groups": []
 			}`),
 		},
@@ -659,19 +681,27 @@ func TestClient_LabUpdate(t *testing.T) {
 		data mr.MockRespList
 		want bool
 	}{
-		{"good", Lab{}, data, false},
+		{"good", Lab{ID: "lab99"}, data, false},
+		{"updated", Lab{ID: "lab99", Title: "new title"}, data2, false},
 		{"bad", Lab{}, mr.MockRespList{mr.MockResp{Code: 405}}, true},
 	}
+
+	lab := &Lab{ID: "lab99"}
+	tc.client.labCache["lab99"] = lab
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tc.mr.SetData(tt.data)
-			_, err := tc.client.LabUpdate(tc.ctx, tt.lab)
+			updatedLab, err := tc.client.LabUpdate(tc.ctx, tt.lab)
 			if tt.want {
 				assert.Error(t, err)
+				return
 			} else {
 				assert.NoError(t, err)
 			}
+			getLab, err := tc.client.LabGet(tc.ctx, tt.lab.ID, false)
+			assert.NoError(t, err)
+			assert.Equal(t, updatedLab, getLab)
 		})
 	}
 }
@@ -760,15 +790,14 @@ func TestClient_CompleteCache(t *testing.T) {
 			tc.mr.SetData(tt.data)
 			_, err := tc.client.LabGet(tc.ctx, "lab1", true)
 			assert.NoError(t, err)
-			// _, err := tc.client.LabGet(ctx, "labuuid", false)
-			// _, err := tc.client.LabUpdate(tc.ctx, tt.lab)
 			link := &Link{LabID: "lab1", SrcNode: "node1", DstNode: "node2"}
 			link, err = tc.client.LinkCreate(tc.ctx, link)
-			assert.Equal(t, "link2", link.ID)
 			if tt.want {
 				assert.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				if assert.NoError(t, err) {
+					assert.Equal(t, "link2", link.ID)
+				}
 			}
 			assert.True(t, tc.mr.Empty())
 		})

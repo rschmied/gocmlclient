@@ -31,7 +31,7 @@ type interfaceData struct {
 	SerialPorts     int      `json:"serial_ports"`
 }
 
-type simplifiedNodeDefinitionList map[definitionID]NodeDefinition
+type NodeDefinitionMap map[definitionID]NodeDefinition
 
 func (nd NodeDefinition) hasVNC() bool {
 	return nd.Sim.VNC
@@ -45,11 +45,16 @@ func (nd NodeDefinition) serialPorts() int {
 	return nd.Device.Interfaces.SerialPorts
 }
 
-func (c *Client) GetNodeDefs(ctx context.Context) ([]NodeDefinition, error) {
+func (c *Client) GetNodeDefs(ctx context.Context) (NodeDefinitionMap, error) {
 	nd := []NodeDefinition{}
 	err := c.jsonGet(ctx, "simplified_node_definitions", &nd, 0)
 	if err != nil {
 		return nil, err
 	}
-	return nd, nil
+
+	nodeDefMap := make(NodeDefinitionMap)
+	for _, nodeDef := range nd {
+		nodeDefMap[nodeDef.ID] = nodeDef
+	}
+	return nodeDefMap, nil
 }
