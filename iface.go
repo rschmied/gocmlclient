@@ -112,15 +112,13 @@ func (c *Client) getCachedIface(iface *Interface) (*Interface, bool) {
 		return nil, false
 	}
 	c.mu.RLock()
+	defer c.mu.RUnlock()
 	lab, ok := c.labCache[iface.LabID]
-	c.mu.RUnlock()
 	if !ok {
 		return nil, false
 	}
 
-	c.mu.RLock()
 	node, ok := lab.Nodes[iface.Node]
-	c.mu.RUnlock()
 	if !ok {
 		return iface, false
 	}
@@ -169,28 +167,25 @@ func (c *Client) deleteCachedIface(iface *Interface, err error) error {
 }
 
 func (c *Client) getInterfacesForNode(ctx context.Context, node *Node) error {
-	api := fmt.Sprintf("labs/%s/nodes/%s/interfaces", node.LabID, node.ID)
-	interfaceIDlist := IDlist{}
-	err := c.jsonGet(ctx, api, &interfaceIDlist, 0)
+	// with the data=true option, we get not only the list of IDs but the
+	// interfaces themselves as well!
+	api := fmt.Sprintf("labs/%s/nodes/%s/interfaces?data=true", node.LabID, node.ID)
+	interfaceList := InterfaceList{}
+	err := c.jsonGet(ctx, api, &interfaceList, 0)
 	if err != nil {
 		return err
 	}
 
-	ifaceList := InterfaceList{}
-	for _, ifaceID := range interfaceIDlist {
-		iface := &Interface{ID: ifaceID, LabID: node.LabID, Node: node.ID}
-		iface, err = c.InterfaceGet(ctx, iface)
-		if err != nil {
-			return err
-		}
-		ifaceList = append(ifaceList, iface)
-	}
-
 	// sort the interface list by slot
-	sort.Slice(ifaceList, func(i, j int) bool {
-		return ifaceList[i].Slot < ifaceList[j].Slot
+	sort.Slice(interfaceList, func(i, j int) bool {
+		return interfaceList[i].Slot < interfaceList[j].Slot
 	})
-	node.Interfaces = ifaceList
+	for _, iface := range interfaceList {
+		c.cacheIface(iface, nil)
+	}
+	c.mu.Lock()
+	node.Interfaces = interfaceList
+	c.mu.Unlock()
 	return nil
 }
 

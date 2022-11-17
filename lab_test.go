@@ -86,9 +86,8 @@ var (
 		  }
 		}
 	  }`)
-	ifacesn1  = []byte(`["n1i1"]`)
-	ifacesn2  = []byte(`["n2i1"]`)
-	ifacen1i1 = []byte(`{
+	// this is the result of interfaces?data=true
+	ifacesn1 = []byte(`[{
 		"id": "n1i1",
 		"lab_id": "lab1",
 		"node": "node1",
@@ -98,8 +97,8 @@ var (
 		"mac_address": "52:54:00:0c:e0:69",
 		"is_connected": true,
 		"state": "STARTED"
-	}`)
-	ifacen2i1 = []byte(`{
+	}]`)
+	ifacesn2 = []byte(`[{
 		"id": "n2i1",
 		"lab_id": "lab1",
 		"node": "node2",
@@ -109,7 +108,8 @@ var (
 		"mac_address": "52:54:00:0c:e0:70",
 		"is_connected": true,
 		"state": "STOPPED"
-	}`)
+	}]`)
+
 	linkn1n2 = []byte(`{
 		"id": "link1",
 		"interface_a": "n1i1",
@@ -166,10 +166,8 @@ func TestClient_GetLab(t *testing.T) {
 				mr.MockResp{Data: nodes, URL: `/nodes$`},
 				mr.MockResp{Data: node1, URL: `/nodes/node1$`},
 				mr.MockResp{Data: node2, URL: `/nodes/node2$`},
-				mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces$`},
-				mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces$`},
-				mr.MockResp{Data: ifacen1i1, URL: `/interfaces/n1i1$`},
-				mr.MockResp{Data: ifacen2i1, URL: `/interfaces/n2i1$`},
+				mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
+				mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces\?data=true$`},
 				mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},
 			},
 			true,
@@ -230,10 +228,8 @@ func TestClient_ImportLab(t *testing.T) {
 				mr.MockResp{Data: nodes, URL: `/nodes$`},
 				mr.MockResp{Data: node1, URL: `/nodes/node1$`},
 				mr.MockResp{Data: node2, URL: `/nodes/node2$`},
-				mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces$`},
-				mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces$`},
-				mr.MockResp{Data: ifacen1i1, URL: `/interfaces/n1i1$`},
-				mr.MockResp{Data: ifacen2i1, URL: `/interfaces/n2i1$`},
+				mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
+				mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces\?data=true$`},
 				mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},
 			},
 			false,
@@ -557,10 +553,8 @@ func TestClient_LabGetByTitle(t *testing.T) {
 		mr.MockResp{Data: nodes, URL: `/nodes$`},
 		mr.MockResp{Data: node1, URL: `/nodes/node1$`},
 		mr.MockResp{Data: node2, URL: `/nodes/node2$`},
-		mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces$`},
-		mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces$`},
-		mr.MockResp{Data: ifacen1i1, URL: `/interfaces/n1i1$`},
-		mr.MockResp{Data: ifacen2i1, URL: `/interfaces/n2i1$`},
+		mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
+		mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces\?data=true$`},
 		mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},
 	}...)
 
@@ -752,27 +746,18 @@ func TestClient_CompleteCache(t *testing.T) {
 		mr.MockResp{Data: nodes, URL: `/nodes$`},
 		mr.MockResp{Data: node1, URL: `/nodes/node1$`},
 		mr.MockResp{Data: node2, URL: `/nodes/node2$`},
-		mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces$`},
-		mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces$`},
-		mr.MockResp{Data: ifacen1i1, URL: `/interfaces/n1i1$`},
-		mr.MockResp{Data: ifacen2i1, URL: `/interfaces/n2i1$`},
+		mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
+		mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces\?data=true$`},
 		mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},
 
-		mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces$`},
-		mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces$`},
-		// mr.MockResp{Data: ifacen1i1, URL: `/interfaces/n1i1$`},
-		// mr.MockResp{Data: ifacen2i1, URL: `/interfaces/n2i1$`},
+		mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
+		mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces\?data=true$`},
 
 		// 2 new interfaces, one new link, followed by a get
 		mr.MockResp{Data: ifacen1i2, URL: `/interfaces$`},
 		mr.MockResp{Data: ifacen2i2, URL: `/interfaces$`},
 		mr.MockResp{Data: link2n1n2, URL: `/links$`},
 		mr.MockResp{Data: link2n1n2, URL: `/links/link2$`},
-
-		// mr.MockResp{Data: ifacen1i2, URL: `/interfaces/n1i2$`},
-		// mr.MockResp{Data: ifacen2i2, URL: `/interfaces/n2i2$`},
-		// mr.MockResp{Data: node1, URL: `/nodes/node1$`},
-		// mr.MockResp{Data: node2, URL: `/nodes/node2$`},
 	}
 
 	tests := []struct {

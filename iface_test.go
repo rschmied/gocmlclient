@@ -2,7 +2,10 @@ package cmlclient
 
 import (
 	"errors"
+	"math/rand"
+	"sync"
 	"testing"
+	"time"
 
 	mr "github.com/rschmied/mockresponder"
 	"github.com/stretchr/testify/assert"
@@ -152,5 +155,106 @@ func TestClient_IfaceDelete(t *testing.T) {
 				assert.Len(t, tt.node.Interfaces, 3)
 			}
 		})
+	}
+}
+
+func Test_Race(t *testing.T) {
+
+	tc := newAuthedTestAPIclient()
+	tc.client.useCache = true
+
+	iface0 := []byte(`{
+		"id": "iface0",
+		"lab_id": "lab1",
+		"node": "node1",
+		"label": "eth0",
+		"slot": 0,
+		"type": "physical",
+		"mac_address": "52:54:00:0c:e0:70",
+		"is_connected": true,
+		"state": "STOPPED"
+	}`)
+	ifaceList := []byte(`[{
+		"id": "iface0",
+		"lab_id": "lab1",
+		"node": "node1",
+		"label": "eth0",
+		"slot": 0,
+		"type": "physical",
+		"mac_address": "52:54:00:0c:e0:70",
+		"is_connected": true,
+		"state": "STOPPED"
+	},{
+		"id": "iface1",
+		"lab_id": "lab1",
+		"node": "node1",
+		"label": "eth1",
+		"slot": 1,
+		"type": "physical",
+		"mac_address": "52:54:00:0c:e0:70",
+		"is_connected": true,
+		"state": "STOPPED"
+	},{
+		"id": "iface2",
+		"lab_id": "lab1",
+		"node": "node1",
+		"label": "eth2",
+		"slot": 2,
+		"type": "physical",
+		"mac_address": "52:54:00:0c:e0:70",
+		"is_connected": true,
+		"state": "STOPPED"
+	},{
+		"id": "iface3",
+		"lab_id": "lab1",
+		"node": "node1",
+		"label": "eth3",
+		"slot": 3,
+		"type": "physical",
+		"mac_address": "52:54:00:0c:e0:70",
+		"is_connected": true,
+		"state": "STOPPED"
+	},{
+		"id": "iface4",
+		"lab_id": "lab1",
+		"node": "node1",
+		"label": "eth4",
+		"slot": 4,
+		"type": "physical",
+		"mac_address": "52:54:00:0c:e0:71",
+		"is_connected": true,
+		"state": "STOPPED"
+	}]`)
+
+	data := mr.MockRespList{
+		mr.MockResp{Data: iface0, URL: `/interfaces/iface0$`},
+		mr.MockResp{Data: ifaceList, URL: `/interfaces\?data=true$`},
+	}
+	tc.mr.SetData(data)
+	wg := sync.WaitGroup{}
+	lab := Lab{
+		ID:    "lab1",
+		Nodes: make(NodeMap),
+	}
+	node := Node{ID: "node1", LabID: lab.ID}
+	lab.Nodes[node.ID] = &node
+	tc.client.labCache[lab.ID] = &lab
+	rand.Seed(time.Now().UnixNano())
+
+	for i := 0; i < 50; i++ {
+		tc.mr.Reset()
+		wg.Add(2)
+		go func() {
+			time.Sleep(time.Millisecond * time.Duration(rand.Intn(20)))
+			_ = tc.client.getInterfacesForNode(tc.ctx, &node)
+			wg.Done()
+		}()
+		go func() {
+			time.Sleep(time.Millisecond * time.Duration(rand.Intn(20)))
+			iface := Interface{LabID: lab.ID, Node: node.ID, ID: "iface0"}
+			tc.client.InterfaceGet(tc.ctx, &iface)
+			wg.Done()
+		}()
+		wg.Wait()
 	}
 }

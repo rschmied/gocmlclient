@@ -54,22 +54,31 @@ func TestClient_LinkMapMarshalJSON(t *testing.T) {
 	assert.Equal(t, nl[1].ID, "zzz")
 }
 
-// func TestClient_LinkMarshalJSON(t *testing.T) {
-// 	l := Link{
-// 		ID:      "bla",
-// 		State:   LinkStateDefined,
-// 		ifaceA:  &Interface{ID: "iaID", node: &Node{ID: "nodeA"}},
-// 		ifaceB:  &Interface{ID: "ibID", node: &Node{ID: "nodeB"}},
-// 		Label:   "label",
-// 		PCAPkey: "",
-// 	}
-// 	b, err := l.MarshalJSON()
-// 	assert.NoError(t, err)
-// 	t.Logf("%+v", string(b))
-// }
-
 func TestClient_GetLink(t *testing.T) {
 	tc := newAuthedTestAPIclient()
+
+	ifacen1i1 := []byte(`{
+		"id": "n1i1",
+		"lab_id": "lab1",
+		"node": "node1",
+		"label": "eth0",
+		"slot": 0,
+		"type": "physical",
+		"mac_address": "52:54:00:0c:e0:69",
+		"is_connected": true,
+		"state": "STARTED"
+	}`)
+	ifacen2i1 := []byte(`{
+		"id": "n2i1",
+		"lab_id": "lab1",
+		"node": "node2",
+		"label": "eth0",
+		"slot": 0,
+		"type": "physical",
+		"mac_address": "52:54:00:0c:e0:70",
+		"is_connected": true,
+		"state": "STOPPED"
+	}`)
 
 	tests := []struct {
 		name      string
@@ -80,8 +89,6 @@ func TestClient_GetLink(t *testing.T) {
 			"link_deep",
 			mr.MockRespList{
 				mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},
-				// mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces$`},
-				// mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces$`},
 				mr.MockResp{Data: ifacen1i1, URL: `/interfaces/n1i1$`},
 				mr.MockResp{Data: ifacen2i1, URL: `/interfaces/n2i1$`},
 				mr.MockResp{Data: node1, URL: `/nodes/node1$`},
@@ -93,8 +100,6 @@ func TestClient_GetLink(t *testing.T) {
 			"link_shallow",
 			mr.MockRespList{
 				mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},
-				// mr.MockResp{Data: ifacen1i1, URL: `/interfaces/n1i1$`},
-				// mr.MockResp{Data: ifacen2i1, URL: `/interfaces/n2i1$`},
 			},
 			false,
 		},
