@@ -224,25 +224,22 @@ func (c *Client) deleteCachedNode(node *Node, err error) error {
 }
 
 func (c *Client) getNodesForLab(ctx context.Context, lab *Lab) error {
-	api := fmt.Sprintf("labs/%s/nodes", lab.ID)
+	api := fmt.Sprintf("labs/%s/nodes?data=true", lab.ID)
 
-	nodeIDlist := &IDlist{}
-	err := c.jsonGet(ctx, api, nodeIDlist, 0)
+	nodes := &nodeList{}
+	err := c.jsonGet(ctx, api, nodes, 0)
 	if err != nil {
 		return err
 	}
 
 	nodeMap := make(NodeMap)
-	for _, nodeID := range *nodeIDlist {
-		api = fmt.Sprintf("labs/%s/nodes/%s", lab.ID, nodeID)
-		node := &Node{lab: lab}
-		err := c.jsonGet(ctx, api, node, 0)
-		if err != nil {
-			return err
-		}
-		nodeMap[nodeID] = node
+	for _, node := range *nodes {
+		nodeMap[node.ID] = node
 	}
+	c.mu.Lock()
 	lab.Nodes = nodeMap
+	c.mu.Unlock()
+
 	return nil
 }
 

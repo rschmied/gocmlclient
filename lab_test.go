@@ -38,22 +38,24 @@ var (
 		"labs": ["lab1"]
 	}`)
 	links = []byte(`["link1"]`)
-	nodes = []byte(`["node1","node2"]`)
-	node1 = []byte(`{
-		"id": "node1",
-		"lab_id": "lab1",
-		"label": "alpine-0",
-		"node_definition": "alpine",
-		"state": "STARTED",
-		"tags": [ "tag1", "tag2" ]
-	}`)
-	node2 = []byte(`{
-		"id": "node2",
-		"lab_id": "lab1",
-		"label": "alpine-1",
-		"node_definition": "alpine",
-		"state": "STOPPED"
-	}`)
+	// nodes = []byte(`["node1","node2"]`)
+	nodes = []byte(`[
+		{
+			"id": "node1",
+			"lab_id": "lab1",
+			"label": "alpine-0",
+			"node_definition": "alpine",
+			"state": "STARTED",
+			"tags": [ "tag1", "tag2" ]
+		},
+		{
+			"id": "node2",
+			"lab_id": "lab1",
+			"label": "alpine-1",
+			"node_definition": "alpine",
+			"state": "STOPPED"
+		}
+	]`)
 	lab_layer3 = []byte(`{
 		"node1": {
 		  "name": "alpine-0",
@@ -163,9 +165,7 @@ func TestClient_GetLab(t *testing.T) {
 				mr.MockResp{Data: links, URL: `/links$`},
 				mr.MockResp{Data: lab_layer3, URL: `layer3_addresses$`},
 				mr.MockResp{Data: ownerUser, URL: `/users/.+$`},
-				mr.MockResp{Data: nodes, URL: `/nodes$`},
-				mr.MockResp{Data: node1, URL: `/nodes/node1$`},
-				mr.MockResp{Data: node2, URL: `/nodes/node2$`},
+				mr.MockResp{Data: nodes, URL: `/nodes\?data=true$`},
 				mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
 				mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces\?data=true$`},
 				mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},
@@ -225,9 +225,7 @@ func TestClient_ImportLab(t *testing.T) {
 				mr.MockResp{Data: links, URL: `/links$`},
 				mr.MockResp{Data: lab_layer3, URL: `/layer3_addresses$`},
 				mr.MockResp{Data: ownerUser, URL: `/users/.+$`},
-				mr.MockResp{Data: nodes, URL: `/nodes$`},
-				mr.MockResp{Data: node1, URL: `/nodes/node1$`},
-				mr.MockResp{Data: node2, URL: `/nodes/node2$`},
+				mr.MockResp{Data: nodes, URL: `/nodes\?data=true$`},
 				mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
 				mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces\?data=true$`},
 				mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},
@@ -550,9 +548,7 @@ func TestClient_LabGetByTitle(t *testing.T) {
 		mr.MockResp{Data: links, URL: `/links$`},
 		mr.MockResp{Data: lab_layer3, URL: `layer3_addresses$`},
 		mr.MockResp{Data: ownerUser, URL: `/users/.+$`},
-		mr.MockResp{Data: nodes, URL: `/nodes$`},
-		mr.MockResp{Data: node1, URL: `/nodes/node1$`},
-		mr.MockResp{Data: node2, URL: `/nodes/node2$`},
+		mr.MockResp{Data: nodes, URL: `/nodes\?data=true$`},
 		mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
 		mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces\?data=true$`},
 		mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},
@@ -743,9 +739,7 @@ func TestClient_CompleteCache(t *testing.T) {
 		mr.MockResp{Data: links, URL: `/links$`},
 		mr.MockResp{Data: lab_layer3, URL: `layer3_addresses$`},
 		mr.MockResp{Data: ownerUser, URL: `/users/.+$`},
-		mr.MockResp{Data: nodes, URL: `/nodes$`},
-		mr.MockResp{Data: node1, URL: `/nodes/node1$`},
-		mr.MockResp{Data: node2, URL: `/nodes/node2$`},
+		mr.MockResp{Data: nodes, URL: `/nodes\?data=true$`},
 		mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
 		mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces\?data=true$`},
 		mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},

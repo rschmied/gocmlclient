@@ -40,6 +40,7 @@ const (
 type IDlist []string
 type NodeMap map[string]*Node
 type InterfaceList []*Interface
+type nodeList []*Node
 type linkList []*Link
 type groupList []*Group
 

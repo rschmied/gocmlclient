@@ -9,6 +9,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	node1 = []byte(`{
+		"id": "node1",
+		"lab_id": "lab1",
+		"label": "alpine-0",
+		"node_definition": "alpine",
+		"state": "STARTED",
+		"tags": [ "tag1", "tag2" ]
+	}`)
+
+	node2 = []byte(`{
+		"id": "node2",
+		"lab_id": "lab1",
+		"label": "alpine-1",
+		"node_definition": "alpine",
+		"state": "STOPPED"
+	}`)
+)
+
 func TestClient_NodeMapMarschalJSON(t *testing.T) {
 	nm := NodeMap{
 		"zzz": &Node{ID: "zzz"},
