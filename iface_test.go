@@ -73,8 +73,7 @@ func TestClient_IfaceWithSlots(t *testing.T) {
 		mr.MockResp{Data: ifaceList, URL: `/interfaces$`},
 	}
 	tc.mr.SetData(data)
-	slot := int(1)
-	iface, err := tc.client.InterfaceCreate(tc.ctx, "lab1", "node1", &slot)
+	iface, err := tc.client.InterfaceCreate(tc.ctx, "lab1", "node1", 1)
 	if assert.NoError(t, err) {
 		assert.Equal(t, "eth1", iface.Label)
 	}

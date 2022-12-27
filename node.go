@@ -121,7 +121,7 @@ func newNodeAlias(node *Node, update bool) nodePatchPostAlias {
 			npp.DataVolume = node.DataVolume
 			npp.BootDiskSize = node.BootDiskSize
 		}
-		// these can only be changed at create time (eg. Post)
+		// these can only be changed at create time (eg. POST)
 		npp.NodeDefinition = node.NodeDefinition
 		npp.ImageDefinition = node.ImageDefinition
 	}
@@ -243,6 +243,9 @@ func (c *Client) getNodesForLab(ctx context.Context, lab *Lab) error {
 	return nil
 }
 
+// NodeSetConfig sets a configuration for the specified node. At least the `ID` of
+// the node and the `labID` must be provided in `node`. The `node` instance will
+// be updated with the current values for the node as provided by the controller.
 func (c *Client) NodeSetConfig(ctx context.Context, node *Node, configuration string) error {
 	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
 
@@ -267,6 +270,8 @@ func (c *Client) NodeSetConfig(ctx context.Context, node *Node, configuration st
 	return err
 }
 
+// NodeUpdate updates the node specified by data in `node` (e.g. ID and LabID)
+// with the other data provided. It returns the udpated node.
 func (c *Client) NodeUpdate(ctx context.Context, node *Node) (*Node, error) {
 	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
 
@@ -286,7 +291,7 @@ func (c *Client) NodeUpdate(ctx context.Context, node *Node) (*Node, error) {
 	return c.cacheNode(c.NodeGet(ctx, node, true))
 }
 
-// NodeStart the given node
+// NodeStart starts the given node.
 func (c *Client) NodeStart(ctx context.Context, node *Node) error {
 	api := fmt.Sprintf("labs/%s/nodes/%s/state/start", node.LabID, node.ID)
 	err := c.jsonPut(ctx, api, 0)
@@ -296,7 +301,7 @@ func (c *Client) NodeStart(ctx context.Context, node *Node) error {
 	return nil
 }
 
-// NodeStop the given node
+// NodeStop stops the given node.
 func (c *Client) NodeStop(ctx context.Context, node *Node) error {
 	api := fmt.Sprintf("labs/%s/nodes/%s/state/stop", node.LabID, node.ID)
 	err := c.jsonPut(ctx, api, 0)
@@ -306,7 +311,8 @@ func (c *Client) NodeStop(ctx context.Context, node *Node) error {
 	return nil
 }
 
-// NodeCreate creates a new node on the controller
+// NodeCreate creates a new node on the controller based on the data provided
+// in `node`. Label, node definition and image definition must be provided.
 func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
 
 	// TODO: inconsistent attributes lab_title vs title, ..
@@ -361,6 +367,7 @@ func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
 	return c.cacheNode(c.NodeGet(ctx, node, true))
 }
 
+// NodeGet returns the node identified by its `ID` and `LabID` in the provided node.
 func (c *Client) NodeGet(ctx context.Context, node *Node, nocache bool) (*Node, error) {
 
 	if !nocache {
@@ -375,11 +382,14 @@ func (c *Client) NodeGet(ctx context.Context, node *Node, nocache bool) (*Node, 
 	return c.cacheNode(newNode, err)
 }
 
+// NodeDestroy deletes the node from the controller.
 func (c *Client) NodeDestroy(ctx context.Context, node *Node) error {
 	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
 	return c.deleteCachedNode(node, c.jsonDelete(ctx, api, 0))
 }
 
+// NodeWipe removes all runtime data from a node on the controller/compute.
+// E.g. it will remove the actual VM and its associated disks.
 func (c *Client) NodeWipe(ctx context.Context, node *Node) error {
 	api := fmt.Sprintf("labs/%s/nodes/%s/wipe_disks", node.LabID, node.ID)
 	return c.jsonPut(ctx, api, 0)

@@ -5,12 +5,16 @@ import "context"
 type definitionID string
 
 type NodeDefinition struct {
-	ID      definitionID   `json:"id"`
-	General map[string]any `json:"general"`
-	Device  deviceData     `json:"device"`
-	UI      map[string]any `json:"ui"`
-	Sim     simData        `json:"sim"`
-	Images  []string       `json:"image_definitions"`
+	ID            definitionID   `json:"id"`
+	Configuration map[string]any `json:"configuration"`
+	Device        deviceData     `json:"device"`
+	Inherited     map[string]any `json:"inherited"`
+	SchemaVersion string         `json:"schema_version"`
+	Sim           simData        `json:"sim"`
+	Boot          map[string]any `json:"boot"`
+	PyATS         map[string]any `json:"pyats"`
+	General       map[string]any `json:"general"`
+	UI            map[string]any `json:"ui"`
 }
 
 type simData struct {
@@ -45,6 +49,9 @@ func (nd NodeDefinition) serialPorts() int {
 	return nd.Device.Interfaces.SerialPorts
 }
 
+// GetNodeDefs returns the list of node definitions available on the CML controller.
+// The key of the map is the definition type name (e.g. "alpine" or "ios").
+// The node def data structure is incomplete, only essential fields are populated.
 func (c *Client) GetNodeDefs(ctx context.Context) (NodeDefinitionMap, error) {
 	nd := []NodeDefinition{}
 	err := c.jsonGet(ctx, "simplified_node_definitions", &nd, 0)

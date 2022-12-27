@@ -769,7 +769,13 @@ func TestClient_CompleteCache(t *testing.T) {
 			tc.mr.SetData(tt.data)
 			_, err := tc.client.LabGet(tc.ctx, "lab1", true)
 			assert.NoError(t, err)
-			link := &Link{LabID: "lab1", SrcNode: "node1", DstNode: "node2"}
+			link := &Link{
+				LabID:   "lab1",
+				SrcNode: "node1",
+				DstNode: "node2",
+				SrcSlot: -1,
+				DstSlot: -1,
+			}
 			link, err = tc.client.LinkCreate(tc.ctx, link)
 			if tt.want {
 				assert.Error(t, err)

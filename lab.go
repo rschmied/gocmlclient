@@ -74,6 +74,7 @@ type Lab struct {
 	// filled bool
 }
 
+// CanBeWiped returns `true` when all nodes in the lab are wiped.
 func (l *Lab) CanBeWiped() bool {
 	if len(l.Nodes) == 0 {
 		return l.State != LabStateDefined
@@ -86,6 +87,7 @@ func (l *Lab) CanBeWiped() bool {
 	return true
 }
 
+// Running returns `true` if at least one node is running (started or booted).
 func (l *Lab) Running() bool {
 	for _, node := range l.Nodes {
 		if node.State != NodeStateDefined && node.State != NodeStateStopped {
@@ -95,6 +97,7 @@ func (l *Lab) Running() bool {
 	return false
 }
 
+// Booted returns `true` if all nodes in the lab are in booted state.
 func (l *Lab) Booted() bool {
 	for _, node := range l.Nodes {
 		if node.State != NodeStateBooted {
@@ -104,6 +107,8 @@ func (l *Lab) Booted() bool {
 	return true
 }
 
+// NodeByLabel returns the node of a lab identified by its `label`` or an
+// error if not found.
 func (l *Lab) NodeByLabel(ctx context.Context, label string) (*Node, error) {
 	for _, node := range l.Nodes {
 		if node.Label == label {
@@ -169,6 +174,7 @@ func (c *Client) deleteCachedLab(id string, err error) error {
 	return nil
 }
 
+// LabCreate creates a new lab on the controller.
 func (c *Client) LabCreate(ctx context.Context, lab Lab) (*Lab, error) {
 
 	// TODO: inconsistent attributes lab_title vs title, ...
@@ -195,6 +201,7 @@ func (c *Client) LabCreate(ctx context.Context, lab Lab) (*Lab, error) {
 	return c.cacheLab(&la.Lab, nil)
 }
 
+// LabUpdate updates specific fields of a lab (title, description and notes).
 func (c *Client) LabUpdate(ctx context.Context, lab Lab) (*Lab, error) {
 
 	// TODO: inconsistent attributes lab_title vs title, ...
@@ -221,6 +228,8 @@ func (c *Client) LabUpdate(ctx context.Context, lab Lab) (*Lab, error) {
 	return c.cacheLab(&la.Lab, nil)
 }
 
+// LabImport imports a lab topology into the controller. This is expected to be
+// in CML YAML topology file format.
 func (c *Client) LabImport(ctx context.Context, topo string) (*Lab, error) {
 	topoReader := strings.NewReader(topo)
 	labImport := &LabImport{}
@@ -235,10 +244,13 @@ func (c *Client) LabImport(ctx context.Context, topo string) (*Lab, error) {
 	return lab, nil
 }
 
+// LabStart starts all nodes of the lab identified by the `id` (a UUIDv4).
 func (c *Client) LabStart(ctx context.Context, id string) error {
 	return c.jsonPut(ctx, fmt.Sprintf("labs/%s/start", id), 0)
 }
 
+// HasLabConverged checks if all nodes of the lab identified by the `id`
+// (a UUIDv4) have converged e.g. are in state "BOOTED".
 func (c *Client) HasLabConverged(ctx context.Context, id string) (bool, error) {
 	api := fmt.Sprintf("labs/%s/check_if_converged", id)
 	converged := false
@@ -249,18 +261,23 @@ func (c *Client) HasLabConverged(ctx context.Context, id string) (bool, error) {
 	return converged, nil
 }
 
+// LabStop stops all nodes of the lab identified by the `id` (a UUIDv4).
 func (c *Client) LabStop(ctx context.Context, id string) error {
 	return c.jsonPut(ctx, fmt.Sprintf("labs/%s/stop", id), 0)
 }
 
+// LabWipe wipes the lab identified by the `id` (a UUIDv4).
 func (c *Client) LabWipe(ctx context.Context, id string) error {
 	return c.jsonPut(ctx, fmt.Sprintf("labs/%s/wipe", id), 0)
 }
 
+// LabDestroy deletes the lab identified by the `id` (a UUIDv4).
 func (c *Client) LabDestroy(ctx context.Context, id string) error {
 	return c.deleteCachedLab(id, c.jsonDelete(ctx, fmt.Sprintf("labs/%s", id), 0))
 }
 
+// LabGetByTitle returns the lab identified by its `title`. For the use of
+// `deep` see LabGet().
 func (c *Client) LabGetByTitle(ctx context.Context, title string, deep bool) (*Lab, error) {
 
 	var data map[string]map[string]*labAlias
@@ -283,6 +300,9 @@ func (c *Client) LabGetByTitle(ctx context.Context, title string, deep bool) (*L
 	return nil, ErrElementNotFound
 }
 
+// LabGet returns the lab identified by `id` (a UUIDv4). If `deep` is provided,
+// then the nodes, their interfaces and links are also fetched from the controller.
+// Also, with `deep`, the L3 IP address info is fetched for the given lab.
 func (c *Client) LabGet(ctx context.Context, id string, deep bool) (*Lab, error) {
 
 	if lab, ok := c.getCachedLab(id, deep); ok {
@@ -366,7 +386,7 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 				}
 			}
 		}
-		log.Printf("loops done")
+		log.Printf("l3info loop done")
 		return nil
 	})
 

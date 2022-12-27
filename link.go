@@ -26,17 +26,7 @@ const (
 // 	"state": "STARTED"
 // }
 
-// type linkAlias struct {
-// 	ID      string `json:"id"`
-// 	State   string `json:"state"`
-// 	Label   string `json:"label"`
-// 	PCAPkey string `json:"link_capture_key"`
-// 	SrcID   string `json:"interface_a"`
-// 	DstID   string `json:"interface_b"`
-// 	SrcNode string `json:"node_a"`
-// 	DstNode string `json:"node_b"`
-// }
-
+// Link defines the data structure for a CML link between nodes.
 type Link struct {
 	ID      string `json:"id"`
 	LabID   string `json:"lab_id"`
@@ -47,8 +37,8 @@ type Link struct {
 	DstID   string `json:"interface_b"`
 	SrcNode string `json:"node_a"`
 	DstNode string `json:"node_b"`
-	SrcSlot *int   `json:"slot_a"`
-	DstSlot *int   `json:"slot_b"`
+	SrcSlot int    `json:"slot_a"`
+	DstSlot int    `json:"slot_b"`
 
 	// not exported, needed for internal linking
 	ifaceA *Interface
@@ -91,6 +81,9 @@ func (c *Client) getLinksForLab(ctx context.Context, lab *Lab, linkIDlist IDlist
 	return nil
 }
 
+// LinkGet returns the link data for the given `labID` and `linkID`. If `deep` is
+// set to `true` then bot interface and node data for the given link are also
+// fetched from the controller.
 func (c *Client) LinkGet(ctx context.Context, labID, linkID string, deep bool) (*Link, error) {
 	api := fmt.Sprintf("labs/%s/links/%s", labID, linkID)
 	link := &Link{}
@@ -139,12 +132,22 @@ func (c *Client) LinkGet(ctx context.Context, labID, linkID string, deep bool) (
 
 		link.ifaceA = ifaceA
 		link.ifaceB = ifaceB
-		link.SrcSlot = &ifaceA.Slot
-		link.DstSlot = &ifaceB.Slot
+		link.SrcSlot = ifaceA.Slot
+		link.DstSlot = ifaceB.Slot
 	}
 	return link, err
 }
 
+// LinkCreate creates a link based on the the data passed in `link`. Required fields
+// are the `LabID` and either a pair of interfaces `SrcID` / `DstID` or a pair of
+// nodes `SrcNode` / `DstNode`. With nodes it's also possible to provide specific
+// slots in `SrcSlot` / `DstSlot` where the link should be created.
+// If one or both of the provided slots aren't available, then new interfaces will
+// be craeted. If interface creation fails or the provided Interface IDs can't be
+// found, the API returns an error, otherwise the returned Link variable has the
+// updated link data.
+// Node: -1 for a slot means: use next free slot. Specific slots run from 0 to the
+// maximum slot number -1 per the node definition of the node type.
 func (c *Client) LinkCreate(ctx context.Context, link *Link) (*Link, error) {
 	api := fmt.Sprintf("labs/%s/links", link.LabID)
 
@@ -179,12 +182,12 @@ func (c *Client) LinkCreate(ctx context.Context, link *Link) (*Link, error) {
 			return nil, err
 		}
 
-		matches := func(slot *int, iface *Interface) bool {
+		matches := func(slot int, iface *Interface) bool {
 			if !iface.IsPhysical() {
 				return false
 			}
-			if slot != nil {
-				if iface.Slot == *slot && !iface.IsConnected {
+			if slot >= 0 {
+				if iface.Slot == slot && !iface.IsConnected {
 					return true
 				}
 			} else {

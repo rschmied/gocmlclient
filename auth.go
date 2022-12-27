@@ -61,16 +61,25 @@ func (c *Client) authenticate(ctx context.Context, userpass userPass, depth int3
 	return nil
 }
 
+// SetToken sets a specific API token to be used. A token takes precedence over
+// a username/password. However, if the token expires, the username/password are
+// used to authorize the client again. An error is raised if no token and no
+// username/password are provided or if the token expires when no username/password
+// are set.
 func (c *Client) SetToken(token string) {
 	c.apiToken = token
 }
 
+// SetUsernamePassword sets the username and the password to be used with the
+// client for all authentications.
 func (c *Client) SetUsernamePassword(username, password string) {
 	c.userpass = userPass{
 		username, password,
 	}
 }
 
+// SetCACert sets a specific X.509 CA certificate to use with the client.
+// If no cert is set, the system trust anchors are used for cert verification.
 func (c *Client) SetCACert(cert []byte) error {
 	caCertPool := x509.NewCertPool()
 	ok := caCertPool.AppendCertsFromPEM(cert)
