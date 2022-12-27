@@ -22,20 +22,23 @@ import "context"
 
 type ImageDefinition struct {
 	ID            string `json:"id"`
+	SchemaVersion string `json:"schema_version"`
 	NodeDefID     string `json:"node_definition_id"`
 	Description   string `json:"description"`
 	Label         string `json:"label"`
-	DiskImage     string `json:"disk_image"`
+	DiskImage1    string `json:"disk_image"`
+	DiskImage2    string `json:"disk_image_2"`
+	DiskImage3    string `json:"disk_image_3"`
 	ReadOnly      bool   `json:"read_only"`
+	DiskSubfolder string `json:"disk_subfolder"`
 	RAM           *int   `json:"ram"`
 	CPUs          *int   `json:"cpus"`
 	CPUlimit      *int   `json:"cpu_limit"`
 	DataVolume    *int   `json:"data_volume"`
 	BootDiskSize  *int   `json:"boot_disk_size"`
-	DiskSubfolder string `json:"disk_subfolder"`
-	SchemaVersion string `json:"schema_version"`
 }
 
+// GetImageDefs returns a list of image definitions known to the controller.
 func (c *Client) GetImageDefs(ctx context.Context) ([]ImageDefinition, error) {
 	imgDef := []ImageDefinition{}
 	err := c.jsonGet(ctx, "image_definitions", &imgDef, 0)

@@ -23,6 +23,8 @@ type Client struct {
 	useCache         bool
 }
 
+// NewClient returns a new CML client instance. The host must be a valid URL
+// including scheme (https://).
 func NewClient(host string, insecure, useCache bool) *Client {
 	tr := http.DefaultTransport.(*http.Transport)
 	tr.TLSClientConfig = &tls.Config{

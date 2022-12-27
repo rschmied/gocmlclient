@@ -32,15 +32,15 @@ func TestClient_GetNodeDefs(t *testing.T) {
 			},
 			"device": {
 				"interfaces": {
-				"has_loopback_zero": false,
-				"default_count": 1,
-				"physical": [
-					"eth0",
-					"eth1",
-					"eth2",
-					"eth3"
-				],
-				"serial_ports": 1
+					"has_loopback_zero": false,
+					"default_count": 1,
+					"physical": [
+						"eth0",
+						"eth1",
+						"eth2",
+						"eth3"
+					],
+					"serial_ports": 1
 				}
 			},
 			"inherited": {
