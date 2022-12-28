@@ -93,7 +93,7 @@ type nodePatchPostAlias struct {
 	X               int      `json:"x"`
 	Y               int      `json:"y"`
 	NodeDefinition  string   `json:"node_definition,omitempty"`
-	ImageDefinition string   `json:"imagee_definition,omitempty"`
+	ImageDefinition string   `json:"image_definition,omitempty"`
 	Configuration   string   `json:"configuration,omitempty"`
 	CPUs            int      `json:"cpus,omitempty"`
 	CPUlimit        int      `json:"cpu_limit,omitempty"`

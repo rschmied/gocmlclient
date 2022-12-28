@@ -1,6 +1,9 @@
 package cmlclient
 
-import "context"
+import (
+	"context"
+	"sort"
+)
 
 // [
 //   {
@@ -45,5 +48,11 @@ func (c *Client) GetImageDefs(ctx context.Context) ([]ImageDefinition, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// sort the image list by their ID
+	sort.Slice(imgDef, func(i, j int) bool {
+		return imgDef[i].ID < imgDef[j].ID
+	})
+
 	return imgDef, nil
 }
