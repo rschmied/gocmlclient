@@ -51,7 +51,7 @@ func (c *Client) GetImageDefs(ctx context.Context) ([]ImageDefinition, error) {
 
 	// sort the image list by their ID
 	sort.Slice(imgDef, func(i, j int) bool {
-		return imgDef[i].ID < imgDef[j].ID
+		return imgDef[i].ID > imgDef[j].ID
 	})
 
 	return imgDef, nil

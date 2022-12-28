@@ -313,7 +313,8 @@ func TestClient_GetImageDefs(t *testing.T) {
 			mr.MockRespList{
 				mr.MockResp{
 					// need this to go through the sorting in the client
-					Data: []byte("[" + zimgdef + "," + aimgdef + "]"),
+					// (highest -> lowest, e.g. 3.15  before 3.14)
+					Data: []byte("[" + aimgdef + "," + zimgdef + "]"),
 				},
 			},
 			false,
@@ -342,7 +343,7 @@ func TestClient_GetImageDefs(t *testing.T) {
 			}
 			expected := []ImageDefinition{}
 			// this is properly sorted:
-			b := bytes.NewReader([]byte("[" + aimgdef + "," + zimgdef + "]"))
+			b := bytes.NewReader([]byte("[" + zimgdef + "," + aimgdef + "]"))
 			err = json.NewDecoder(b).Decode(&expected)
 			if err != nil {
 				t.Error("bad test data")
