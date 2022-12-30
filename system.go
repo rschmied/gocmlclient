@@ -20,7 +20,7 @@ type systemVersion struct {
 	Ready   bool   `json:"ready"`
 }
 
-const versionConstraint = ">=2.4.0,<2.6.0"
+const versionConstraint = ">=2.4.0,<3.0.0"
 
 func versionError(got string) error {
 	return fmt.Errorf("server not compatible, want %s, got %s", versionConstraint, got)

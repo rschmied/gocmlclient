@@ -2,6 +2,33 @@
 
 Lists the changes in the gocmlclient package.
 
+## Version 0.0.8 to 0.0.11
+
+- Added most of the doc string for exported functions.
+- reversed the sorting of images for the image definitions.
+- sort image definitions by their ID. Lists have the newest (highest version)
+  image as the first element.
+- updated dependencies.
+- have InterfaceCreate accept a slot value (not a pointer). A negative slot
+  indicates "don't specify a slot", this was previously indicated by nil.
+- added more values to the ImageDefinition and Nodedefinition structs.
+- added a link unit test.
+- more node attributes can be updated when a node is DEFINED_ON_CORE
+- NodeCreate removes a node now when the 2nd API call fails. The 2nd call is
+  needed to update certain attributes which are not accepted in the actual
+  create API (POST).
+- move the upper version for the version constraint from <2.6.0 to <3.0.0.
+- omit empty tags on update.
+
+## Version 0.0.5 to 0.0.7
+
+- refactored the code so that interfaces are read in one go ("data=true"). This
+  without this, only a list of interface IDs is returned by the API. With this,
+  the API returns a list of complete interface object.
+- Implement the same approach for nodes (0.0.6).
+- updated dependencies.
+- Due to the data=true option, restrict the code to only work with 2.4.0 and later.
+
 ## Version 0.0.4
 
 - added additional locking to prevent races

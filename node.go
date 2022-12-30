@@ -100,7 +100,7 @@ type nodePatchPostAlias struct {
 	RAM             int      `json:"ram,omitempty"`
 	DataVolume      int      `json:"data_volume,omitempty"`
 	BootDiskSize    int      `json:"boot_disk_size,omitempty"`
-	Tags            []string `json:"tags"`
+	Tags            []string `json:"tags,omitempty"`
 }
 
 func newNodeAlias(node *Node, update bool) nodePatchPostAlias {
@@ -111,19 +111,20 @@ func newNodeAlias(node *Node, update bool) nodePatchPostAlias {
 	npp.Y = node.Y
 	npp.Tags = node.Tags
 
-	if !update {
-		// these can be changed but only when the node VM doesn't exist
-		if node.State == NodeStateDefined {
-			npp.Configuration = node.Configuration
-			npp.CPUs = node.CPUs
-			npp.CPUlimit = node.CPUlimit
-			npp.RAM = node.RAM
-			npp.DataVolume = node.DataVolume
-			npp.BootDiskSize = node.BootDiskSize
-		}
-		// these can only be changed at create time (eg. POST)
-		npp.NodeDefinition = node.NodeDefinition
+	// these can be changed but only when the node VM doesn't exist
+	if node.State == NodeStateDefined {
+		npp.Configuration = node.Configuration
+		npp.CPUs = node.CPUs
+		npp.CPUlimit = node.CPUlimit
+		npp.RAM = node.RAM
+		npp.DataVolume = node.DataVolume
+		npp.BootDiskSize = node.BootDiskSize
 		npp.ImageDefinition = node.ImageDefinition
+	}
+
+	// node definition can only be changed at create time (eg. POST)
+	if !update {
+		npp.NodeDefinition = node.NodeDefinition
 	}
 
 	return npp
@@ -339,7 +340,7 @@ func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
 	}
 
 	// FIX: Since the create does not use all possible values, we need to follow
-	// up with a patch (this is an API bug, imo)
+	// up with a PATCH (this is an API bug, imo)
 	// ram, cpu, ...
 
 	// NodeDefinition can't be set even when the node is DEFINED_ON_CORE (since
@@ -357,6 +358,12 @@ func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
 	// FIX: inconsistency of patch API
 	err = c.jsonPatch(ctx, api, buf, nil, 0)
 	if err != nil {
+		// for consistency, remove the created node that can't be updated
+		// this assumes that the error was because of the provided data and
+		// not because of e.g. a conncectivity issue between the initial create
+		// and the attempted removal.
+		node.ID = newNode.ID
+		c.NodeDestroy(ctx, node)
 		return nil, err
 	}
 
@@ -379,6 +386,9 @@ func (c *Client) NodeGet(ctx context.Context, node *Node, nocache bool) (*Node, 
 	newNode := &Node{}
 	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
 	err := c.jsonGet(ctx, api, newNode, 0)
+	// SIMPLE-5052 -- results are different for simplified=true vs false
+	// for the inherited values. in the simplified case, all values are
+	// always null.
 	return c.cacheNode(newNode, err)
 }
 
