@@ -100,7 +100,7 @@ type nodePatchPostAlias struct {
 	RAM             int      `json:"ram,omitempty"`
 	DataVolume      int      `json:"data_volume,omitempty"`
 	BootDiskSize    int      `json:"boot_disk_size,omitempty"`
-	Tags            []string `json:"tags,omitempty"`
+	Tags            []string `json:"tags"`
 }
 
 func newNodeAlias(node *Node, update bool) nodePatchPostAlias {
@@ -110,6 +110,13 @@ func newNodeAlias(node *Node, update bool) nodePatchPostAlias {
 	npp.X = node.X
 	npp.Y = node.Y
 	npp.Tags = node.Tags
+
+	// node tags can't be null, either the tag has to be omitted or it has
+	// to be an empty list. but since we can't use "omitempty" we need to
+	// ensure it's an empty list if no tags are provided.
+	if node.Tags == nil {
+		npp.Tags = []string{}
+	}
 
 	// these can be changed but only when the node VM doesn't exist
 	if node.State == NodeStateDefined {

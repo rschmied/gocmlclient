@@ -80,6 +80,24 @@ func TestClient_NodeCreate(t *testing.T) {
 	}
 }
 
+func TestClient_NodeCreateFails(t *testing.T) {
+	tc := newAuthedTestAPIclient()
+
+	dataWithUser := mr.MockRespList{
+		// post returns a partial node object, need to update
+		mr.MockResp{Data: node1},
+		// patch / update fails -- illegal data
+		mr.MockResp{Data: []byte(`"node1"`), Code: 400},
+		// results in a delete of the object
+		mr.MockResp{Code: 204},
+	}
+	tc.mr.SetData(dataWithUser)
+
+	node := Node{LabID: "lab1", NodeDefinition: "server"}
+	_, err := tc.client.NodeCreate(tc.ctx, &node)
+	assert.NotEqual(t, err, nil)
+}
+
 func TestClient_NodeSetConfig(t *testing.T) {
 	tc := newAuthedTestAPIclient()
 

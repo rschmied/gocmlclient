@@ -2,6 +2,13 @@
 
 Lists the changes in the gocmlclient package.
 
+## Version 0.0.12
+
+- Realized that the empty tags removal from 0.0.11 caused a regression.
+  node tags are always returned/set even when there's no tags... in that
+  case, the empty list is returned or needs to be provided. See 0.0.3 comment.
+- Test coverage improvement
+
 ## Version 0.0.8 to 0.0.11
 
 - Added most of the doc string for exported functions.
