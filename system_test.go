@@ -9,7 +9,7 @@ import (
 
 func TestClient_VersionCheck(t *testing.T) {
 
-	c := NewClient("https://bla.bla", true, useCache)
+	c := New("https://bla.bla", true, useCache)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
 	c.state.set(stateAuthenticated)
@@ -25,7 +25,7 @@ func TestClient_VersionCheck(t *testing.T) {
 		{"perfect", `{"version": "2.4.0","ready": true}`, false},
 		{"actual", `{"version": "2.4.0+build.1","ready": true}`, false},
 		{"newer", `{"version": "2.4.1","ready": true}`, false},
-		{"devbuild", `{"version": "2.4.0.dev0","ready": true}`, false},
+		{"dev", `{"version": "2.5.0-dev0+build.3.2f7875762","ready": true}`, false},
 	}
 	for _, tt := range tests {
 		mrClient.SetData(mr.MockRespList{{Data: []byte(tt.wantJSON)}})
@@ -42,7 +42,7 @@ func TestClient_VersionCheck(t *testing.T) {
 
 func TestClient_NotReady(t *testing.T) {
 
-	c := NewClient("https://bla.bla", true, useCache)
+	c := New("https://bla.bla", true, useCache)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
 	c.state.set(stateAuthenticated)
@@ -58,5 +58,27 @@ func TestClient_NotReady(t *testing.T) {
 
 	if !mrClient.Empty() {
 		t.Error("not all data in mock client consumed")
+	}
+}
+
+func TestClient_Version(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		want    string
+	}{
+
+		{"empty", "", ""},
+		{"some", "some", "some"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				version: tt.version,
+			}
+			if got := c.Version(); got != tt.want {
+				t.Errorf("Client.Version() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

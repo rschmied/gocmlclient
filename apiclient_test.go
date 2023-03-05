@@ -17,7 +17,7 @@ type testClient struct {
 }
 
 func newTestAPIclient() testClient {
-	c := NewClient("https://controller", true, useCache)
+	c := New("https://controller", true, useCache)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
 	c.SetUsernamePassword("user", "pass")
@@ -31,7 +31,7 @@ func newAuthedTestAPIclient() testClient {
 }
 
 func TestClient_methoderror(t *testing.T) {
-	c := NewClient("", true, useCache)
+	c := New("", true, useCache)
 	err := c.jsonReq(context.Background(), "ü", "###", nil, nil, 0)
 	assert.Error(t, err)
 }

@@ -34,23 +34,23 @@ func main() {
 		return
 	}
 	ctx := context.Background()
-	client := cmlclient.NewClient(host, false, false)
+	client := cmlclient.New(host, false, false)
 	if token_found {
 		client.SetToken(token)
 	} else {
 		client.SetUsernamePassword(username, password)
 	}
 
-	cert, err := os.ReadFile("ca.pem")
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	err = client.SetCACert(cert)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	// cert, err := os.ReadFile("ca.pem")
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return
+	// }
+	// err = client.SetCACert(cert)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return
+	// }
 
 	// topo, err := os.ReadFile("topology.yaml")
 	// if err != nil {

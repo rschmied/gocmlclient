@@ -21,11 +21,12 @@ type Client struct {
 	mu               sync.RWMutex
 	labCache         map[string]*Lab
 	useCache         bool
+	version          string
 }
 
-// NewClient returns a new CML client instance. The host must be a valid URL
-// including scheme (https://).
-func NewClient(host string, insecure, useCache bool) *Client {
+// New returns a new CML client instance. The host must be a valid URL including
+// scheme (https://).
+func New(host string, insecure, useCache bool) *Client {
 	tr := http.DefaultTransport.(*http.Transport)
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: insecure,
@@ -34,6 +35,7 @@ func NewClient(host string, insecure, useCache bool) *Client {
 	return &Client{
 		host:     host,
 		apiToken: "",
+		version:  "",
 		userpass: userPass{},
 		httpClient: &http.Client{
 			Timeout:   15 * time.Second,

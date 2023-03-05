@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 )
 
+// the 2.4.0.dev is likely wrong, should be -dev (dash, not dot):
 // {
 // 	"version": "2.4.0.dev0+build.f904bdf8",
 // 	"ready": true
 // }
+// 2.5.0-dev0+build.3.2f7875762
 
 type systemVersion struct {
 	Version string `json:"version"`
@@ -42,13 +43,13 @@ func (c *Client) versionCheck(ctx context.Context, depth int32) error {
 		panic("unparsable semver version constant")
 	}
 
-	re := regexp.MustCompile(`^(\d\.\d\.\d)(\+build.*|\.dev.*)?$`)
+	re := regexp.MustCompile(`^(\d\.\d\.\d)((-dev0)?\+build.*)?$`)
 	m := re.FindStringSubmatch(sv.Version)
 	if m == nil {
 		return versionError(sv.Version)
 	}
 	log.Printf("controller version: %s", sv.Version)
-	if len(m[2]) > 0 && strings.Contains(m[2], "dev") {
+	if len(m[3]) > 0 {
 		log.Printf("Warning, this is a DEV version %s", sv.Version)
 	}
 	stem := m[1]
@@ -56,10 +57,16 @@ func (c *Client) versionCheck(ctx context.Context, depth int32) error {
 	if err != nil {
 		return err
 	}
-	// Check if the version meets the constraints. The a variable will be true.
+	// Check if the version meets the constraints
 	ok := constraint.Check(v)
 	if !ok {
 		return versionError(sv.Version)
 	}
+	c.version = sv.Version
 	return nil
+}
+
+// version returns the CML controller version
+func (c *Client) Version() string {
+	return c.version
 }

@@ -396,6 +396,8 @@ func (c *Client) NodeGet(ctx context.Context, node *Node, nocache bool) (*Node, 
 	// SIMPLE-5052 -- results are different for simplified=true vs false
 	// for the inherited values. in the simplified case, all values are
 	// always null.
+	// There's yet another modified "operational" which also influences
+	// the returned values
 	return c.cacheNode(newNode, err)
 }
 
