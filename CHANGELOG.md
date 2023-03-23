@@ -2,6 +2,15 @@
 
 Lists the changes in the gocmlclient package.
 
+## Version 0.0.15
+
+- made node configuration a pointer to differentiate between
+  "no configuration" (null), "empty configuration" and "specific
+  configuration". With a null configuration, the default configuration
+  from the node definition will be inserted if there is one
+- added Version var/func, moved NewClient() to New()
+- bump go to 1.19 and vendor deps
+
 ## Version 0.0.12
 
 - Realized that the empty tags removal from 0.0.11 caused a regression.

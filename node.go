@@ -71,7 +71,7 @@ type Node struct {
 	Y               int            `json:"y"`
 	NodeDefinition  string         `json:"node_definition"`
 	ImageDefinition string         `json:"image_definition"`
-	Configuration   string         `json:"configuration"`
+	Configuration   *string        `json:"configuration"`
 	CPUs            int            `json:"cpus"`
 	CPUlimit        int            `json:"cpu_limit"`
 	RAM             int            `json:"ram"`
@@ -94,7 +94,7 @@ type nodePatchPostAlias struct {
 	Y               int      `json:"y"`
 	NodeDefinition  string   `json:"node_definition,omitempty"`
 	ImageDefinition string   `json:"image_definition,omitempty"`
-	Configuration   string   `json:"configuration,omitempty"`
+	Configuration   *string  `json:"configuration,omitempty"`
 	CPUs            int      `json:"cpus,omitempty"`
 	CPUlimit        int      `json:"cpu_limit,omitempty"`
 	RAM             int      `json:"ram,omitempty"`
