@@ -111,7 +111,7 @@ func TestClient_GetNodeDefs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tc.mr.SetData(tt.data)
-			got, err := tc.client.GetNodeDefs(tc.ctx)
+			got, err := tc.client.NodeDefinitions(tc.ctx)
 			if err != nil {
 				if !tt.wantErr {
 					t.Error("unexpected error!")

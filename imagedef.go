@@ -41,8 +41,8 @@ type ImageDefinition struct {
 	BootDiskSize  *int   `json:"boot_disk_size"`
 }
 
-// GetImageDefs returns a list of image definitions known to the controller.
-func (c *Client) GetImageDefs(ctx context.Context) ([]ImageDefinition, error) {
+// ImageDefinitions returns a list of image definitions known to the controller.
+func (c *Client) ImageDefinitions(ctx context.Context) ([]ImageDefinition, error) {
 	imgDef := []ImageDefinition{}
 	err := c.jsonGet(ctx, "image_definitions", &imgDef, 0)
 	if err != nil {

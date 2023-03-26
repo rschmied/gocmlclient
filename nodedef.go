@@ -49,10 +49,11 @@ func (nd NodeDefinition) serialPorts() int {
 	return nd.Device.Interfaces.SerialPorts
 }
 
-// GetNodeDefs returns the list of node definitions available on the CML controller.
-// The key of the map is the definition type name (e.g. "alpine" or "ios").
-// The node def data structure is incomplete, only essential fields are populated.
-func (c *Client) GetNodeDefs(ctx context.Context) (NodeDefinitionMap, error) {
+// NodeDefinitions returns the list of node definitions available on the CML
+// controller. The key of the map is the definition type name (e.g. "alpine" or
+// "ios"). The node def data structure is incomplete, only essential fields are
+// populated.
+func (c *Client) NodeDefinitions(ctx context.Context) (NodeDefinitionMap, error) {
 	nd := []NodeDefinition{}
 	err := c.jsonGet(ctx, "simplified_node_definitions", &nd, 0)
 	if err != nil {

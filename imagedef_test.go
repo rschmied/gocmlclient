@@ -334,7 +334,7 @@ func TestClient_GetImageDefs(t *testing.T) {
 	for _, tt := range tests {
 		tc.mr.SetData(tt.responses)
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tc.client.GetImageDefs(tc.ctx)
+			got, err := tc.client.ImageDefinitions(tc.ctx)
 			if err != nil {
 				if !tt.wantErr {
 					t.Errorf("Client.GetImageDefs() error = %v, wantErr %v", err, tt.wantErr)

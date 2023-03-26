@@ -26,6 +26,7 @@ func TestClient_VersionCheck(t *testing.T) {
 		{"actual", `{"version": "2.4.0+build.1","ready": true}`, false},
 		{"newer", `{"version": "2.4.1","ready": true}`, false},
 		{"dev", `{"version": "2.5.0-dev0+build.3.2f7875762","ready": true}`, false},
+		{"v2.5.0", `{"version": "2.5.0+build.5","ready": true}`, false},
 	}
 	for _, tt := range tests {
 		mrClient.SetData(mr.MockRespList{{Data: []byte(tt.wantJSON)}})
@@ -46,14 +47,12 @@ func TestClient_NotReady(t *testing.T) {
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
 	c.state.set(stateAuthenticated)
-	// c.versionChecked = false
-	// c.authChecked = true
 
 	mrClient.SetData(mr.MockRespList{
-		{Data: []byte(`{"version": "2.4.0.dev0","false": true}`)},
+		{Data: []byte(`{"version": "2.5.0","ready": false}`)},
 	})
 
-	err := c.versionCheck(ctx, 0)
+	err := c.Ready(ctx)
 	assert.Error(t, err)
 
 	if !mrClient.Empty() {

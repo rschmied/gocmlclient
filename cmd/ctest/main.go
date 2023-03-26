@@ -18,12 +18,12 @@ func main() {
 		log.Println("CML_HOST env var not found!")
 		return
 	}
-	labID, found := os.LookupEnv("CML_LABID")
-	if !found {
-		log.Println("CML_LABID env var not found!")
-		return
-	}
-	_ = labID
+	// labID, found := os.LookupEnv("CML_LABID")
+	// if !found {
+	// 	log.Println("CML_LABID env var not found!")
+	// 	return
+	// }
+	// _ = labID
 
 	// auth related
 	username, user_found := os.LookupEnv("CML_USERNAME")
@@ -35,6 +35,9 @@ func main() {
 	}
 	ctx := context.Background()
 	client := cmlclient.New(host, false, false)
+	if err := client.Ready(ctx); err != nil {
+		log.Fatal(err)
+	}
 	if token_found {
 		client.SetToken(token)
 	} else {
@@ -59,11 +62,11 @@ func main() {
 	// }
 	// l, err := client.ImportLab(ctx, string(topo))
 
-	l, err := client.LabGet(ctx, labID, false)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	// l, err := client.LabGet(ctx, labID, false)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return
+	// }
 
 	// nd, err := client.GetNodeDefs(ctx)
 	// if err != nil {
@@ -82,7 +85,13 @@ func main() {
 	// 	return
 	// }
 
-	je, err := json.Marshal(l)
+	result, err := client.UserGroups(ctx, "cc42bd56-1dc6-445c-b7e7-569b0a8b0c94")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	je, err := json.Marshal(result)
 	if err != nil {
 		log.Println(err)
 	}

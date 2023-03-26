@@ -24,7 +24,10 @@ type systemVersion struct {
 const versionConstraint = ">=2.4.0,<3.0.0"
 
 func versionError(got string) error {
-	return fmt.Errorf("server not compatible, want %s, got %s", versionConstraint, got)
+	return fmt.Errorf(
+		"server not compatible, want %s, got %s (%w)",
+		versionConstraint, got, ErrSystemNotReady,
+	)
 }
 
 func (c *Client) versionCheck(ctx context.Context, depth int32) error {
@@ -66,7 +69,14 @@ func (c *Client) versionCheck(ctx context.Context, depth int32) error {
 	return nil
 }
 
-// version returns the CML controller version
+// Version returns the CML controller version
 func (c *Client) Version() string {
 	return c.version
+}
+
+// Ready returns nil if the system is compatible and ready
+func (c *Client) Ready(ctx context.Context) error {
+	// we can safely assume depth 0 as the API endpoint does not
+	// require authentication
+	return c.versionCheck(ctx, 0)
 }

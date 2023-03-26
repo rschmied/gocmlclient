@@ -12,19 +12,21 @@ import (
 )
 
 // {
-// 	"id": "90f84e38-a71c-4d57-8d90-00fa8a197385",
-// 	"state": "DEFINED_ON_CORE",
-// 	"created": "2021-02-28T07:33:47+00:00",
-// 	"modified": "2021-02-28T07:33:47+00:00",
-// 	"lab_title": "Lab at Mon 17:27 PM",
-// 	"owner": "90f84e38-a71c-4d57-8d90-00fa8a197385",
-// 	"lab_description": "string",
-// 	"node_count": 0,
-// 	"link_count": 0,
-// 	"lab_notes": "string",
+// 	"state": "STOPPED",
+// 	"created": "2023-02-08T10:02:43+00:00",
+// 	"modified": "2023-02-08T11:59:45+00:00",
+// 	"lab_title": "sample",
+// 	"lab_description": "",
+// 	"lab_notes": "",
+// 	"owner": "00000000-0000-4000-a000-000000000000",
+// 	"owner_username": "admin",
+// 	"node_count": 5,
+// 	"link_count": 4,
+// 	"id": "a7d20917-5e57-407f-80ea-63596c53f198",
 // 	"groups": [
 // 	  {
-// 		"id": "90f84e38-a71c-4d57-8d90-00fa8a197385",
+// 		"id": "bc9b796e-48bc-4369-b131-231dfa057d41",
+// 		"name": "students",
 // 		"permission": "read_only"
 // 	  }
 // 	]
@@ -37,12 +39,18 @@ const (
 	LabStateBooted  = "BOOTED"
 )
 
+type LabGroup struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Permission string `json:"permission"`
+}
+
 type IDlist []string
 type NodeMap map[string]*Node
 type InterfaceList []*Interface
 type nodeList []*Node
 type linkList []*Link
-type groupList []*Group
+type labGroupList []*LabGroup
 
 type labAlias struct {
 	Lab
@@ -56,19 +64,19 @@ type labPatchPostAlias struct {
 }
 
 type Lab struct {
-	ID          string    `json:"id"`
-	State       string    `json:"state"`
-	Created     string    `json:"created"`
-	Modified    string    `json:"modified"`
-	Title       string    `json:"lab_title"`
-	Description string    `json:"lab_description"`
-	Notes       string    `json:"lab_notes"`
-	Owner       *User     `json:"owner"`
-	NodeCount   int       `json:"node_count"`
-	LinkCount   int       `json:"link_count"`
-	Nodes       NodeMap   `json:"nodes"`
-	Links       linkList  `json:"links"`
-	Groups      groupList `json:"groups"`
+	ID          string       `json:"id"`
+	State       string       `json:"state"`
+	Created     string       `json:"created"`
+	Modified    string       `json:"modified"`
+	Title       string       `json:"lab_title"`
+	Description string       `json:"lab_description"`
+	Notes       string       `json:"lab_notes"`
+	Owner       *User        `json:"owner"`
+	NodeCount   int          `json:"node_count"`
+	LinkCount   int          `json:"link_count"`
+	Nodes       NodeMap      `json:"nodes"`
+	Links       linkList     `json:"links"`
+	Groups      labGroupList `json:"groups"`
 
 	// private
 	// filled bool
@@ -107,7 +115,7 @@ func (l *Lab) Booted() bool {
 	return true
 }
 
-// NodeByLabel returns the node of a lab identified by its `label`` or an
+// NodeByLabel returns the node of a lab identified by its `label“ or an
 // error if not found.
 func (l *Lab) NodeByLabel(ctx context.Context, label string) (*Node, error) {
 	for _, node := range l.Nodes {
@@ -328,7 +336,7 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 
 	g.Go(func() error {
 		defer log.Printf("user done")
-		la.Owner, err = c.getUser(ctx, la.OwnerID)
+		la.Owner, err = c.UserGet(ctx, la.OwnerID)
 		if err != nil {
 			return err
 		}
