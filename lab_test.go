@@ -599,6 +599,22 @@ func TestClient_LabCreate(t *testing.T) {
 				"groups": []
 			}`),
 		},
+		mr.MockResp{
+			Data: []byte(`{
+				"state": "DEFINED_ON_CORE",
+				"created": "2022-10-14T10:05:07+00:00",
+				"modified": "2022-10-14T10:05:07+00:00",
+				"lab_title": "Lab at Mon 17:27 PM",
+				"lab_description": "string",
+				"lab_notes": "string",
+				"owner": "00000000-0000-4000-a000-000000000000",
+				"owner_username": "admin",
+				"node_count": 0,
+				"link_count": 0,
+				"id": "375b41ae-dd90-41a2-858d-98948abbbd38",
+				"groups": []
+			}`),
+		},
 	}
 
 	tests := []struct {

@@ -257,9 +257,8 @@ func TestClient_UserCreate(t *testing.T) {
 		{
 			"good",
 			mr.MockRespList{
-				mr.MockResp{
-					Data: []byte(user1),
-				},
+				mr.MockResp{Data: []byte(user1)},
+				mr.MockResp{Data: []byte(user1)},
 			},
 			false,
 		},
@@ -313,6 +312,9 @@ func TestClient_UserUpdate(t *testing.T) {
 		{
 			"good",
 			mr.MockRespList{
+				mr.MockResp{
+					Data: []byte(user1),
+				},
 				mr.MockResp{
 					Data: []byte(user1),
 				},
@@ -372,7 +374,7 @@ func TestClient_UserGroups(t *testing.T) {
 			mr.MockRespList{
 				mr.MockResp{
 					Data: []byte(`[
-						"85401911-851f-4e6a-b5c3-4aa1d91fa21d",					
+						"85401911-851f-4e6a-b5c3-4aa1d91fa21d",
 						"90f84e38-a71c-4d57-8d90-00fa8a197385"
 					]`),
 				},
@@ -424,9 +426,4 @@ func TestClient_UserGroups(t *testing.T) {
 			t.Error("not all data in mock client consumed")
 		}
 	}
-
-	// "id": "85401911-851f-4e6a-b5c3-4aa1d91fa21d",
-	// "id": "90f84e38-a71c-4d57-8d90-00fa8a197385",
-
-	// "id": "cc42bd56-1dc6-445c-b7e7-569b0a8b0c94",
 }

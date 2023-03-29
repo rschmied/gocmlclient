@@ -2,6 +2,14 @@
 
 Lists the changes in the gocmlclient package.
 
+## Version 0.0.16
+
+- added new API endpoints for groups and users
+- tried to apply some consistency to func names
+- add 201 return code to the list of "OK" codes
+- allow to set "groups" when creating/updating a lab
+- updated dependencies
+
 ## Version 0.0.15
 
 - made node configuration a pointer to differentiate between

@@ -28,22 +28,53 @@ import (
 // }
 
 type User struct {
-	ID           string   `json:"id"`
-	Created      string   `json:"created"`
-	Modified     string   `json:"modified"`
+	ID           string   `json:"id,omitempty"`
+	Created      string   `json:"created,omitempty"`
+	Modified     string   `json:"modified,omitempty"`
 	Username     string   `json:"username"`
+	Password     string   `json:"password"`
 	Fullname     string   `json:"fullname"`
 	Email        string   `json:"email"`
-	Description  string   `json:"lab_description"`
+	Description  string   `json:"description"`
 	IsAdmin      bool     `json:"admin"`
-	DirectoryDN  string   `json:"directory_dn"`
-	Groups       []string `json:"groups"`
-	Labs         []string `json:"labs"`
-	OptIn        bool     `json:"opt_in"`        // with 2.5.0
-	ResourcePool *string  `json:"resource_pool"` // with 2.5.0
+	DirectoryDN  string   `json:"directory_dn,omitempty"`
+	Groups       []string `json:"groups,omitempty"`
+	Labs         []string `json:"labs,omitempty"`
+	OptIn        bool     `json:"opt_in"`                  // with 2.5.0
+	ResourcePool *string  `json:"resource_pool,omitempty"` // with 2.5.0
 }
 
 type UserList []*User
+
+type userPatchPostAlias struct {
+	Username     string   `json:"username"`
+	Password     string   `json:"password,omitempty"`
+	Fullname     string   `json:"fullname"`
+	Email        string   `json:"email"`
+	Description  string   `json:"description"`
+	IsAdmin      bool     `json:"admin"`
+	Groups       []string `json:"groups"`
+	Labs         []string `json:"labs,omitempty"`          // can't be set
+	OptIn        bool     `json:"opt_in"`                  // with 2.5.0
+	ResourcePool *string  `json:"resource_pool,omitempty"` // with 2.5.0
+}
+
+func newUserAlias(user *User) userPatchPostAlias {
+	upp := userPatchPostAlias{}
+
+	upp.Username = user.Username
+	upp.Password = user.Password
+	upp.Fullname = user.Fullname
+	upp.Email = user.Email
+	upp.Description = user.Description
+	upp.IsAdmin = user.IsAdmin
+	upp.OptIn = user.OptIn
+	upp.Groups = user.Groups
+	upp.Labs = user.Labs
+	upp.ResourcePool = user.ResourcePool
+
+	return upp
+}
 
 // UserGet returns the user with the given `id`.
 func (c *Client) UserGet(ctx context.Context, id string) (*User, error) {
@@ -99,13 +130,14 @@ func (c *Client) UserCreate(ctx context.Context, user *User) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &result, err
+	return c.UserGet(ctx, result.ID)
 }
 
 // UserUpdate updates the given user which must exist.
 func (c *Client) UserUpdate(ctx context.Context, user *User) (*User, error) {
+	patchAlias := newUserAlias(user)
 	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(user)
+	err := json.NewEncoder(buf).Encode(patchAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +146,7 @@ func (c *Client) UserUpdate(ctx context.Context, user *User) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &result, err
+	return c.UserGet(ctx, result.ID)
 }
 
 // UserGroups retrieves the list of all groups the user belongs to.
@@ -136,6 +168,7 @@ func (c *Client) UserGroups(ctx context.Context, id string) (GroupList, error) {
 	}
 
 	// sort the user list by their ID
+	// (groups are a set so sorting is only done for test stability)
 	sort.Slice(groups, func(i, j int) bool {
 		return groups[i].ID > groups[j].ID
 	})

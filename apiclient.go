@@ -99,7 +99,7 @@ retry:
 		c.state.set(stateAuthenticated)
 		goto retry
 	}
-	if res.StatusCode == http.StatusOK || res.StatusCode == http.StatusNoContent {
+	if res.StatusCode == http.StatusOK || res.StatusCode == http.StatusNoContent || res.StatusCode == http.StatusCreated {
 		return body, err
 	} else {
 		return nil, fmt.Errorf("status: %d, %s", res.StatusCode, body)

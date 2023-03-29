@@ -28,15 +28,16 @@ import (
 //   }
 // ]
 
+type GroupLab struct {
+	ID         string `json:"id"`
+	Permission string `json:"permission"`
+}
 type Group struct {
-	ID          string   `json:"id"`
-	Description string   `json:"description"`
-	Members     []string `json:"members"`
-	Name        string   `json:"name"`
-	Labs        []struct {
-		ID         string `json:"id"`
-		Permission string `json:"permission"`
-	}
+	ID          string     `json:"id,omitempty"`
+	Description string     `json:"description"`
+	Members     []string   `json:"members"`
+	Name        string     `json:"name"`
+	Labs        []GroupLab `json:"labs"`
 }
 
 type GroupList []*Group
@@ -98,13 +99,15 @@ func (c *Client) GroupCreate(ctx context.Context, group *Group) (*Group, error) 
 
 // GroupUpdate updates the given group which must exist.
 func (c *Client) GroupUpdate(ctx context.Context, group *Group) (*Group, error) {
+	groupID := group.ID
+	group.ID = ""
 	buf := &bytes.Buffer{}
 	err := json.NewEncoder(buf).Encode(group)
 	if err != nil {
 		return nil, err
 	}
 	result := Group{}
-	err = c.jsonPatch(ctx, fmt.Sprintf("groups/%s", group.ID), buf, &result, 0)
+	err = c.jsonPatch(ctx, fmt.Sprintf("groups/%s", groupID), buf, &result, 0)
 	if err != nil {
 		return nil, err
 	}

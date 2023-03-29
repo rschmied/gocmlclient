@@ -41,7 +41,7 @@ const (
 
 type LabGroup struct {
 	ID         string `json:"id"`
-	Name       string `json:"name"`
+	Name       string `json:"name,omitempty"`
 	Permission string `json:"permission"`
 }
 
@@ -50,7 +50,7 @@ type NodeMap map[string]*Node
 type InterfaceList []*Interface
 type nodeList []*Node
 type linkList []*Link
-type labGroupList []*LabGroup
+type LabGroupList []*LabGroup
 
 type labAlias struct {
 	Lab
@@ -58,9 +58,10 @@ type labAlias struct {
 }
 
 type labPatchPostAlias struct {
-	Title       string `json:"title,omitempty"`
-	Description string `json:"description,omitempty"`
-	Notes       string `json:"notes,omitempty"`
+	Title       string       `json:"title,omitempty"`
+	Description string       `json:"description,omitempty"`
+	Notes       string       `json:"notes,omitempty"`
+	Groups      LabGroupList `json:"groups,omitempty"`
 }
 
 type Lab struct {
@@ -76,7 +77,7 @@ type Lab struct {
 	LinkCount   int          `json:"link_count"`
 	Nodes       NodeMap      `json:"nodes"`
 	Links       linkList     `json:"links"`
-	Groups      labGroupList `json:"groups"`
+	Groups      LabGroupList `json:"groups"`
 
 	// private
 	// filled bool
@@ -190,6 +191,7 @@ func (c *Client) LabCreate(ctx context.Context, lab Lab) (*Lab, error) {
 		Title:       lab.Title,
 		Description: lab.Description,
 		Notes:       lab.Notes,
+		// Groups:      lab.Groups, // can't set at create
 	}
 
 	buf := &bytes.Buffer{}
@@ -204,9 +206,8 @@ func (c *Client) LabCreate(ctx context.Context, lab Lab) (*Lab, error) {
 		return nil, err
 	}
 
-	la.Owner = &User{ID: la.OwnerID}
-	la.Nodes = make(NodeMap)
-	return c.cacheLab(&la.Lab, nil)
+	lab.ID = la.ID
+	return c.LabUpdate(ctx, lab)
 }
 
 // LabUpdate updates specific fields of a lab (title, description and notes).
@@ -217,6 +218,7 @@ func (c *Client) LabUpdate(ctx context.Context, lab Lab) (*Lab, error) {
 		Title:       lab.Title,
 		Description: lab.Description,
 		Notes:       lab.Notes,
+		Groups:      lab.Groups,
 	}
 
 	buf := &bytes.Buffer{}
@@ -233,6 +235,7 @@ func (c *Client) LabUpdate(ctx context.Context, lab Lab) (*Lab, error) {
 	}
 
 	la.Owner = &User{ID: la.OwnerID}
+	la.Nodes = make(NodeMap)
 	return c.cacheLab(&la.Lab, nil)
 }
 

@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.0
-	github.com/rschmied/mockresponder v1.0.3
+	github.com/rschmied/mockresponder v1.0.4
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/sync v0.1.0
 )
