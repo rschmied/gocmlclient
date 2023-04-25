@@ -8,7 +8,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"sync/atomic"
+	"syscall"
 )
 
 const (
@@ -39,6 +41,10 @@ func (c *Client) apiRequest(ctx context.Context, method string, path string, dat
 		setTokenHeader(req, c.apiToken)
 	}
 	req.Header.Set("Accept", contentType)
+	req.Header.Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	req.Header.Set("Pragma", "no-cache")
+	req.Header.Set("Expires", "0")
+	req.Header.Set("Conenction", "close")
 	if data != nil {
 		req.Header.Set("Content-Type", contentType)
 	}
@@ -71,6 +77,9 @@ retry:
 	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
+		if errors.Is(err, syscall.ECONNREFUSED) {
+			return nil, ErrSystemNotReady
+		}
 		return nil, err
 	}
 	defer res.Body.Close()
@@ -99,11 +108,20 @@ retry:
 		c.state.set(stateAuthenticated)
 		goto retry
 	}
-	if res.StatusCode == http.StatusOK || res.StatusCode == http.StatusNoContent || res.StatusCode == http.StatusCreated {
+	switch res.StatusCode {
+	case http.StatusOK:
+		fallthrough
+	case http.StatusNoContent:
+		fallthrough
+	case http.StatusCreated:
 		return body, err
-	} else {
-		return nil, fmt.Errorf("status: %d, %s", res.StatusCode, body)
+	case http.StatusBadGateway:
+		return nil, ErrSystemNotReady
 	}
+	return nil, fmt.Errorf(
+		"status: %d, %s",
+		res.StatusCode, strings.TrimSpace(string(body)),
+	)
 }
 
 /* technically, only jsonGet and jsonPost need the depth as they are the only

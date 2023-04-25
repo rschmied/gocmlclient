@@ -2,6 +2,14 @@
 
 Lists the changes in the gocmlclient package.
 
+## Version 0.0.17
+
+- added cache control headers to requests
+- return ErrSystemNotReady for Connection refused and 502, also always
+  reset the client's compatibility error property when versionCheck is called
+  so that it always queries the backend.
+- bumped semver to 3.2.1
+
 ## Version 0.0.16
 
 - added new API endpoints for groups and users

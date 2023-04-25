@@ -147,7 +147,7 @@ func TestClient_token_auth(t *testing.T) {
 			t.Error("not all data in mock client consumed")
 		}
 		if tt.wantErr {
-			assert.EqualError(t, err, tt.errstr)
+			assert.ErrorContains(t, err, tt.errstr)
 		}
 	}
 }
