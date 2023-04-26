@@ -2,6 +2,17 @@
 
 Lists the changes in the gocmlclient package.
 
+## Version 0.0.19
+
+fix a stupid regression
+
+## Version 0.0.18
+
+fix header and connection error
+
+- remove the connection close header (was having a typo anyway)
+- also respond with ErrSystemNotReady with "no route to host" error
+
 ## Version 0.0.17
 
 - added cache control headers to requests
