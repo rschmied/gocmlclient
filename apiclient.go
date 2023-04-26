@@ -44,7 +44,7 @@ func (c *Client) apiRequest(ctx context.Context, method string, path string, dat
 	req.Header.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	req.Header.Set("Pragma", "no-cache")
 	req.Header.Set("Expires", "0")
-	req.Header.Set("Conenction", "close")
+	// req.Header.Set("Connection", "close")
 	if data != nil {
 		req.Header.Set("Content-Type", contentType)
 	}
@@ -80,7 +80,9 @@ retry:
 		if errors.Is(err, syscall.ECONNREFUSED) {
 			return nil, ErrSystemNotReady
 		}
-		return nil, err
+		if errors.Is(err, syscall.EHOSTUNREACH) {
+			return nil, ErrSystemNotReady
+		}
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
