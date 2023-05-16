@@ -83,7 +83,10 @@ retry:
 		if errors.Is(err, syscall.EHOSTUNREACH) {
 			return nil, ErrSystemNotReady
 		}
-                return nil, err
+		if errors.Is(err, syscall.ENETUNREACH) {
+			return nil, ErrSystemNotReady
+		}
+		return nil, err
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)

@@ -31,6 +31,7 @@ func New(host string, insecure, useCache bool) *Client {
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: insecure,
 	}
+	tr.Proxy = http.ProxyFromEnvironment
 
 	return &Client{
 		host:     host,
