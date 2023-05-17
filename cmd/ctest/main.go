@@ -2,8 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
+	"errors"
 	"log"
 	"os"
 
@@ -34,10 +33,10 @@ func main() {
 		return
 	}
 	ctx := context.Background()
-	client := cmlclient.New(host, false, false)
-	if err := client.Ready(ctx); err != nil {
-		log.Fatal(err)
-	}
+	client := cmlclient.New(host, true, false)
+	// if err := client.Ready(ctx); err != nil {
+	// 	log.Fatal(err)
+	// }
 	if token_found {
 		client.SetToken(token)
 	} else {
@@ -85,15 +84,19 @@ func main() {
 	// 	return
 	// }
 
-	result, err := client.UserGroups(ctx, "cc42bd56-1dc6-445c-b7e7-569b0a8b0c94")
-	if err != nil {
+	// result, err := client.UserGroups(ctx, "cc42bd56-1dc6-445c-b7e7-569b0a8b0c94")
+	err := client.Ready(ctx)
+	if errors.Is(err, cmlclient.ErrSystemNotReady) {
+		log.Println("it is not ready")
+	}
+	if err != nil && !errors.Is(err, cmlclient.ErrSystemNotReady) {
 		log.Println(err)
 		return
 	}
 
-	je, err := json.Marshal(result)
-	if err != nil {
-		log.Println(err)
-	}
-	fmt.Println(string(je))
+	// je, err := json.Marshal(result)
+	// if err != nil {
+	// 	log.Println(err)
+	// }
+	// fmt.Println(string(je))
 }

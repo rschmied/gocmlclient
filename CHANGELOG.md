@@ -2,6 +2,11 @@
 
 Lists the changes in the gocmlclient package.
 
+## Version 0.0.20 and 0.0.21
+
+- added more cases where an error results in ErrSystemNotReady
+- use http.ProxyFromEnvironment for API requests
+
 ## Version 0.0.19
 
 fix a stupid regression

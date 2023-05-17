@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -77,6 +78,11 @@ retry:
 	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
+		if urlError, ok := (err).(*url.Error); ok {
+			if urlError.Timeout() {
+				return nil, ErrSystemNotReady
+			}
+		}
 		if errors.Is(err, syscall.ECONNREFUSED) {
 			return nil, ErrSystemNotReady
 		}
@@ -122,6 +128,10 @@ retry:
 	case http.StatusCreated:
 		return body, err
 	case http.StatusBadGateway:
+		fallthrough
+	case http.StatusServiceUnavailable:
+		fallthrough
+	case http.StatusGatewayTimeout:
 		return nil, ErrSystemNotReady
 	}
 	return nil, fmt.Errorf(
