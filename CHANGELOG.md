@@ -2,6 +2,12 @@
 
 Lists the changes in the gocmlclient package.
 
+## Version 0.0.22
+
+- added HideLinks node property
+- added another HTTP request error condition
+- ran gofumpt over the code base
+
 ## Version 0.0.20 and 0.0.21
 
 - added more cases where an error results in ErrSystemNotReady

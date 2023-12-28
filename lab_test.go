@@ -307,7 +307,6 @@ func TestClient_ImportLabBadAuth(t *testing.T) {
 }
 
 func TestClient_NodeByLabel(t *testing.T) {
-
 	l := Lab{
 		Nodes: NodeMap{
 			"bla": &Node{
@@ -579,6 +578,7 @@ func TestClient_LabGetByTitle(t *testing.T) {
 		})
 	}
 }
+
 func TestClient_LabCreate(t *testing.T) {
 	tc := newAuthedTestAPIclient()
 

@@ -158,7 +158,6 @@ func TestClient_IfaceDelete(t *testing.T) {
 }
 
 func Test_Race(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 	tc.client.useCache = true
 

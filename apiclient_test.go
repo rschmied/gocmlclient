@@ -49,7 +49,6 @@ func TestClient_compatibility(t *testing.T) {
 }
 
 func TestClient_putpatch(t *testing.T) {
-
 	putResponse := mr.MockRespList{
 		mr.MockResp{Code: 204},
 	}

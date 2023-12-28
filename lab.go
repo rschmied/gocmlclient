@@ -45,12 +45,14 @@ type LabGroup struct {
 	Permission string `json:"permission"`
 }
 
-type IDlist []string
-type NodeMap map[string]*Node
-type InterfaceList []*Interface
-type nodeList []*Node
-type linkList []*Link
-type LabGroupList []*LabGroup
+type (
+	IDlist        []string
+	NodeMap       map[string]*Node
+	InterfaceList []*Interface
+	nodeList      []*Node
+	linkList      []*Link
+	LabGroupList  []*LabGroup
+)
 
 type labAlias struct {
 	Lab
@@ -185,7 +187,6 @@ func (c *Client) deleteCachedLab(id string, err error) error {
 
 // LabCreate creates a new lab on the controller.
 func (c *Client) LabCreate(ctx context.Context, lab Lab) (*Lab, error) {
-
 	// TODO: inconsistent attributes lab_title vs title, ...
 	postAlias := labPatchPostAlias{
 		Title:       lab.Title,
@@ -212,7 +213,6 @@ func (c *Client) LabCreate(ctx context.Context, lab Lab) (*Lab, error) {
 
 // LabUpdate updates specific fields of a lab (title, description and notes).
 func (c *Client) LabUpdate(ctx context.Context, lab Lab) (*Lab, error) {
-
 	// TODO: inconsistent attributes lab_title vs title, ...
 	patchAlias := labPatchPostAlias{
 		Title:       lab.Title,
@@ -290,7 +290,6 @@ func (c *Client) LabDestroy(ctx context.Context, id string) error {
 // LabGetByTitle returns the lab identified by its `title`. For the use of
 // `deep` see LabGet().
 func (c *Client) LabGetByTitle(ctx context.Context, title string, deep bool) (*Lab, error) {
-
 	var data map[string]map[string]*labAlias
 
 	err := c.jsonGet(ctx, "populate_lab_tiles", &data, 0)
@@ -315,7 +314,6 @@ func (c *Client) LabGetByTitle(ctx context.Context, title string, deep bool) (*L
 // then the nodes, their interfaces and links are also fetched from the controller.
 // Also, with `deep`, the L3 IP address info is fetched for the given lab.
 func (c *Client) LabGet(ctx context.Context, id string, deep bool) (*Lab, error) {
-
 	if lab, ok := c.getCachedLab(id, deep); ok {
 		return lab, nil
 	}
@@ -333,7 +331,6 @@ func (c *Client) LabGet(ctx context.Context, id string, deep bool) (*Lab, error)
 }
 
 func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
-
 	var err error
 	g, ctx := errgroup.WithContext(ctx)
 

@@ -8,7 +8,6 @@ import (
 )
 
 func TestClient_VersionCheck(t *testing.T) {
-
 	c := New("https://bla.bla", true, useCache)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
@@ -42,7 +41,6 @@ func TestClient_VersionCheck(t *testing.T) {
 }
 
 func TestClient_NotReady(t *testing.T) {
-
 	c := New("https://bla.bla", true, useCache)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
@@ -66,7 +64,6 @@ func TestClient_Version(t *testing.T) {
 		version string
 		want    string
 	}{
-
 		{"empty", "", ""},
 		{"some", "some", "some"},
 	}

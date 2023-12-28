@@ -48,7 +48,6 @@ var (
 )
 
 func TestClient_GetUsers(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 
 	tests := []struct {
@@ -108,7 +107,6 @@ func TestClient_GetUsers(t *testing.T) {
 }
 
 func TestClient_GetUserByName(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 
 	tests := []struct {
@@ -169,7 +167,6 @@ func TestClient_GetUserByName(t *testing.T) {
 }
 
 func TestClient_GetUser(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 
 	// ID of user1 from above
@@ -245,7 +242,6 @@ func TestClient_UserDestroy(t *testing.T) {
 }
 
 func TestClient_UserCreate(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 	newUser := User{Username: "doesntmatter"}
 
@@ -300,7 +296,6 @@ func TestClient_UserCreate(t *testing.T) {
 }
 
 func TestClient_UserUpdate(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 	newUser := User{Username: "doesntmatter"}
 
@@ -359,7 +354,6 @@ func TestClient_UserUpdate(t *testing.T) {
 }
 
 func TestClient_UserGroups(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 
 	tests := []struct {

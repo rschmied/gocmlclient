@@ -269,7 +269,6 @@ import (
 // ]
 
 func TestClient_GetImageDefs(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 
 	aimgdef := `{

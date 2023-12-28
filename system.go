@@ -31,7 +31,6 @@ func versionError(got string) error {
 }
 
 func (c *Client) versionCheck(ctx context.Context, depth int32) error {
-
 	c.compatibilityErr = nil
 	sv := systemVersion{}
 	if err := c.jsonGet(ctx, systeminfoAPI, &sv, depth); err != nil {

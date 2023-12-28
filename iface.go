@@ -224,7 +224,6 @@ func (c *Client) getInterfacesForNode(ctx context.Context, node *Node) error {
 
 // InterfaceGet returns the interface identified by its `ID` (iface.ID).
 func (c *Client) InterfaceGet(ctx context.Context, iface *Interface) (*Interface, error) {
-
 	if iface, ok := c.getCachedIface(iface); ok {
 		return iface, nil
 	}
@@ -238,7 +237,6 @@ func (c *Client) InterfaceGet(ctx context.Context, iface *Interface) (*Interface
 // is >= 0, the request creates all unallocated slots up to and including
 // that slot. Conversely, if the slot is < 0 (e.g. -1), the next free slot is used.
 func (c *Client) InterfaceCreate(ctx context.Context, labID, nodeID string, slot int) (*Interface, error) {
-
 	var slotPtr *int
 
 	if slot >= 0 {

@@ -10,7 +10,6 @@ import (
 )
 
 func main() {
-
 	// address and lab id
 	host, found := os.LookupEnv("CML_HOST")
 	if !found {

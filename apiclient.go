@@ -54,7 +54,6 @@ func (c *Client) apiRequest(ctx context.Context, method string, path string, dat
 }
 
 func (c *Client) doAPI(ctx context.Context, req *http.Request, depth int32) ([]byte, error) {
-
 	if c.state.get() == stateInitial {
 		c.state.set(stateCheckVersion)
 		c.compatibilityErr = c.versionCheck(ctx, depth)
@@ -79,7 +78,7 @@ retry:
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		if urlError, ok := (err).(*url.Error); ok {
-			if urlError.Timeout() {
+			if urlError.Timeout() || urlError.Temporary() {
 				return nil, ErrSystemNotReady
 			}
 		}
@@ -166,7 +165,6 @@ func (c *Client) jsonDelete(ctx context.Context, api string, depth int32) error 
 }
 
 func (c *Client) jsonReq(ctx context.Context, method, api string, data io.Reader, result any, depth int32) error {
-
 	// during initialization, the API client does API calls recursively which
 	// leads to all sorts of nasty race problems.  The below basically prevents
 	// any additional API calls when recursion happens during initialization or

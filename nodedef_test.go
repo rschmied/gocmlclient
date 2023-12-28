@@ -8,7 +8,6 @@ import (
 )
 
 func TestClient_GetNodeDefs(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 
 	nodeDefs := []byte(`[

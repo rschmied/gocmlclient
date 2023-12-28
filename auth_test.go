@@ -12,7 +12,6 @@ import (
 )
 
 func TestClient_authenticate(t *testing.T) {
-
 	tc := newTestAPIclient()
 	tc.client.state.set(stateAuthRequired)
 	tc.client.userpass = userPass{"qwe", "qwe"}
@@ -76,7 +75,6 @@ func TestClient_authenticate(t *testing.T) {
 }
 
 func TestClient_token_auth(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 	tc.client.apiToken = "sometoken"
 	tc.client.userpass = userPass{}
@@ -183,7 +181,6 @@ func TestClient_SetCACert(t *testing.T) {
 }
 
 func TestClient_complete(t *testing.T) {
-
 	tc := newTestAPIclient()
 
 	tc.mr.SetData(mr.MockRespList{
@@ -232,7 +229,6 @@ func TestClient_complete(t *testing.T) {
 }
 
 func TestClient_Race(t *testing.T) {
-
 	// GOFLAGS="-count=1000" time go test -race -parallel 2  . -run 'Race$'
 	t.Parallel()
 

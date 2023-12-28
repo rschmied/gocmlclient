@@ -69,6 +69,7 @@ type Node struct {
 	Label           string         `json:"label"`
 	X               int            `json:"x"`
 	Y               int            `json:"y"`
+	HideLinks       bool           `json:"hide_links"`
 	NodeDefinition  string         `json:"node_definition"`
 	ImageDefinition string         `json:"image_definition"`
 	Configuration   *string        `json:"configuration"`
@@ -92,6 +93,7 @@ type nodePatchPostAlias struct {
 	Label           string   `json:"label,omitempty"`
 	X               int      `json:"x"`
 	Y               int      `json:"y"`
+	HideLinks       bool     `json:"hide_links"`
 	NodeDefinition  string   `json:"node_definition,omitempty"`
 	ImageDefinition string   `json:"image_definition,omitempty"`
 	Configuration   *string  `json:"configuration,omitempty"`
@@ -109,6 +111,7 @@ func newNodeAlias(node *Node, update bool) nodePatchPostAlias {
 	npp.Label = node.Label
 	npp.X = node.X
 	npp.Y = node.Y
+	npp.HideLinks = node.HideLinks
 	npp.Tags = node.Tags
 
 	// node tags can't be null, either the tag has to be omitted or it has
@@ -156,6 +159,7 @@ func (c *Client) updateCachedNode(existingNode, node *Node) *Node {
 	existingNode.X = node.X
 	existingNode.Y = node.Y
 	existingNode.Tags = node.Tags
+	existingNode.HideLinks = node.HideLinks
 
 	// these can be changed but only when the node VM doesn't exist
 	if node.State == NodeStateDefined {
@@ -322,7 +326,6 @@ func (c *Client) NodeStop(ctx context.Context, node *Node) error {
 // NodeCreate creates a new node on the controller based on the data provided
 // in `node`. Label, node definition and image definition must be provided.
 func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
-
 	// TODO: inconsistent attributes lab_title vs title, ..
 	node.State = NodeStateDefined
 	postAlias := newNodeAlias(node, false)
@@ -383,7 +386,6 @@ func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
 
 // NodeGet returns the node identified by its `ID` and `LabID` in the provided node.
 func (c *Client) NodeGet(ctx context.Context, node *Node, nocache bool) (*Node, error) {
-
 	if !nocache {
 		if node, ok := c.getCachedNode(node.LabID, node.ID); ok {
 			return node, nil

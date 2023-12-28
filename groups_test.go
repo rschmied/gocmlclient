@@ -49,7 +49,6 @@ var (
 )
 
 func TestClient_GetGroups(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 
 	tests := []struct {
@@ -109,7 +108,6 @@ func TestClient_GetGroups(t *testing.T) {
 }
 
 func TestClient_GetGroupByName(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 
 	tests := []struct {
@@ -167,7 +165,6 @@ func TestClient_GetGroupByName(t *testing.T) {
 }
 
 func TestClient_GetGroup(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 
 	// ID of group1 from above
@@ -243,7 +240,6 @@ func TestClient_GroupDestroy(t *testing.T) {
 }
 
 func TestClient_GroupCreate(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 	newGroup := Group{Name: "doesntmatter"}
 
@@ -299,7 +295,6 @@ func TestClient_GroupCreate(t *testing.T) {
 }
 
 func TestClient_GroupUpdate(t *testing.T) {
-
 	tc := newAuthedTestAPIclient()
 	newGroup := Group{Name: "doesntmatter"}
 

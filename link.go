@@ -95,10 +95,8 @@ func (c *Client) LinkGet(ctx context.Context, labID, linkID string, deep bool) (
 	link.LabID = labID
 
 	if deep {
-		var (
-			err error
-			// ifaceA, ifaceB *Interface
-		)
+		var err error
+		// ifaceA, ifaceB *Interface
 
 		ifaceA := &Interface{
 			ID:    link.SrcID,
