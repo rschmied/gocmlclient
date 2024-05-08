@@ -258,3 +258,10 @@ func (c *Client) LinkCreate(ctx context.Context, link *Link) (*Link, error) {
 
 	return c.LinkGet(ctx, link.LabID, newLinkResult.ID, true)
 }
+
+// LinkDestroy removes a link from a lab identified by the Lab ID and Link ID
+// provided in the link arg.
+func (c *Client) LinkDestroy(ctx context.Context, link *Link) error {
+	api := fmt.Sprintf("labs/%s/links/%s", link.LabID, link.ID)
+	return c.jsonDelete(ctx, api, 0)
+}

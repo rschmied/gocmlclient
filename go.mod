@@ -1,12 +1,12 @@
 module github.com/rschmied/gocmlclient
 
-go 1.19
+go 1.20
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/rschmied/mockresponder v1.0.4
 	github.com/stretchr/testify v1.8.2
-	golang.org/x/sync v0.5.0
+	golang.org/x/sync v0.7.0
 )
 
 require (

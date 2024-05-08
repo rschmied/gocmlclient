@@ -68,7 +68,7 @@ func (iface Interface) IsPhysical() bool {
 	return iface.Type == IfaceTypePhysical
 }
 
-func (c *Client) updateCachedIface(existingIface, iface *Interface) *Interface {
+func (c *Client) updateCachedIface(existingIface, _ *Interface) *Interface {
 	// this is a no-op at this point, we don't allow updating interfaces
 	return existingIface
 }

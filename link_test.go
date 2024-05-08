@@ -287,3 +287,15 @@ func TestClient_CreateLink(t *testing.T) {
 		}
 	}
 }
+
+func TestClient_DestroyLink(t *testing.T) {
+	tc := newAuthedTestAPIclient()
+
+	tc.mr.SetData(mr.MockRespList{
+		mr.MockResp{Code: 200},
+	})
+
+	tc.client.useCache = false
+	err := tc.client.LinkDestroy(tc.ctx, &Link{LabID: "lab1", ID: "link1"})
+	assert.NoError(t, err)
+}

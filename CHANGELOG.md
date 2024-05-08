@@ -2,6 +2,13 @@
 
 Lists the changes in the gocmlclient package.
 
+## Version 0.0.23
+
+- added LinkDestroy() method
+- removed rand.Seed() as it's not needed with newer go versions
+- made the package require 1.20
+- updated dependencies / vendor data
+
 ## Version 0.0.22
 
 - added HideLinks node property
