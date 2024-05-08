@@ -237,7 +237,8 @@ func Test_Race(t *testing.T) {
 	node := Node{ID: "node1", LabID: lab.ID}
 	lab.Nodes[node.ID] = &node
 	tc.client.labCache[lab.ID] = &lab
-	rand.Seed(time.Now().UnixNano())
+	// rand.Seed is not needed anymore from 1.20 onward
+	// rand.Seed(time.Now().UnixNano())
 
 	for i := 0; i < 50; i++ {
 		tc.mr.Reset()
