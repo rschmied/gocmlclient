@@ -3,7 +3,7 @@ package cmlclient
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
@@ -51,9 +51,9 @@ func (c *Client) versionCheck(ctx context.Context, depth int32) error {
 	if m == nil {
 		return versionError(sv.Version)
 	}
-	log.Printf("controller version: %s", sv.Version)
+	slog.Info("controller", "version", sv.Version)
 	if len(m[3]) > 0 {
-		log.Printf("Warning, this is a DEV version %s", sv.Version)
+		slog.Warn("this is a DEV version", "version", sv.Version)
 	}
 	stem := m[1]
 	v, err := semver.NewVersion(stem)
@@ -76,7 +76,7 @@ func (c *Client) Version() string {
 
 // Ready returns nil if the system is compatible and ready
 func (c *Client) Ready(ctx context.Context) error {
-	// we can safely assume depth 0 as the API endpoint does not
-	// require authentication
+	// we can safely assume depth 0 as the API endpoint does not require
+	// authentication
 	return c.versionCheck(ctx, 0)
 }

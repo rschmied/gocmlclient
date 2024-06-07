@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -335,9 +335,10 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		defer log.Printf("user done")
+		defer slog.Debug("user done")
 		la.Owner, err = c.UserGet(ctx, la.OwnerID)
 		if err != nil {
+			slog.Info("user")
 			return err
 		}
 		return nil
@@ -350,7 +351,7 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 	ch := make(chan struct{})
 	g.Go(func() error {
 		defer func() {
-			log.Printf("nodes/interfaces done")
+			slog.Debug("nodes/interfaces done")
 			// two sync points, we can run the API endpoints but we need to
 			// wait for the node data to be read until we can add the layer3
 			// info (1) and the link info (2)
@@ -359,11 +360,13 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 		}()
 		err := c.getNodesForLab(ctx, lab)
 		if err != nil {
+			slog.Info("nodes for lab")
 			return err
 		}
 		for _, node := range lab.Nodes {
 			err = c.getInterfacesForNode(ctx, node)
 			if err != nil {
+				slog.Info("interfaces for node")
 				return err
 			}
 		}
@@ -371,12 +374,13 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 	})
 
 	g.Go(func() error {
-		defer log.Printf("l3info done")
+		defer slog.Debug("l3info done")
 		l3info, err := c.getL3Info(ctx, lab.ID)
 		if err != nil {
+			slog.Info("l3info")
 			return err
 		}
-		log.Printf("l3info read")
+		slog.Debug("l3info read")
 		// wait for node data read complete
 		<-ch
 		// map and merge the l3 data...
@@ -394,27 +398,29 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 				}
 			}
 		}
-		log.Printf("l3info loop done")
+		slog.Debug("l3info loop done")
 		return nil
 	})
 
 	g.Go(func() error {
-		defer log.Printf("links done")
+		defer slog.Debug("links done")
 		idlist, err := c.getLinkIDsForLab(ctx, lab)
 		if err != nil {
+			slog.Info("links")
 			return err
 		}
-		log.Printf("linkidlist read")
+		slog.Debug("links read")
 		// wait for node data read complete
 		<-ch
 		return c.getLinksForLab(ctx, lab, idlist)
 	})
 
 	if err := g.Wait(); err != nil {
+		slog.Info("wait")
 		return nil, err
 	}
-	log.Printf("wait done")
-	// lab.filled = true
+	slog.Debug("wait done")
+	// lab.filled = trueNodeConfig{}
 	// return c.cacheLab(lab, nil)
 	return lab, nil
 }

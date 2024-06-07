@@ -6,7 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -56,7 +56,7 @@ func (c *Client) authenticate(ctx context.Context, userpass userPass, depth int3
 	if err != nil {
 		return err
 	}
-	log.Printf("user id %s, is admin: %s", auth.ID, strconv.FormatBool(auth.Admin))
+	slog.Info("user auth", "id", auth.ID, "is_admin", strconv.FormatBool(auth.Admin))
 	c.apiToken = auth.Token
 	return nil
 }

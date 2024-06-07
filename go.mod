@@ -1,9 +1,10 @@
 module github.com/rschmied/gocmlclient
 
-go 1.20
+go 1.21
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
+	github.com/lmittmann/tint v1.0.4
 	github.com/rschmied/mockresponder v1.0.4
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/sync v0.7.0

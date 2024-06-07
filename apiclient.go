@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -64,7 +64,7 @@ func (c *Client) doAPI(ctx context.Context, req *http.Request, depth int32) ([]b
 	}
 
 	if c.state.get() != stateAuthenticated && c.authRequired(req.URL) {
-		log.Println("needs auth")
+		slog.Info("needs auth")
 		c.state.set(stateAuthenticating)
 		if err := c.jsonGet(ctx, authokAPI, nil, depth); err != nil {
 			return nil, err
@@ -102,7 +102,7 @@ retry:
 	if res.StatusCode == http.StatusUnauthorized {
 		invalid_token := len(c.apiToken) > 0
 		c.apiToken = ""
-		log.Println("need to authenticate")
+		slog.Info("need to authenticate")
 		c.state.set(stateAuthRequired)
 		if !c.userpass.valid() {
 			errmsg := "no credentials provided"
