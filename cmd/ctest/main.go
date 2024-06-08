@@ -17,7 +17,7 @@ func main() {
 	// set global logger with custom options
 	slog.SetDefault(slog.New(
 		tint.NewHandler(os.Stderr, &tint.Options{
-			AddSource: true,
+			AddSource:  true,
 			Level:      slog.LevelDebug,
 			TimeFormat: time.RFC822,
 		}),
@@ -106,7 +106,7 @@ func main() {
 		slog.Error("ready", slog.Any("error", err))
 		return
 	}
-	node := &cmlclient.Node{
+	/* node := &cmlclient.Node{
 		// ID:    "28ec08ec-483a-415a-a3ed-625b0d45bef0",
 		// ID:    "8116a609-8b68-4e0f-a196-5225da9f05c0",
 		ID:    "0577f1c4-4907-4c49-a4fd-c6daa61b6e78",
@@ -123,25 +123,25 @@ func main() {
 		slog.Error("marshal", slog.Any("error", err))
 		return
 	}
-	fmt.Println(string(je))
+	fmt.Println(string(je)) */
 
-	// lab, err := client.LabGet(ctx, "2b7435f2-b247-4cc8-8509-6b0d0f593c4c", true)
-	// if err != nil {
-	// 	slog.Error("get", slog.Any("error", err))
-	// 	return
-	// }
-	//
-	// for _, v := range lab.Nodes {
-	// 	if v.Configuration != nil {
-	// 		fmt.Printf("[1] %T: %s\n", v.Configuration, *v.Configuration)
-	// 	}
-	// 	fmt.Printf("[2] %T: %+v\n", v.Configurations, v.Configurations)
-	// }
-	// return
-	// je, err := json.Marshal(lab)
-	// if err != nil {
-	// 	slog.Error("marshal", slog.Any("error", err))
-	// 	return
-	// }
-	// fmt.Println(string(je))
+	lab, err := client.LabGet(ctx, "2b7435f2-b247-4cc8-8509-6b0d0f593c4c", true)
+	if err != nil {
+		slog.Error("get", slog.Any("error", err))
+		return
+	}
+
+	for _, v := range lab.Nodes {
+		if v.Configuration != nil {
+			fmt.Printf("[1] %T: %s\n", v.Configuration, *v.Configuration)
+		}
+		fmt.Printf("[2] %T: %+v\n", v.Configurations, v.Configurations)
+	}
+	return
+	je, err := json.Marshal(lab)
+	if err != nil {
+		slog.Error("marshal", slog.Any("error", err))
+		return
+	}
+	fmt.Println(string(je))
 }

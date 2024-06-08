@@ -80,9 +80,6 @@ type Lab struct {
 	Nodes       NodeMap      `json:"nodes"`
 	Links       linkList     `json:"links"`
 	Groups      LabGroupList `json:"groups"`
-
-	// private
-	// filled bool
 }
 
 // CanBeWiped returns `true` when all nodes in the lab are wiped.
@@ -118,8 +115,8 @@ func (l *Lab) Booted() bool {
 	return true
 }
 
-// NodeByLabel returns the node of a lab identified by its `label“ or an
-// error if not found.
+// NodeByLabel returns the node of a lab identified by its `label“ or an error
+// if not found.
 func (l *Lab) NodeByLabel(ctx context.Context, label string) (*Node, error) {
 	for _, node := range l.Nodes {
 		if node.Label == label {
@@ -311,8 +308,9 @@ func (c *Client) LabGetByTitle(ctx context.Context, title string, deep bool) (*L
 }
 
 // LabGet returns the lab identified by `id` (a UUIDv4). If `deep` is provided,
-// then the nodes, their interfaces and links are also fetched from the controller.
-// Also, with `deep`, the L3 IP address info is fetched for the given lab.
+// then the nodes, their interfaces and links are also fetched from the
+// controller. Also, with `deep`, the L3 IP address info is fetched for the
+// given lab.
 func (c *Client) LabGet(ctx context.Context, id string, deep bool) (*Lab, error) {
 	if lab, ok := c.getCachedLab(id, deep); ok {
 		return lab, nil
@@ -388,7 +386,6 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 			if node, found := lab.Nodes[nid]; found {
 				for mac, l3i := range l3data.Interfaces {
 					for _, iface := range node.Interfaces {
-						// if iface, found := node.Interfaces[l3i.ID]; found {
 						if iface.MACaddress == mac {
 							iface.IP4 = l3i.IP4
 							iface.IP6 = l3i.IP6
@@ -420,7 +417,5 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 		return nil, err
 	}
 	slog.Debug("wait done")
-	// lab.filled = trueNodeConfig{}
-	// return c.cacheLab(lab, nil)
 	return lab, nil
 }

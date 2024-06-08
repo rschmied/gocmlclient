@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 )
 
@@ -58,6 +60,11 @@ const (
 	NodeStateBooted  = "BOOTED"
 )
 
+type NodeConfig struct {
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+
 type SerialDevice struct {
 	ConsoleKey   string `json:"console_key"`
 	DeviceNumber int    `json:"device_number"`
@@ -73,6 +80,7 @@ type Node struct {
 	NodeDefinition  string         `json:"node_definition"`
 	ImageDefinition string         `json:"image_definition"`
 	Configuration   *string        `json:"configuration"`
+	Configurations  []NodeConfig   `json:"-"`
 	CPUs            int            `json:"cpus"`
 	CPUlimit        int            `json:"cpu_limit"`
 	RAM             int            `json:"ram"`
@@ -85,8 +93,7 @@ type Node struct {
 	SerialDevices   []SerialDevice `json:"serial_devices"`
 	ComputeID       string         `json:"compute_id"`
 
-	// not exported, needed for internal linking
-	lab *Lab
+	// Configurations is  not exported, it's overloaded within the API
 }
 
 type nodePatchPostAlias struct {
@@ -96,7 +103,7 @@ type nodePatchPostAlias struct {
 	HideLinks       bool     `json:"hide_links"`
 	NodeDefinition  string   `json:"node_definition,omitempty"`
 	ImageDefinition string   `json:"image_definition,omitempty"`
-	Configuration   *string  `json:"configuration,omitempty"`
+	Configuration   any      `json:"configuration,omitempty"`
 	CPUs            int      `json:"cpus,omitempty"`
 	CPUlimit        int      `json:"cpu_limit,omitempty"`
 	RAM             int      `json:"ram,omitempty"`
@@ -114,9 +121,9 @@ func newNodeAlias(node *Node, update bool) nodePatchPostAlias {
 	npp.HideLinks = node.HideLinks
 	npp.Tags = node.Tags
 
-	// node tags can't be null, either the tag has to be omitted or it has
-	// to be an empty list. but since we can't use "omitempty" we need to
-	// ensure it's an empty list if no tags are provided.
+	// node tags can't be null, either the tag has to be omitted or it has to
+	// be an empty list. But since we can't use "omitempty" we need to ensure
+	// it's an empty list if no tags are provided.
 	if node.Tags == nil {
 		npp.Tags = []string{}
 	}
@@ -153,6 +160,67 @@ func (nmap NodeMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nodeList)
 }
 
+func (n *Node) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" || string(data) == `""` {
+		return nil
+	}
+
+	type nodeAlias Node
+
+	var tmpNode struct {
+		nodeAlias
+		Configs any `json:"configuration"`
+	}
+
+	// Unmarshal the JSON into the tmpNode struct.
+	if err := json.Unmarshal(data, &tmpNode); err != nil {
+		return err
+	}
+
+	na := tmpNode.nodeAlias
+
+	switch thing := tmpNode.Configs.(type) {
+	case nil:
+		na.Configuration = nil
+	case string:
+		na.Configuration = &thing
+	case []any:
+		b, err := json.Marshal(thing)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(b, &na.Configurations)
+		if err != nil {
+			return err
+		}
+		if len(na.Configurations) == 1 {
+			config := na.Configurations[0].Content
+			na.Configuration = &config
+			na.Configurations = nil
+		}
+	default:
+		return fmt.Errorf("unexpected type: %T", thing)
+	}
+	*n = (Node)(na)
+
+	return nil
+}
+
+func (node *Node) MarshalJSON() ([]byte, error) {
+	type nodeAlias Node
+	if len(node.Configurations) > 1 {
+		node.Configuration = nil
+		return json.Marshal(&struct {
+			*nodeAlias
+			NamedConfig []NodeConfig `json:"configuration"`
+		}{
+			(*nodeAlias)(node),
+			node.Configurations,
+		})
+	}
+	return json.Marshal((*nodeAlias)(node))
+}
+
 func (c *Client) updateCachedNode(existingNode, node *Node) *Node {
 	// only copy fields which can be updated
 	existingNode.Label = node.Label
@@ -164,6 +232,7 @@ func (c *Client) updateCachedNode(existingNode, node *Node) *Node {
 	// these can be changed but only when the node VM doesn't exist
 	if node.State == NodeStateDefined {
 		existingNode.Configuration = node.Configuration
+		existingNode.Configurations = node.Configurations
 		existingNode.CPUs = node.CPUs
 		existingNode.CPUlimit = node.CPUlimit
 		existingNode.RAM = node.RAM
@@ -238,6 +307,10 @@ func (c *Client) deleteCachedNode(node *Node, err error) error {
 func (c *Client) getNodesForLab(ctx context.Context, lab *Lab) error {
 	api := fmt.Sprintf("labs/%s/nodes?data=true", lab.ID)
 
+	if c.namedConfigs {
+		api += "&operational=true&exclude_configurations=false"
+	}
+
 	nodes := &nodeList{}
 	err := c.jsonGet(ctx, api, nodes, 0)
 	if err != nil {
@@ -255,19 +328,11 @@ func (c *Client) getNodesForLab(ctx context.Context, lab *Lab) error {
 	return nil
 }
 
-// NodeSetConfig sets a configuration for the specified node. At least the `ID` of
-// the node and the `labID` must be provided in `node`. The `node` instance will
-// be updated with the current values for the node as provided by the controller.
-func (c *Client) NodeSetConfig(ctx context.Context, node *Node, configuration string) error {
+func (c *Client) nodeSetConfigData(ctx context.Context, node *Node, data any) error {
 	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
 
-	type nodeConfig struct {
-		Configuration string `json:"configuration"`
-	}
-
 	buf := &bytes.Buffer{}
-	nodeCfg := nodeConfig{Configuration: configuration}
-	err := json.NewEncoder(buf).Encode(nodeCfg)
+	err := json.NewEncoder(buf).Encode(data)
 	if err != nil {
 		return err
 	}
@@ -282,12 +347,43 @@ func (c *Client) NodeSetConfig(ctx context.Context, node *Node, configuration st
 	return err
 }
 
+// NodeSetConfig sets a configuration for the specified node. At least the `ID`
+// of the node and the `labID` must be provided in `node`. The `node` instance
+// will be updated with the current values for the node as provided by the
+// controller.
+func (c *Client) NodeSetConfig(ctx context.Context, node *Node, configuration string) error {
+	nodeCfg := struct {
+		Configuration string `json:"configuration"`
+	}{configuration}
+	return c.nodeSetConfigData(ctx, node, nodeCfg)
+}
+
+// NodeSetNamedConfigs sets a list of named configurations for the specified
+// node. At least the `ID` of the node and the `labID` must be provided in
+// `node`.
+func (c *Client) NodeSetNamedConfigs(ctx context.Context, node *Node, configs []NodeConfig) error {
+	nodeCfg := struct {
+		NamedConfigs []NodeConfig `json:"configuration"`
+	}{configs}
+	return c.nodeSetConfigData(ctx, node, nodeCfg)
+}
+
 // NodeUpdate updates the node specified by data in `node` (e.g. ID and LabID)
-// with the other data provided. It returns the udpated node.
+// with the other data provided. It returns the updated node.
 func (c *Client) NodeUpdate(ctx context.Context, node *Node) (*Node, error) {
 	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
 
 	postAlias := newNodeAlias(node, true)
+
+	if len(node.Configurations) > 0 {
+		if !c.namedConfigs {
+			err := errors.New("named configs are not supported by the controller!")
+			slog.Error("update", slog.Any("error", err))
+			return node, err
+		}
+		postAlias.Configuration = node.Configurations
+	}
+
 	buf := &bytes.Buffer{}
 	err := json.NewEncoder(buf).Encode(postAlias)
 	if err != nil {
@@ -370,7 +466,7 @@ func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
 	if err != nil {
 		// for consistency, remove the created node that can't be updated
 		// this assumes that the error was because of the provided data and
-		// not because of e.g. a conncectivity issue between the initial create
+		// not because of e.g. a connectivity issue between the initial create
 		// and the attempted removal.
 		node.ID = newNode.ID
 		c.NodeDestroy(ctx, node)
@@ -392,15 +488,24 @@ func (c *Client) NodeGet(ctx context.Context, node *Node, nocache bool) (*Node, 
 		}
 	}
 
-	newNode := &Node{}
+	/* SIMPLE-5052 -- results are different for simplified=true vs false
+	for the inherited values. In the simplified case, all values are always
+	null. */
+
+	var err error
+	newNode := Node{}
 	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
-	err := c.jsonGet(ctx, api, newNode, 0)
-	// SIMPLE-5052 -- results are different for simplified=true vs false
-	// for the inherited values. in the simplified case, all values are
-	// always null.
-	// There's yet another modified "operational" which also influences
-	// the returned values
-	return c.cacheNode(newNode, err)
+	if c.namedConfigs {
+		api += "?operational=true&exclude_configurations=false"
+	}
+	err = c.jsonGet(ctx, api, &newNode, 0)
+	// for backwards compatibility, store single config in the old field name
+	// and reset the multi-config field.
+	if len(newNode.Configurations) == 1 {
+		newNode.Configuration = &newNode.Configurations[0].Content
+		newNode.Configurations = nil
+	}
+	return c.cacheNode(&newNode, err)
 }
 
 // NodeDestroy deletes the node from the controller.

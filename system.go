@@ -21,7 +21,10 @@ type systemVersion struct {
 	Ready   bool   `json:"ready"`
 }
 
-const versionConstraint = ">=2.4.0,<3.0.0"
+const (
+	versionConstraint      = ">=2.4.0,<3.0.0"
+	namedConfigsConstraint = ">=2.7.0"
+)
 
 func versionError(got string) error {
 	return fmt.Errorf(
@@ -41,10 +44,7 @@ func (c *Client) versionCheck(ctx context.Context, depth int32) error {
 		return ErrSystemNotReady
 	}
 
-	constraint, err := semver.NewConstraint(versionConstraint)
-	if err != nil {
-		panic("unparsable semver version constant")
-	}
+	constraint, _ := semver.NewConstraint(versionConstraint)
 
 	re := regexp.MustCompile(`^(\d\.\d\.\d)((-dev0)?\+build.*)?$`)
 	m := re.FindStringSubmatch(sv.Version)
@@ -64,6 +64,11 @@ func (c *Client) versionCheck(ctx context.Context, depth int32) error {
 	ok := constraint.Check(v)
 	if !ok {
 		return versionError(sv.Version)
+	}
+	constraint, _ = semver.NewConstraint(namedConfigsConstraint)
+	if ok = constraint.Check(v); ok {
+		slog.Info("named configs supported")
+		c.namedConfigs = true
 	}
 	c.version = sv.Version
 	return nil

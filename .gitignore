@@ -1,3 +1,5 @@
 coverage.out
 *.code-workspace
+.envrc
+.tool-versions
 

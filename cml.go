@@ -21,11 +21,12 @@ type Client struct {
 	mu               sync.RWMutex
 	labCache         map[string]*Lab
 	useCache         bool
+	namedConfigs     bool
 	version          string
 }
 
-// New returns a new CML client instance. The host must be a valid URL including
-// scheme (https://).
+// New returns a new CML client instance. The host must be a valid URL
+// including scheme (https://).
 func New(host string, insecure, useCache bool) *Client {
 	tr := http.DefaultTransport.(*http.Transport)
 	tr.TLSClientConfig = &tls.Config{
@@ -46,5 +47,6 @@ func New(host string, insecure, useCache bool) *Client {
 		state:            newState(),
 		labCache:         make(map[string]*Lab),
 		useCache:         useCache,
+		namedConfigs:     false,
 	}
 }

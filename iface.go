@@ -259,12 +259,13 @@ func (c *Client) InterfaceCreate(ctx context.Context, labID, nodeID string, slot
 		return nil, err
 	}
 
-	// This is quite awkward, not even sure if it's a good REST design practice:
-	// "Returns a JSON object that identifies the interface that was created. In
-	// the case of bulk interface creation, returns a JSON array of such
-	// objects." <-- from the API documentation
-	// A list is returned when slot is defined, even if it's just creating
-	// one interface
+	// This is quite awkward, not even sure if it's a good REST design
+	// practice: "Returns a JSON object that identifies the interface that was
+	// created. In the case of bulk interface creation, returns a JSON array of
+	// such objects." <-- from the API documentation
+	//
+	// A list is returned when slot is defined, even if it's just creating one
+	// interface
 
 	api := fmt.Sprintf("labs/%s/interfaces", labID)
 	if slotPtr == nil {

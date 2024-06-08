@@ -36,8 +36,8 @@ func (up userPass) valid() bool {
 	return len(up.Username) > 0 && len(up.Password) > 0
 }
 
-// technically, authokAPI requires auth, but it's used specifically
-// to test whether auth is OK, so it will take a different path
+// technically, authokAPI requires auth, but it's used specifically to test
+// whether auth is OK, so it will take a different path
 func (c *Client) authRequired(api *url.URL) bool {
 	url := api.String()
 	return !(strings.HasSuffix(url, authAPI) ||
@@ -62,10 +62,10 @@ func (c *Client) authenticate(ctx context.Context, userpass userPass, depth int3
 }
 
 // SetToken sets a specific API token to be used. A token takes precedence over
-// a username/password. However, if the token expires, the username/password are
-// used to authorize the client again. An error is raised if no token and no
-// username/password are provided or if the token expires when no username/password
-// are set.
+// a username/password. However, if the token expires, the username/password
+// are used to authorize the client again. An error is raised if no token and
+// no username/password are provided or if the token expires when no
+// username/password are set.
 func (c *Client) SetToken(token string) {
 	c.apiToken = token
 }
