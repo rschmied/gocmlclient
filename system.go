@@ -65,10 +65,13 @@ func (c *Client) versionCheck(ctx context.Context, depth int32) error {
 	if !ok {
 		return versionError(sv.Version)
 	}
+
+	// unset useNamedConfig if necessary
 	constraint, _ = semver.NewConstraint(namedConfigsConstraint)
 	if ok = constraint.Check(v); ok {
 		slog.Info("named configs supported")
-		c.namedConfigs = true
+	} else {
+		c.useNamedConfigs = false
 	}
 	c.version = sv.Version
 	return nil
@@ -77,6 +80,12 @@ func (c *Client) versionCheck(ctx context.Context, depth int32) error {
 // Version returns the CML controller version
 func (c *Client) Version() string {
 	return c.version
+}
+
+// Turns on the use of named configs (only with 2.7.0 and newer)
+func (c *Client) UseNamedConfigs() {
+	slog.Info("USE named configs")
+	c.useNamedConfigs = true
 }
 
 // Ready returns nil if the system is compatible and ready

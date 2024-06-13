@@ -151,20 +151,20 @@ func TestClient_token_auth(t *testing.T) {
 }
 
 func TestClient_SetToken(t *testing.T) {
-	c := New("https://bla.bla", true, useCache)
+	c := New("https://bla.bla", true)
 	c.SetToken("qwe")
 	assert.Equal(t, "qwe", c.apiToken)
 }
 
 func TestClient_SetUsernamePassword(t *testing.T) {
-	c := New("https://bla.bla", true, useCache)
+	c := New("https://bla.bla", true)
 	c.SetUsernamePassword("user", "pass")
 	assert.Equal(t, "user", c.userpass.Username)
 	assert.Equal(t, "pass", c.userpass.Password)
 }
 
 func TestClient_SetCACert(t *testing.T) {
-	c := New("https://bla.bla", true, useCache)
+	c := New("https://bla.bla", true)
 	err := c.SetCACert([]byte("crapdata"))
 	assert.EqualError(t, err, "failed to parse root certificate")
 	testCA := "testdata/ca.pem"

@@ -104,23 +104,16 @@ func TestClient_GetLink(t *testing.T) {
 			false,
 		},
 	}
-	for _, useCache := range []bool{false, true} {
-		for _, tt := range tests {
-			tc.mr.SetData(tt.responses)
-			tc.client.useCache = useCache
-			t.Run(tt.name, func(t *testing.T) {
-				lab, err := tc.client.LinkGet(tc.ctx, "qweaa", "link1", tt.deep)
-				assert.NoError(t, err)
-				assert.NotNil(t, lab)
-				// if tt.deep {
-				// 	assert.Len(t, lab.Links, 1)
-				// 	assert.Len(t, lab.Nodes, 2)
-				if !(useCache || tc.mr.Empty()) {
-					t.Errorf("not all data in mock client consumed: %v", useCache)
-				}
-				// }
-			})
-		}
+	for _, tt := range tests {
+		tc.mr.SetData(tt.responses)
+		t.Run(tt.name, func(t *testing.T) {
+			link, err := tc.client.LinkGet(tc.ctx, "qweaa", "link1", tt.deep)
+			assert.NoError(t, err)
+			assert.NotNil(t, link)
+			if !tc.mr.Empty() {
+				t.Error("not all data in mock client consumed")
+			}
+		})
 	}
 }
 
@@ -229,9 +222,46 @@ func TestClient_CreateLink(t *testing.T) {
 		"state": "DEFINED_ON_CORE"
 	}`)
 
+	newiface0 := []byte(`{
+		"id": "iface0",
+		"lab_id": "lab1",
+		"node": "node1",
+		"label": "eth0",
+		"slot": 0,
+		"type": "physical",
+		"mac_address": "52:54:00:0c:e0:70",
+		"is_connected": false,
+		"state": "STOPPED"
+	}`)
+
+	newiface1 := []byte(`{
+		"id": "iface0",
+		"lab_id": "lab1",
+		"node": "node1",
+		"label": "eth0",
+		"slot": 0,
+		"type": "physical",
+		"mac_address": "52:54:00:0c:e0:70",
+		"is_connected": false,
+		"state": "STOPPED"
+	}`)
+
 	mockdata := mr.MockRespList{
 		mr.MockResp{Data: ifaceList1, URL: `node1/interfaces\?data=true$`},
 		mr.MockResp{Data: ifaceList2, URL: `node2/interfaces\?data=true$`},
+		mr.MockResp{Data: linkn1n2, URL: `/links$`},
+		mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},
+		mr.MockResp{Data: iface1, URL: `/interfaces/iface1$`},
+		mr.MockResp{Data: iface6, URL: `/interfaces/iface6$`},
+		mr.MockResp{Data: node1, URL: `/labs/lab1/nodes/node1$`},
+		mr.MockResp{Data: node1, URL: `/labs/lab1/nodes/node2$`},
+	}
+
+	mockdata2 := mr.MockRespList{
+		mr.MockResp{Data: []byte(`[]`), URL: `node1/interfaces\?data=true$`},
+		mr.MockResp{Data: []byte(`[]`), URL: `node2/interfaces\?data=true$`},
+		mr.MockResp{Data: newiface0, URL: `/labs/lab1/interfaces$`},
+		mr.MockResp{Data: newiface1, URL: `/labs/lab1/interfaces$`},
 		mr.MockResp{Data: linkn1n2, URL: `/links$`},
 		mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},
 		mr.MockResp{Data: iface1, URL: `/interfaces/iface1$`},
@@ -257,7 +287,7 @@ func TestClient_CreateLink(t *testing.T) {
 			mockdata,
 		},
 		{
-			"link_no_slots",
+			"link_no_slots_1",
 			&Link{
 				LabID:   "lab1",
 				SrcNode: "node1",
@@ -267,24 +297,28 @@ func TestClient_CreateLink(t *testing.T) {
 			},
 			mockdata,
 		},
+		{
+			"link_no_slots_2",
+			&Link{
+				LabID:   "lab1",
+				SrcNode: "node1",
+				DstNode: "node2",
+				SrcSlot: -1,
+				DstSlot: -1,
+			},
+			mockdata2,
+		},
 	}
-	for _, useCache := range []bool{false, true} {
-		for _, tt := range tests {
-			tc.mr.SetData(tt.responses)
-			tc.client.useCache = useCache
-			t.Run(tt.name, func(t *testing.T) {
-				lab, err := tc.client.LinkCreate(tc.ctx, tt.link)
-				assert.NoError(t, err)
-				assert.NotNil(t, lab)
-				// if tt.deep {
-				// 	assert.Len(t, lab.Links, 1)
-				// 	assert.Len(t, lab.Nodes, 2)
-				if !(useCache || tc.mr.Empty()) {
-					t.Errorf("not all data in mock client consumed: %v", useCache)
-				}
-				// }
-			})
-		}
+	for _, tt := range tests {
+		tc.mr.SetData(tt.responses)
+		t.Run(tt.name, func(t *testing.T) {
+			lab, err := tc.client.LinkCreate(tc.ctx, tt.link)
+			assert.NoError(t, err)
+			assert.NotNil(t, lab)
+			if !tc.mr.Empty() {
+				t.Error("not all data in mock client consumed")
+			}
+		})
 	}
 }
 
@@ -295,7 +329,6 @@ func TestClient_DestroyLink(t *testing.T) {
 		mr.MockResp{Code: 200},
 	})
 
-	tc.client.useCache = false
 	err := tc.client.LinkDestroy(tc.ctx, &Link{LabID: "lab1", ID: "link1"})
 	assert.NoError(t, err)
 }

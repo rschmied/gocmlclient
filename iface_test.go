@@ -1,7 +1,6 @@
 package cmlclient
 
 import (
-	"errors"
 	"math/rand"
 	"sync"
 	"testing"
@@ -43,7 +42,6 @@ func TestClient_IfaceRuns(t *testing.T) {
 
 func TestClient_IfaceWithSlots(t *testing.T) {
 	tc := newAuthedTestAPIclient()
-	tc.client.useCache = true
 
 	ifaceList := []byte(`[{
 			"id": "n2i0",
@@ -79,87 +77,8 @@ func TestClient_IfaceWithSlots(t *testing.T) {
 	}
 }
 
-func TestClient_IfaceDelete(t *testing.T) {
-	tc := newAuthedTestAPIclient()
-	tc.client.useCache = true
-
-	tests := []struct {
-		name      string
-		lab       Lab
-		node      Node
-		ifaceList InterfaceList
-		preErr    error
-		want      bool
-	}{
-		{
-			"error before",
-			Lab{
-				ID:    "different",
-				Nodes: make(NodeMap),
-			},
-			Node{},
-			InterfaceList{},
-			errors.New("some error"),
-			false,
-		},
-		{
-			"nolab",
-			Lab{
-				ID:    "different",
-				Nodes: make(NodeMap),
-			},
-			Node{},
-			InterfaceList{},
-			nil,
-			false,
-		},
-		{
-			"nolab",
-			Lab{
-				ID:    "lab1",
-				Nodes: make(NodeMap),
-			},
-			Node{ID: "node2"},
-			InterfaceList{},
-			nil,
-			false,
-		},
-		{
-			"good",
-			Lab{
-				ID:    "lab1",
-				Nodes: make(NodeMap),
-			},
-			Node{ID: "node1"},
-			InterfaceList{
-				&Interface{ID: "iface0"},
-				&Interface{ID: "iface1"},
-				&Interface{ID: "iface2"},
-				&Interface{ID: "iface3"},
-			},
-			nil,
-			false,
-		},
-	}
-
-	iface := &Interface{ID: "iface2", LabID: "lab1", Node: "node1"}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.node.Interfaces = tt.ifaceList
-			tt.lab.Nodes[tt.node.ID] = &tt.node
-			tc.client.labCache[tt.lab.ID] = &tt.lab
-			err := tc.client.deleteCachedIface(iface, tt.preErr)
-			assert.Equal(t, tt.preErr, err)
-			if err == nil && tt.name == "good" {
-				assert.Len(t, tt.node.Interfaces, 3)
-			}
-		})
-	}
-}
-
 func Test_Race(t *testing.T) {
 	tc := newAuthedTestAPIclient()
-	tc.client.useCache = true
 
 	iface0 := []byte(`{
 		"id": "iface0",
@@ -236,9 +155,6 @@ func Test_Race(t *testing.T) {
 	}
 	node := Node{ID: "node1", LabID: lab.ID}
 	lab.Nodes[node.ID] = &node
-	tc.client.labCache[lab.ID] = &lab
-	// rand.Seed is not needed anymore from 1.20 onward
-	// rand.Seed(time.Now().UnixNano())
 
 	for i := 0; i < 50; i++ {
 		tc.mr.Reset()

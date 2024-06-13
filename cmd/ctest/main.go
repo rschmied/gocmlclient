@@ -45,7 +45,7 @@ func main() {
 		return
 	}
 	ctx := context.Background()
-	client := cmlclient.New(host, false, false)
+	client := cmlclient.New(host, false)
 	// if err := client.Ready(ctx); err != nil {
 	// 	log.Fatal(err)
 	// }

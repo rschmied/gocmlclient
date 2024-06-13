@@ -8,9 +8,10 @@ import (
 )
 
 func TestClient_VersionCheck(t *testing.T) {
-	c := New("https://bla.bla", true, useCache)
+	c := New("https://bla.bla", true)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
+	c.useNamedConfigs = true
 	c.state.set(stateAuthenticated)
 
 	tests := []struct {
@@ -19,9 +20,11 @@ func TestClient_VersionCheck(t *testing.T) {
 		wantErr     bool
 		canNamedCfg bool
 	}{
-		{"too old", `{"version": "2.1.0","ready": true}`, true, false},
-		{"garbage", `{"version": "garbage","ready": true}`, true, false},
-		{"too new", `{"version": "2.35.0","ready": true}`, true, false},
+		// these three yield an error, useNamedConfigs is untouched
+		{"too old", `{"version": "2.1.0","ready": true}`, true, true},
+		{"garbage", `{"version": "garbage","ready": true}`, true, true},
+		{"too new", `{"version": "2.35.0","ready": true}`, true, true},
+		// the rest will reset useNamedConfigs, if needed
 		{"perfect", `{"version": "2.4.0","ready": true}`, false, false},
 		{"actual", `{"version": "2.4.0+build.1","ready": true}`, false, false},
 		{"newer", `{"version": "2.4.1","ready": true}`, false, false},
@@ -32,11 +35,12 @@ func TestClient_VersionCheck(t *testing.T) {
 	for _, tt := range tests {
 		mrClient.SetData(mr.MockRespList{{Data: []byte(tt.wantJSON)}})
 		t.Run(tt.name, func(t *testing.T) {
+			c.UseNamedConfigs()
 			if err := c.versionCheck(ctx, 0); (err != nil) != tt.wantErr {
 				t.Errorf("Client.VersionCheck() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if tt.canNamedCfg != c.namedConfigs {
-				t.Errorf("Client.VersionCheck() canNamedConfigs is = %t, want %t", c.namedConfigs, tt.canNamedCfg)
+			if tt.canNamedCfg != c.useNamedConfigs {
+				t.Errorf("Client.VersionCheck() useNamedConfigs is = %t, want %t", c.useNamedConfigs, tt.canNamedCfg)
 			}
 		})
 		if !mrClient.Empty() {
@@ -46,7 +50,7 @@ func TestClient_VersionCheck(t *testing.T) {
 }
 
 func TestClient_NotReady(t *testing.T) {
-	c := New("https://bla.bla", true, useCache)
+	c := New("https://bla.bla", true)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
 	c.state.set(stateAuthenticated)

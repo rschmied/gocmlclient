@@ -107,7 +107,7 @@ func (c *Client) LinkGet(ctx context.Context, labID, linkID string, deep bool) (
 		if err != nil {
 			return nil, err
 		}
-		ifaceA.node, err = c.NodeGet(ctx, ifaceA.node, false)
+		ifaceA.node, err = c.NodeGet(ctx, ifaceA.node)
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +122,7 @@ func (c *Client) LinkGet(ctx context.Context, labID, linkID string, deep bool) (
 		if err != nil {
 			return nil, err
 		}
-		ifaceB.node, err = c.NodeGet(ctx, ifaceB.node, false)
+		ifaceB.node, err = c.NodeGet(ctx, ifaceB.node)
 		if err != nil {
 			return nil, err
 		}
@@ -169,19 +169,7 @@ func (c *Client) LinkCreate(ctx context.Context, link *Link) (*Link, error) {
 		}
 
 		matches := func(slot int, iface *Interface) bool {
-			if !iface.IsPhysical() {
-				return false
-			}
-			if slot >= 0 {
-				if iface.Slot == slot && !iface.IsConnected {
-					return true
-				}
-			} else {
-				if !iface.IsConnected {
-					return true
-				}
-			}
-			return false
+			return iface.IsPhysical() && !iface.IsConnected && (slot < 0 || iface.Slot == slot)
 		}
 
 		for _, iface := range nodeA.Interfaces {

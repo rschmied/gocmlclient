@@ -131,57 +131,6 @@ type LabImport struct {
 	Warnings []string `json:"warnings"`
 }
 
-func (c *Client) updateCachedLab(existingLab, updatedLab *Lab) *Lab {
-	// only copy fields which can be updated
-	c.mu.Lock()
-	existingLab.Title = updatedLab.Title
-	existingLab.Description = updatedLab.Description
-	existingLab.Nodes = updatedLab.Nodes
-	existingLab.State = updatedLab.State
-	c.mu.Unlock()
-	return existingLab
-}
-
-func (c *Client) cacheLab(lab *Lab, err error) (*Lab, error) {
-	if !c.useCache || err != nil {
-		return lab, err
-	}
-
-	c.mu.RLock()
-	existingLab, ok := c.labCache[lab.ID]
-	c.mu.RUnlock()
-	if ok {
-		return c.updateCachedLab(existingLab, lab), nil
-	}
-
-	lab.Nodes = make(NodeMap)
-	c.mu.Lock()
-	c.labCache[lab.ID] = lab
-	c.mu.Unlock()
-	return lab, nil
-}
-
-func (c *Client) getCachedLab(id string, deep bool) (*Lab, bool) {
-	// no caching when reading deep
-	if !c.useCache || deep {
-		return nil, false
-	}
-	c.mu.RLock()
-	lab, ok := c.labCache[id]
-	c.mu.RUnlock()
-	return lab, ok
-}
-
-func (c *Client) deleteCachedLab(id string, err error) error {
-	if !c.useCache || err != nil {
-		return err
-	}
-	c.mu.Lock()
-	delete(c.labCache, id)
-	c.mu.Unlock()
-	return nil
-}
-
 // LabCreate creates a new lab on the controller.
 func (c *Client) LabCreate(ctx context.Context, lab Lab) (*Lab, error) {
 	// TODO: inconsistent attributes lab_title vs title, ...
@@ -232,8 +181,7 @@ func (c *Client) LabUpdate(ctx context.Context, lab Lab) (*Lab, error) {
 	}
 
 	la.Owner = &User{ID: la.OwnerID}
-	la.Nodes = make(NodeMap)
-	return c.cacheLab(&la.Lab, nil)
+	return &la.Lab, nil
 }
 
 // LabImport imports a lab topology into the controller. This is expected to be
@@ -281,7 +229,7 @@ func (c *Client) LabWipe(ctx context.Context, id string) error {
 
 // LabDestroy deletes the lab identified by the `id` (a UUIDv4).
 func (c *Client) LabDestroy(ctx context.Context, id string) error {
-	return c.deleteCachedLab(id, c.jsonDelete(ctx, fmt.Sprintf("labs/%s", id), 0))
+	return c.jsonDelete(ctx, fmt.Sprintf("labs/%s", id), 0)
 }
 
 // LabGetByTitle returns the lab identified by its `title`. For the use of
@@ -312,9 +260,6 @@ func (c *Client) LabGetByTitle(ctx context.Context, title string, deep bool) (*L
 // controller. Also, with `deep`, the L3 IP address info is fetched for the
 // given lab.
 func (c *Client) LabGet(ctx context.Context, id string, deep bool) (*Lab, error) {
-	if lab, ok := c.getCachedLab(id, deep); ok {
-		return lab, nil
-	}
 	api := fmt.Sprintf("labs/%s", id)
 	la := &labAlias{}
 	err := c.jsonGet(ctx, api, la, 0)
@@ -323,7 +268,7 @@ func (c *Client) LabGet(ctx context.Context, id string, deep bool) (*Lab, error)
 	}
 	if !deep {
 		la.Owner = &User{ID: la.OwnerID}
-		return c.cacheLab(&la.Lab, nil)
+		return &la.Lab, nil
 	}
 	return c.labFill(ctx, la)
 }
@@ -336,14 +281,12 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 		defer slog.Debug("user done")
 		la.Owner, err = c.UserGet(ctx, la.OwnerID)
 		if err != nil {
-			slog.Info("user")
 			return err
 		}
 		return nil
 	})
 
 	lab := &la.Lab
-	lab, _ = c.cacheLab(lab, nil)
 
 	// need to ensure that this block finishes before the others run
 	ch := make(chan struct{})
@@ -358,13 +301,11 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 		}()
 		err := c.getNodesForLab(ctx, lab)
 		if err != nil {
-			slog.Info("nodes for lab")
 			return err
 		}
 		for _, node := range lab.Nodes {
 			err = c.getInterfacesForNode(ctx, node)
 			if err != nil {
-				slog.Info("interfaces for node")
 				return err
 			}
 		}
@@ -375,7 +316,6 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 		defer slog.Debug("l3info done")
 		l3info, err := c.getL3Info(ctx, lab.ID)
 		if err != nil {
-			slog.Info("l3info")
 			return err
 		}
 		slog.Debug("l3info read")
@@ -403,7 +343,6 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 		defer slog.Debug("links done")
 		idlist, err := c.getLinkIDsForLab(ctx, lab)
 		if err != nil {
-			slog.Info("links")
 			return err
 		}
 		slog.Debug("links read")
@@ -413,7 +352,6 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 	})
 
 	if err := g.Wait(); err != nil {
-		slog.Info("wait")
 		return nil, err
 	}
 	slog.Debug("wait done")
