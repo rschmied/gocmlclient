@@ -277,3 +277,116 @@ func TestClient_NodeSetNamedConfigs(t *testing.T) {
 		})
 	}
 }
+
+func TestNode_SameConfig(t *testing.T) {
+	one1 := "one"
+	one2 := "one"
+	two := "two"
+
+	type fields struct {
+		Configuration  *string
+		Configurations []NodeConfig
+	}
+	type args struct {
+		other Node
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		other  Node
+		want   bool
+	}{
+		{"test", fields{Configuration: nil}, Node{Configuration: nil}, true},
+		{"test", fields{Configuration: &one1}, Node{Configuration: &one2}, true},
+		{"test", fields{Configuration: &one1}, Node{Configuration: &two}, false},
+		{"test", fields{
+			Configurations: []NodeConfig{
+				{
+					Name:    "bla",
+					Content: "this",
+				},
+			},
+		},
+			Node{Configurations: []NodeConfig{}},
+			false,
+		},
+		{"test", fields{
+			Configurations: []NodeConfig{
+				{
+					Name:    "bla",
+					Content: "this",
+				},
+			},
+		},
+			Node{Configurations: []NodeConfig{
+				{
+					Name:    "bla",
+					Content: "somethingelse",
+				},
+			},
+			},
+			false,
+		},
+		{"test", fields{
+			Configurations: []NodeConfig{
+				{
+					Name:    "bla",
+					Content: "this",
+				},
+			},
+		},
+			Node{Configurations: []NodeConfig{
+				{
+					Name:    "something",
+					Content: "this",
+				},
+			},
+			},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			node := Node{
+				Configuration:  tt.fields.Configuration,
+				Configurations: tt.fields.Configurations,
+			}
+			if got := node.SameConfig(tt.other); got != tt.want {
+				t.Errorf("Node.SameConfig() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNode_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    []byte
+		wantErr bool
+	}{
+		{"nil-config", []byte(`null`), false},
+		{"no-config", []byte(`{"id": "bla"}`), false},
+		{"ok-config", []byte(`{"id": "bla", "configuration": "hostname bla"}`), false},
+		{"ok-named-config", []byte(`{"id": "bla", "configuration": [{"name": "name", "content": "content"}]}`), false},
+		{"invalid-named-config", []byte(`{"id": "bla", "configuration": 10}`), true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var n Node
+			var err error
+			if err = json.Unmarshal(tt.data, &n); (err != nil) != tt.wantErr {
+				t.Errorf("Node.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
+	// direct call with error
+	t.Run("manual error", func(t *testing.T) {
+		var bla Node
+		err := bla.UnmarshalJSON([]byte(`error`))
+		if err == nil {
+			t.Errorf("Node.UnmarshalJSON() expected error, got nil")
+		}
+	})
+
+}
