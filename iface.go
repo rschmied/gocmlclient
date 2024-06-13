@@ -68,104 +68,6 @@ func (iface Interface) IsPhysical() bool {
 	return iface.Type == IfaceTypePhysical
 }
 
-func (c *Client) updateCachedIface(existingIface, _ *Interface) *Interface {
-	// this is a no-op at this point, we don't allow updating interfaces
-	return existingIface
-}
-
-func (c *Client) cacheIface(iface *Interface, err error) (*Interface, error) {
-	if !c.useCache || err != nil {
-		return iface, err
-	}
-
-	c.mu.RLock()
-	lab, ok := c.labCache[iface.LabID]
-	c.mu.RUnlock()
-	if !ok {
-		return iface, err
-	}
-
-	c.mu.RLock()
-	node, ok := lab.Nodes[iface.Node]
-	c.mu.RUnlock()
-	if !ok {
-		return iface, err
-	}
-	c.mu.RLock()
-	interfaces := node.Interfaces
-	c.mu.RUnlock()
-	for _, nodeIface := range interfaces {
-		if nodeIface.ID == iface.ID {
-			return c.updateCachedIface(nodeIface, iface), nil
-		}
-	}
-
-	iface.node = node // internal linking
-	c.mu.Lock()
-	node.Interfaces = append(node.Interfaces, iface)
-	c.mu.Unlock()
-	return iface, nil
-}
-
-func (c *Client) getCachedIface(iface *Interface) (*Interface, bool) {
-	if !c.useCache {
-		return nil, false
-	}
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	lab, ok := c.labCache[iface.LabID]
-	if !ok {
-		return nil, false
-	}
-
-	node, ok := lab.Nodes[iface.Node]
-	if !ok {
-		return iface, false
-	}
-
-	for _, nodeIface := range node.Interfaces {
-		if nodeIface != nil && nodeIface.ID == iface.ID {
-			if nodeIface.node == nil {
-				nodeIface.node = node
-			}
-			return nodeIface, true
-		}
-	}
-
-	return iface, false
-}
-
-func (c *Client) deleteCachedIface(iface *Interface, err error) error {
-	if !c.useCache || err != nil {
-		return err
-	}
-
-	c.mu.RLock()
-	lab, ok := c.labCache[iface.LabID]
-	c.mu.RUnlock()
-	if !ok {
-		return err
-	}
-
-	c.mu.RLock()
-	node, ok := lab.Nodes[iface.Node]
-	c.mu.RUnlock()
-	if !ok {
-		return err
-	}
-
-	c.mu.Lock()
-	newList := InterfaceList{}
-	for _, nodeIface := range node.Interfaces {
-		if nodeIface.ID != iface.ID {
-			newList = append(newList, nodeIface)
-		}
-	}
-	node.Interfaces = newList
-	c.mu.Unlock()
-	return nil
-}
-
 func (c *Client) getInterfacesForNode(ctx context.Context, node *Node) error {
 	// with the data=true option, we get not only the list of IDs but the
 	// interfaces themselves as well!
@@ -180,9 +82,6 @@ func (c *Client) getInterfacesForNode(ctx context.Context, node *Node) error {
 	sort.Slice(interfaceList, func(i, j int) bool {
 		return interfaceList[i].Slot < interfaceList[j].Slot
 	})
-	for _, iface := range interfaceList {
-		c.cacheIface(iface, nil)
-	}
 	c.mu.Lock()
 	node.Interfaces = interfaceList
 	c.mu.Unlock()
@@ -224,18 +123,14 @@ func (c *Client) getInterfacesForNode(ctx context.Context, node *Node) error {
 
 // InterfaceGet returns the interface identified by its `ID` (iface.ID).
 func (c *Client) InterfaceGet(ctx context.Context, iface *Interface) (*Interface, error) {
-	if iface, ok := c.getCachedIface(iface); ok {
-		return iface, nil
-	}
-
 	api := fmt.Sprintf("labs/%s/interfaces/%s", iface.LabID, iface.ID)
 	err := c.jsonGet(ctx, api, iface, 0)
-	return c.cacheIface(iface, err)
+	return iface, err
 }
 
 // InterfaceCreate creates an interface in the given lab and node.  If the slot
-// is >= 0, the request creates all unallocated slots up to and including
-// that slot. Conversely, if the slot is < 0 (e.g. -1), the next free slot is used.
+// is >= 0, the request creates all unallocated slots up to and including that
+// slot. Conversely, if the slot is < 0 (e.g. -1), the next free slot is used.
 func (c *Client) InterfaceCreate(ctx context.Context, labID, nodeID string, slot int) (*Interface, error) {
 	var slotPtr *int
 
@@ -257,12 +152,13 @@ func (c *Client) InterfaceCreate(ctx context.Context, labID, nodeID string, slot
 		return nil, err
 	}
 
-	// This is quite awkward, not even sure if it's a good REST design practice:
-	// "Returns a JSON object that identifies the interface that was created. In
-	// the case of bulk interface creation, returns a JSON array of such
-	// objects." <-- from the API documentation
-	// A list is returned when slot is defined, even if it's just creating
-	// one interface
+	// This is quite awkward, not even sure if it's a good REST design
+	// practice: "Returns a JSON object that identifies the interface that was
+	// created. In the case of bulk interface creation, returns a JSON array of
+	// such objects." <-- from the API documentation
+	//
+	// A list is returned when slot is defined, even if it's just creating one
+	// interface
 
 	api := fmt.Sprintf("labs/%s/interfaces", labID)
 	if slotPtr == nil {
@@ -271,7 +167,7 @@ func (c *Client) InterfaceCreate(ctx context.Context, labID, nodeID string, slot
 		if err != nil {
 			return nil, err
 		}
-		return c.cacheIface(&result, err)
+		return &result, err
 	}
 
 	// this is when a slot has been provided; the API provides now a list of
@@ -283,8 +179,5 @@ func (c *Client) InterfaceCreate(ctx context.Context, labID, nodeID string, slot
 	}
 
 	lastIface := &result[len(result)-1]
-	for _, li := range result {
-		c.cacheIface(&li, nil)
-	}
 	return lastIface, nil
 }

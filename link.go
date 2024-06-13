@@ -81,9 +81,9 @@ func (c *Client) getLinksForLab(ctx context.Context, lab *Lab, linkIDlist IDlist
 	return nil
 }
 
-// LinkGet returns the link data for the given `labID` and `linkID`. If `deep` is
-// set to `true` then bot interface and node data for the given link are also
-// fetched from the controller.
+// LinkGet returns the link data for the given `labID` and `linkID`. If `deep`
+// is set to `true` then bot interface and node data for the given link are
+// also fetched from the controller.
 func (c *Client) LinkGet(ctx context.Context, labID, linkID string, deep bool) (*Link, error) {
 	api := fmt.Sprintf("labs/%s/links/%s", labID, linkID)
 	link := &Link{}
@@ -96,7 +96,6 @@ func (c *Client) LinkGet(ctx context.Context, labID, linkID string, deep bool) (
 
 	if deep {
 		var err error
-		// ifaceA, ifaceB *Interface
 
 		ifaceA := &Interface{
 			ID:    link.SrcID,
@@ -108,7 +107,7 @@ func (c *Client) LinkGet(ctx context.Context, labID, linkID string, deep bool) (
 		if err != nil {
 			return nil, err
 		}
-		ifaceA.node, err = c.NodeGet(ctx, ifaceA.node, false)
+		ifaceA.node, err = c.NodeGet(ctx, ifaceA.node)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +122,7 @@ func (c *Client) LinkGet(ctx context.Context, labID, linkID string, deep bool) (
 		if err != nil {
 			return nil, err
 		}
-		ifaceB.node, err = c.NodeGet(ctx, ifaceB.node, false)
+		ifaceB.node, err = c.NodeGet(ctx, ifaceB.node)
 		if err != nil {
 			return nil, err
 		}
@@ -136,16 +135,17 @@ func (c *Client) LinkGet(ctx context.Context, labID, linkID string, deep bool) (
 	return link, err
 }
 
-// LinkCreate creates a link based on the the data passed in `link`. Required fields
-// are the `LabID` and either a pair of interfaces `SrcID` / `DstID` or a pair of
-// nodes `SrcNode` / `DstNode`. With nodes it's also possible to provide specific
-// slots in `SrcSlot` / `DstSlot` where the link should be created.
-// If one or both of the provided slots aren't available, then new interfaces will
-// be craeted. If interface creation fails or the provided Interface IDs can't be
-// found, the API returns an error, otherwise the returned Link variable has the
-// updated link data.
-// Node: -1 for a slot means: use next free slot. Specific slots run from 0 to the
-// maximum slot number -1 per the node definition of the node type.
+// LinkCreate creates a link based on the data passed in `link`. Required
+// fields are the `LabID` and either a pair of interfaces `SrcID` / `DstID` or
+// a pair of nodes `SrcNode` / `DstNode`. With nodes it's also possible to
+// provide specific slots in `SrcSlot` / `DstSlot` where the link should be
+// created.
+// If one or both of the provided slots aren't available, then new interfaces
+// will be created. If interface creation fails or the provided Interface IDs
+// can't be found, the API returns an error, otherwise the returned Link
+// variable has the updated link data.
+// Node: -1 for a slot means: use next free slot. Specific slots run from 0 to
+// the maximum slot number -1 per the node definition of the node type.
 func (c *Client) LinkCreate(ctx context.Context, link *Link) (*Link, error) {
 	api := fmt.Sprintf("labs/%s/links", link.LabID)
 
@@ -157,43 +157,19 @@ func (c *Client) LinkCreate(ctx context.Context, link *Link) (*Link, error) {
 	if len(link.SrcNode) > 0 && len(link.DstNode) > 0 {
 
 		nodeA = &Node{LabID: link.LabID, ID: link.SrcNode}
-		// if c.useCache {
-		// 	nodeA, err = c.NodeGet(ctx, nodeA, false)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-		// }
 		err = c.getInterfacesForNode(ctx, nodeA)
 		if err != nil {
 			return nil, err
 		}
 
 		nodeB = &Node{LabID: link.LabID, ID: link.DstNode}
-		// if c.useCache {
-		// 	nodeB, err = c.NodeGet(ctx, nodeB, false)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-		// }
 		err = c.getInterfacesForNode(ctx, nodeB)
 		if err != nil {
 			return nil, err
 		}
 
 		matches := func(slot int, iface *Interface) bool {
-			if !iface.IsPhysical() {
-				return false
-			}
-			if slot >= 0 {
-				if iface.Slot == slot && !iface.IsConnected {
-					return true
-				}
-			} else {
-				if !iface.IsConnected {
-					return true
-				}
-			}
-			return false
+			return iface.IsPhysical() && !iface.IsConnected && (slot < 0 || iface.Slot == slot)
 		}
 
 		for _, iface := range nodeA.Interfaces {

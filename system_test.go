@@ -8,30 +8,39 @@ import (
 )
 
 func TestClient_VersionCheck(t *testing.T) {
-	c := New("https://bla.bla", true, useCache)
+	c := New("https://bla.bla", true)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
+	c.useNamedConfigs = true
 	c.state.set(stateAuthenticated)
 
 	tests := []struct {
-		name     string
-		wantJSON string
-		wantErr  bool
+		name        string
+		wantJSON    string
+		wantErr     bool
+		canNamedCfg bool
 	}{
-		{"too old", `{"version": "2.1.0","ready": true}`, true},
-		{"garbage", `{"version": "garbage","ready": true}`, true},
-		{"too new", `{"version": "2.35.0","ready": true}`, true},
-		{"perfect", `{"version": "2.4.0","ready": true}`, false},
-		{"actual", `{"version": "2.4.0+build.1","ready": true}`, false},
-		{"newer", `{"version": "2.4.1","ready": true}`, false},
-		{"dev", `{"version": "2.5.0-dev0+build.3.2f7875762","ready": true}`, false},
-		{"v2.5.0", `{"version": "2.5.0+build.5","ready": true}`, false},
+		// these three yield an error, useNamedConfigs is untouched
+		{"too old", `{"version": "2.1.0","ready": true}`, true, true},
+		{"garbage", `{"version": "garbage","ready": true}`, true, true},
+		{"too new", `{"version": "2.35.0","ready": true}`, true, true},
+		// the rest will reset useNamedConfigs, if needed
+		{"perfect", `{"version": "2.4.0","ready": true}`, false, false},
+		{"actual", `{"version": "2.4.0+build.1","ready": true}`, false, false},
+		{"newer", `{"version": "2.4.1","ready": true}`, false, false},
+		{"dev", `{"version": "2.5.0-dev0+build.3.2f7875762","ready": true}`, false, false},
+		{"v2.5.0", `{"version": "2.5.0+build.5","ready": true}`, false, false},
+		{"v2.7.0", `{"version": "2.7.0+build.8","ready": true}`, false, true},
 	}
 	for _, tt := range tests {
 		mrClient.SetData(mr.MockRespList{{Data: []byte(tt.wantJSON)}})
 		t.Run(tt.name, func(t *testing.T) {
+			c.UseNamedConfigs()
 			if err := c.versionCheck(ctx, 0); (err != nil) != tt.wantErr {
 				t.Errorf("Client.VersionCheck() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.canNamedCfg != c.useNamedConfigs {
+				t.Errorf("Client.VersionCheck() useNamedConfigs is = %t, want %t", c.useNamedConfigs, tt.canNamedCfg)
 			}
 		})
 		if !mrClient.Empty() {
@@ -41,7 +50,7 @@ func TestClient_VersionCheck(t *testing.T) {
 }
 
 func TestClient_NotReady(t *testing.T) {
-	c := New("https://bla.bla", true, useCache)
+	c := New("https://bla.bla", true)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
 	c.state.set(stateAuthenticated)

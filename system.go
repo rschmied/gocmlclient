@@ -3,7 +3,7 @@ package cmlclient
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
@@ -21,7 +21,10 @@ type systemVersion struct {
 	Ready   bool   `json:"ready"`
 }
 
-const versionConstraint = ">=2.4.0,<3.0.0"
+const (
+	versionConstraint      = ">=2.4.0,<3.0.0"
+	namedConfigsConstraint = ">=2.7.0"
+)
 
 func versionError(got string) error {
 	return fmt.Errorf(
@@ -41,19 +44,16 @@ func (c *Client) versionCheck(ctx context.Context, depth int32) error {
 		return ErrSystemNotReady
 	}
 
-	constraint, err := semver.NewConstraint(versionConstraint)
-	if err != nil {
-		panic("unparsable semver version constant")
-	}
+	constraint, _ := semver.NewConstraint(versionConstraint)
 
 	re := regexp.MustCompile(`^(\d\.\d\.\d)((-dev0)?\+build.*)?$`)
 	m := re.FindStringSubmatch(sv.Version)
 	if m == nil {
 		return versionError(sv.Version)
 	}
-	log.Printf("controller version: %s", sv.Version)
+	slog.Info("controller", "version", sv.Version)
 	if len(m[3]) > 0 {
-		log.Printf("Warning, this is a DEV version %s", sv.Version)
+		slog.Warn("this is a DEV version", "version", sv.Version)
 	}
 	stem := m[1]
 	v, err := semver.NewVersion(stem)
@@ -65,6 +65,14 @@ func (c *Client) versionCheck(ctx context.Context, depth int32) error {
 	if !ok {
 		return versionError(sv.Version)
 	}
+
+	// unset useNamedConfig if necessary
+	constraint, _ = semver.NewConstraint(namedConfigsConstraint)
+	if ok = constraint.Check(v); ok {
+		slog.Info("named configs supported")
+	} else {
+		c.useNamedConfigs = false
+	}
 	c.version = sv.Version
 	return nil
 }
@@ -74,9 +82,15 @@ func (c *Client) Version() string {
 	return c.version
 }
 
+// Turns on the use of named configs (only with 2.7.0 and newer)
+func (c *Client) UseNamedConfigs() {
+	slog.Info("USE named configs")
+	c.useNamedConfigs = true
+}
+
 // Ready returns nil if the system is compatible and ready
 func (c *Client) Ready(ctx context.Context) error {
-	// we can safely assume depth 0 as the API endpoint does not
-	// require authentication
+	// we can safely assume depth 0 as the API endpoint does not require
+	// authentication
 	return c.versionCheck(ctx, 0)
 }

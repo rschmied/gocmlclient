@@ -494,21 +494,18 @@ func TestClient_StartStopWipeDestroy(t *testing.T) {
 		tc.client.LabDestroy,
 	}
 
-	for _, useCache := range []bool{true, false} {
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				tc.client.useCache = useCache
-				tc.mr.SetData(tt.data)
-				for _, f := range funcs {
-					err := f(tc.ctx, "bla")
-					if tt.want {
-						assert.Error(t, err)
-					} else {
-						assert.NoError(t, err)
-					}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tc.mr.SetData(tt.data)
+			for _, f := range funcs {
+				err := f(tc.ctx, "bla")
+				if tt.want {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
 				}
-			})
-		}
+			}
+		})
 	}
 }
 
@@ -642,9 +639,24 @@ func TestClient_LabCreate(t *testing.T) {
 
 func TestClient_LabUpdate(t *testing.T) {
 	tc := newAuthedTestAPIclient()
-	tc.client.useCache = true
 
 	data := mr.MockRespList{
+		mr.MockResp{
+			Data: []byte(`{
+				"state": "DEFINED_ON_CORE",
+				"created": "2022-10-14T10:05:07+00:00",
+				"modified": "2022-10-14T10:05:07+00:00",
+				"lab_title": "Lab at Mon 17:27 PM",
+				"lab_description": "string",
+				"lab_notes": "string",
+				"owner": "00000000-0000-4000-a000-000000000000",
+				"owner_username": "admin",
+				"node_count": 0,
+				"link_count": 0,
+				"id": "lab99",
+				"groups": []
+			}`),
+		},
 		mr.MockResp{
 			Data: []byte(`{
 				"state": "DEFINED_ON_CORE",
@@ -679,6 +691,22 @@ func TestClient_LabUpdate(t *testing.T) {
 				"groups": []
 			}`),
 		},
+		mr.MockResp{
+			Data: []byte(`{
+				"state": "DEFINED_ON_CORE",
+				"created": "2022-10-14T10:05:07+00:00",
+				"modified": "2022-10-14T12:05:07+00:00",
+				"lab_title": "new title",
+				"lab_description": "string",
+				"lab_notes": "string",
+				"owner": "00000000-0000-4000-a000-000000000000",
+				"owner_username": "admin",
+				"node_count": 0,
+				"link_count": 0,
+				"id": "lab99",
+				"groups": []
+			}`),
+		},
 	}
 
 	tests := []struct {
@@ -691,9 +719,6 @@ func TestClient_LabUpdate(t *testing.T) {
 		{"updated", Lab{ID: "lab99", Title: "new title"}, data2, false},
 		{"bad", Lab{}, mr.MockRespList{mr.MockResp{Code: 405}}, true},
 	}
-
-	lab := &Lab{ID: "lab99"}
-	tc.client.labCache["lab99"] = lab
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -708,99 +733,6 @@ func TestClient_LabUpdate(t *testing.T) {
 			getLab, err := tc.client.LabGet(tc.ctx, tt.lab.ID, false)
 			assert.NoError(t, err)
 			assert.Equal(t, updatedLab, getLab)
-		})
-	}
-}
-
-func TestClient_CompleteCache(t *testing.T) {
-	tc := newAuthedTestAPIclient()
-	tc.client.useCache = true
-
-	ifacen1i2 := []byte(`{
-		"id": "n1i2",
-		"lab_id": "lab1",
-		"node": "node1",
-		"label": "eth1",
-		"slot": 1,
-		"type": "physical",
-		"mac_address": "52:54:00:0c:e0:69",
-		"is_connected": true,
-		"state": "STARTED"
-	}`)
-	ifacen2i2 := []byte(`{
-		"id": "n2i2",
-		"lab_id": "lab1",
-		"node": "node2",
-		"label": "eth1",
-		"slot": 1,
-		"type": "physical",
-		"mac_address": "52:54:00:0c:e0:70",
-		"is_connected": true,
-		"state": "STOPPED"
-	}`)
-	link2n1n2 := []byte(`{
-		"id": "link2",
-		"interface_a": "n1i2",
-		"interface_b": "n2i2",
-		"lab_id": "lab1",
-		"label": "alpine-0-eth1<->alpine-1-eth1",
-		"link_capture_key": "",
-		"node_a": "node1",
-		"node_b": "node2",
-		"state": "DEFINED_ON_CORE"
-	}`)
-
-	data := mr.MockRespList{
-		mr.MockResp{Data: demoLab, URL: `/labs/lab1$`},
-		mr.MockResp{Data: links, URL: `/links$`},
-		mr.MockResp{Data: lab_layer3, URL: `layer3_addresses$`},
-		mr.MockResp{Data: ownerUser, URL: `/users/.+$`},
-		mr.MockResp{Data: nodes, URL: `/nodes\?data=true$`},
-		mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
-		mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces\?data=true$`},
-		mr.MockResp{Data: linkn1n2, URL: `/links/link1$`},
-
-		mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
-		mr.MockResp{Data: ifacesn2, URL: `/node2/interfaces\?data=true$`},
-
-		// 2 new interfaces, one new link, followed by a get
-		mr.MockResp{Data: ifacen1i2, URL: `/interfaces$`},
-		mr.MockResp{Data: ifacen2i2, URL: `/interfaces$`},
-		mr.MockResp{Data: link2n1n2, URL: `/links$`},
-		mr.MockResp{Data: link2n1n2, URL: `/links/link2$`},
-	}
-
-	tests := []struct {
-		name string
-		lab  Lab
-		data mr.MockRespList
-		want bool
-	}{
-		{"good", Lab{}, data, false},
-		// {"bad", Lab{}, mr.MockRespList{mr.MockResp{Code: 405}}, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tc.mr.SetData(tt.data)
-			_, err := tc.client.LabGet(tc.ctx, "lab1", true)
-			assert.NoError(t, err)
-			link := &Link{
-				LabID:   "lab1",
-				SrcNode: "node1",
-				DstNode: "node2",
-				SrcSlot: -1,
-				DstSlot: -1,
-			}
-			link, err = tc.client.LinkCreate(tc.ctx, link)
-			if tt.want {
-				assert.Error(t, err)
-			} else {
-				if assert.NoError(t, err) {
-					assert.Equal(t, "link2", link.ID)
-				}
-			}
-			assert.True(t, tc.mr.Empty())
 		})
 	}
 }

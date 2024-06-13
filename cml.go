@@ -19,14 +19,13 @@ type Client struct {
 	compatibilityErr error
 	state            *apiClientState
 	mu               sync.RWMutex
-	labCache         map[string]*Lab
-	useCache         bool
+	useNamedConfigs  bool
 	version          string
 }
 
-// New returns a new CML client instance. The host must be a valid URL including
-// scheme (https://).
-func New(host string, insecure, useCache bool) *Client {
+// New returns a new CML client instance. The host must be a valid URL
+// including scheme (https://).
+func New(host string, insecure bool) *Client {
 	tr := http.DefaultTransport.(*http.Transport)
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: insecure,
@@ -44,7 +43,6 @@ func New(host string, insecure, useCache bool) *Client {
 		},
 		compatibilityErr: nil,
 		state:            newState(),
-		labCache:         make(map[string]*Lab),
-		useCache:         useCache,
+		useNamedConfigs:  false,
 	}
 }

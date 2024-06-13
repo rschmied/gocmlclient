@@ -8,8 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const useCache bool = false
-
 type testClient struct {
 	client *Client
 	mr     *mr.MockResponder
@@ -17,7 +15,7 @@ type testClient struct {
 }
 
 func newTestAPIclient() testClient {
-	c := New("https://controller", true, useCache)
+	c := New("https://controller", true)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
 	c.SetUsernamePassword("user", "pass")
@@ -31,7 +29,7 @@ func newAuthedTestAPIclient() testClient {
 }
 
 func TestClient_methoderror(t *testing.T) {
-	c := New("", true, useCache)
+	c := New("", true)
 	err := c.jsonReq(context.Background(), "ü", "###", nil, nil, 0)
 	assert.Error(t, err)
 }

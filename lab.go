@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -80,9 +80,6 @@ type Lab struct {
 	Nodes       NodeMap      `json:"nodes"`
 	Links       linkList     `json:"links"`
 	Groups      LabGroupList `json:"groups"`
-
-	// private
-	// filled bool
 }
 
 // CanBeWiped returns `true` when all nodes in the lab are wiped.
@@ -118,8 +115,8 @@ func (l *Lab) Booted() bool {
 	return true
 }
 
-// NodeByLabel returns the node of a lab identified by its `label“ or an
-// error if not found.
+// NodeByLabel returns the node of a lab identified by its `label“ or an error
+// if not found.
 func (l *Lab) NodeByLabel(ctx context.Context, label string) (*Node, error) {
 	for _, node := range l.Nodes {
 		if node.Label == label {
@@ -132,57 +129,6 @@ func (l *Lab) NodeByLabel(ctx context.Context, label string) (*Node, error) {
 type LabImport struct {
 	ID       string   `json:"id"`
 	Warnings []string `json:"warnings"`
-}
-
-func (c *Client) updateCachedLab(existingLab, updatedLab *Lab) *Lab {
-	// only copy fields which can be updated
-	c.mu.Lock()
-	existingLab.Title = updatedLab.Title
-	existingLab.Description = updatedLab.Description
-	existingLab.Nodes = updatedLab.Nodes
-	existingLab.State = updatedLab.State
-	c.mu.Unlock()
-	return existingLab
-}
-
-func (c *Client) cacheLab(lab *Lab, err error) (*Lab, error) {
-	if !c.useCache || err != nil {
-		return lab, err
-	}
-
-	c.mu.RLock()
-	existingLab, ok := c.labCache[lab.ID]
-	c.mu.RUnlock()
-	if ok {
-		return c.updateCachedLab(existingLab, lab), nil
-	}
-
-	lab.Nodes = make(NodeMap)
-	c.mu.Lock()
-	c.labCache[lab.ID] = lab
-	c.mu.Unlock()
-	return lab, nil
-}
-
-func (c *Client) getCachedLab(id string, deep bool) (*Lab, bool) {
-	// no caching when reading deep
-	if !c.useCache || deep {
-		return nil, false
-	}
-	c.mu.RLock()
-	lab, ok := c.labCache[id]
-	c.mu.RUnlock()
-	return lab, ok
-}
-
-func (c *Client) deleteCachedLab(id string, err error) error {
-	if !c.useCache || err != nil {
-		return err
-	}
-	c.mu.Lock()
-	delete(c.labCache, id)
-	c.mu.Unlock()
-	return nil
 }
 
 // LabCreate creates a new lab on the controller.
@@ -235,8 +181,7 @@ func (c *Client) LabUpdate(ctx context.Context, lab Lab) (*Lab, error) {
 	}
 
 	la.Owner = &User{ID: la.OwnerID}
-	la.Nodes = make(NodeMap)
-	return c.cacheLab(&la.Lab, nil)
+	return &la.Lab, nil
 }
 
 // LabImport imports a lab topology into the controller. This is expected to be
@@ -284,7 +229,7 @@ func (c *Client) LabWipe(ctx context.Context, id string) error {
 
 // LabDestroy deletes the lab identified by the `id` (a UUIDv4).
 func (c *Client) LabDestroy(ctx context.Context, id string) error {
-	return c.deleteCachedLab(id, c.jsonDelete(ctx, fmt.Sprintf("labs/%s", id), 0))
+	return c.jsonDelete(ctx, fmt.Sprintf("labs/%s", id), 0)
 }
 
 // LabGetByTitle returns the lab identified by its `title`. For the use of
@@ -311,12 +256,10 @@ func (c *Client) LabGetByTitle(ctx context.Context, title string, deep bool) (*L
 }
 
 // LabGet returns the lab identified by `id` (a UUIDv4). If `deep` is provided,
-// then the nodes, their interfaces and links are also fetched from the controller.
-// Also, with `deep`, the L3 IP address info is fetched for the given lab.
+// then the nodes, their interfaces and links are also fetched from the
+// controller. Also, with `deep`, the L3 IP address info is fetched for the
+// given lab.
 func (c *Client) LabGet(ctx context.Context, id string, deep bool) (*Lab, error) {
-	if lab, ok := c.getCachedLab(id, deep); ok {
-		return lab, nil
-	}
 	api := fmt.Sprintf("labs/%s", id)
 	la := &labAlias{}
 	err := c.jsonGet(ctx, api, la, 0)
@@ -325,7 +268,7 @@ func (c *Client) LabGet(ctx context.Context, id string, deep bool) (*Lab, error)
 	}
 	if !deep {
 		la.Owner = &User{ID: la.OwnerID}
-		return c.cacheLab(&la.Lab, nil)
+		return &la.Lab, nil
 	}
 	return c.labFill(ctx, la)
 }
@@ -335,7 +278,7 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		defer log.Printf("user done")
+		defer slog.Debug("user done")
 		la.Owner, err = c.UserGet(ctx, la.OwnerID)
 		if err != nil {
 			return err
@@ -344,13 +287,12 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 	})
 
 	lab := &la.Lab
-	lab, _ = c.cacheLab(lab, nil)
 
 	// need to ensure that this block finishes before the others run
 	ch := make(chan struct{})
 	g.Go(func() error {
 		defer func() {
-			log.Printf("nodes/interfaces done")
+			slog.Debug("nodes/interfaces done")
 			// two sync points, we can run the API endpoints but we need to
 			// wait for the node data to be read until we can add the layer3
 			// info (1) and the link info (2)
@@ -371,12 +313,12 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 	})
 
 	g.Go(func() error {
-		defer log.Printf("l3info done")
+		defer slog.Debug("l3info done")
 		l3info, err := c.getL3Info(ctx, lab.ID)
 		if err != nil {
 			return err
 		}
-		log.Printf("l3info read")
+		slog.Debug("l3info read")
 		// wait for node data read complete
 		<-ch
 		// map and merge the l3 data...
@@ -384,7 +326,6 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 			if node, found := lab.Nodes[nid]; found {
 				for mac, l3i := range l3data.Interfaces {
 					for _, iface := range node.Interfaces {
-						// if iface, found := node.Interfaces[l3i.ID]; found {
 						if iface.MACaddress == mac {
 							iface.IP4 = l3i.IP4
 							iface.IP6 = l3i.IP6
@@ -394,17 +335,17 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 				}
 			}
 		}
-		log.Printf("l3info loop done")
+		slog.Debug("l3info loop done")
 		return nil
 	})
 
 	g.Go(func() error {
-		defer log.Printf("links done")
+		defer slog.Debug("links done")
 		idlist, err := c.getLinkIDsForLab(ctx, lab)
 		if err != nil {
 			return err
 		}
-		log.Printf("linkidlist read")
+		slog.Debug("links read")
 		// wait for node data read complete
 		<-ch
 		return c.getLinksForLab(ctx, lab, idlist)
@@ -413,8 +354,6 @@ func (c *Client) labFill(ctx context.Context, la *labAlias) (*Lab, error) {
 	if err := g.Wait(); err != nil {
 		return nil, err
 	}
-	log.Printf("wait done")
-	// lab.filled = true
-	// return c.cacheLab(lab, nil)
+	slog.Debug("wait done")
 	return lab, nil
 }
