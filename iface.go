@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"sort"
 )
 
@@ -76,7 +75,6 @@ func (c *Client) getInterfacesForNode(ctx context.Context, node *Node) error {
 	interfaceList := InterfaceList{}
 	err := c.jsonGet(ctx, api, &interfaceList, 0)
 	if err != nil {
-		slog.Info("done", "lab", node.LabID, "node", node.ID, slog.Any("err", err))
 		return err
 	}
 

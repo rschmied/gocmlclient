@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"sort"
 )
 
@@ -424,16 +423,14 @@ func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
 
 // NodeGet returns the node identified by its `ID` and `LabID` in the provided node.
 func (c *Client) NodeGet(ctx context.Context, node *Node) (*Node, error) {
-	/* SIMPLE-5052 -- results are different for simplified=true vs false
-	for the inherited values. In the simplified case, all values are always
-	null. */
+	// SIMPLE-5052 -- results are different for simplified=true vs false for
+	// the inherited values. In the simplified case, all values are always
+	// null.
 
 	var err error
 	newNode := Node{}
 	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
-	// slog.Warn("using named ####", slog.Any("client", c))
 	if c.useNamedConfigs {
-		slog.Warn("using named configs")
 		api += "?operational=true&exclude_configurations=false"
 	}
 	err = c.jsonGet(ctx, api, &newNode, 0)
