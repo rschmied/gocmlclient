@@ -5,6 +5,7 @@ Lists the changes in the gocmlclient package.
 ## Version 0.1.0
 
 - making a somewhat bigger version bump due to some bigger changes
+- moved logging to log/slog
 - removed all the caching logic / code. It didn't really work well due to races.  In addition, TF doesn't really keep a connection / client over multiple resource calls so the caching was somewhat limited even it would have properly worked (which it did not).
 - named configurations (added with CML 2.7)
 - added some tests for the named configs
