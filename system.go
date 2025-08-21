@@ -82,7 +82,36 @@ func (c *Client) Version() string {
 	return c.version
 }
 
-// Turns on the use of named configs (only with 2.7.0 and newer)
+// VersionCheck checks if the client version satisfies the provided semantic
+// version.
+func (c *Client) VersionCheck(ctx context.Context, version string) (bool, error) {
+	constraint, err := semver.NewConstraint(versionConstraint)
+	if err != nil {
+		slog.Error("version isn't valid", "err", err)
+	}
+
+	if len(c.version) == 0 {
+		slog.Error("version unknown")
+		return false, fmt.Errorf("version unknown")
+	}
+
+	re := regexp.MustCompile(`^(\d\.\d\.\d)((-dev0)?\+build.*)?$`)
+	m := re.FindStringSubmatch(c.version)
+	if m == nil {
+		return false, fmt.Errorf("version doesn't match expected format")
+	}
+
+	stem := m[1]
+	v, err := semver.NewVersion(stem)
+	if err != nil {
+		return false, fmt.Errorf("version doesn't doesn't adhere to semver")
+	}
+
+	return constraint.Check(v), nil
+}
+
+// UseNamedConfigs turns on the use of named configs (only with 2.7.0 and
+// newer)
 func (c *Client) UseNamedConfigs() {
 	slog.Info("USE named configs")
 	c.useNamedConfigs = true

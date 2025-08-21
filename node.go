@@ -163,7 +163,7 @@ func (nmap NodeMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nodeList)
 }
 
-func (n *Node) UnmarshalJSON(data []byte) error {
+func (node *Node) UnmarshalJSON(data []byte) error {
 	if string(data) == "null" || string(data) == `""` {
 		return nil
 	}
@@ -199,7 +199,7 @@ func (n *Node) UnmarshalJSON(data []byte) error {
 	default:
 		return fmt.Errorf("unexpected type: %T", thing)
 	}
-	*n = (Node)(na)
+	*node = (Node)(na)
 
 	return nil
 }
@@ -405,10 +405,10 @@ func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
 	// FIX: inconsistency of patch API
 	err = c.jsonPatch(ctx, api, buf, nil, 0)
 	if err != nil {
-		// for consistency, remove the created node that can't be updated
-		// this assumes that the error was because of the provided data and
-		// not because of e.g. a connectivity issue between the initial create
-		// and the attempted removal.
+		// For consistency, remove the created node that can't be updated. This
+		// assumes that the error was because of the provided data and not because
+		// of e.g. a connectivity issue between the initial create and the
+		// attempted removal.
 		node.ID = newNode.ID
 		c.NodeDestroy(ctx, node)
 		return nil, err

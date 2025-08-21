@@ -70,9 +70,8 @@ func (c *Client) ExtConnGet(ctx context.Context, extConnID string) (*ExtConn, er
 
 // ExtConnectors returns all external connectors on the system
 func (c *Client) ExtConnectors(ctx context.Context) ([]*ExtConn, error) {
-	api := fmt.Sprintf("system/external_connectors")
 	extconnlist := make([]*ExtConn, 0)
-	err := c.jsonGet(ctx, api, &extconnlist, 0)
+	err := c.jsonGet(ctx, "system/external_connectors", &extconnlist, 0)
 	if err != nil {
 		return nil, err
 	}

@@ -2,8 +2,10 @@ package cmlclient
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
+	"os"
 	"reflect"
 	"testing"
 
@@ -356,4 +358,38 @@ func TestClient_GetImageDefs(t *testing.T) {
 			t.Error("not all data in mock client consumed")
 		}
 	}
+}
+
+func TestImageLiveServer(t *testing.T) {
+	testHost := os.Getenv("TEST_HOST")
+	testToken := os.Getenv("TEST_TOKEN")
+
+	if testHost == "" || testToken == "" {
+		t.Skip("skipping live server test: TEST_HOST and TEST_TOKEN environment variables must be set")
+	}
+
+	ctx := context.Background()
+	client := New(testHost, true) // true for insecure TLS
+	if client == nil {
+		t.Fatal("Failed to create CML client")
+	}
+	client.apiToken = testToken
+	t.Run("GetImageDefinitions", func(t *testing.T) {
+		images, err := client.ImageDefinitions(ctx)
+		if err != nil {
+			t.Fatalf("failed to get image definitions: %v", err)
+		}
+
+		if len(images) == 0 {
+			t.Skip("no images found on server, skipping image tests")
+		}
+
+		t.Logf("found %d image definitions", len(images))
+
+		// Test that we got valid image data
+		firstImage := images[0]
+		if firstImage.ID == "" {
+			t.Error("first image has empty ID")
+		}
+	})
 }
