@@ -26,7 +26,7 @@ type Client struct {
 func New(baseURL string, opts ...Option) (*Client, error) {
 	// start with defaults
 	cfg := &Config{
-		// HTTPClient: http.DefaultClient,
+		// httpClient: http.DefaultClient,
 		logger:  slog.Default(), // whatever you use
 		baseURL: baseURL,
 	}
@@ -50,10 +50,8 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 }
 
 func createAPIclient(c *Config) *api.Client {
-	slog.Info("=== Full Integration Example ===")
-
 	// 1. Create token provider
-	provider := auth.NewUsernamePasswordProvider(auth.UsernamePasswordConfig{
+	provider := auth.NewAuthProvider(auth.AuthConfig{
 		BaseURL:            c.baseURL,
 		Username:           c.username,
 		Password:           c.password,
@@ -61,51 +59,39 @@ func createAPIclient(c *Config) *api.Client {
 		InsecureSkipVerify: c.insecureSkipVerify,
 	})
 
-	// 2. Create auth manager
+	// 2. create the auth manager
 	manager := auth.NewManager(provider, auth.Config{
 		RefreshBuffer: 30 * time.Second,
 	})
 
+	// 3. create a sane base transport
 	tr := http.DefaultTransport.(*http.Transport)
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: c.insecureSkipVerify,
 	}
 	tr.Proxy = http.ProxyFromEnvironment
 
-	// // 4. Create authenticated transport
-	authTransport := auth.NewTransport(auth.TransportConfig{
-		// Base:    api.NewTransport(c.insecureSkipVerify),
-		Base:    tr,
-		Manager: manager,
-		// SkipAuthEndpoints: []string{
-		// 	"/api/v0/auth_extended",
-		// 	"/health", // additional endpoints to skip
-		// },
-	})
+	// 4. create authenticated transport
+	authTransport := auth.NewTransport(tr, manager)
 
-	// 5. Create HTTP client with auth transport
-	httpClient := &http.Client{
-		Transport: authTransport,
-		Timeout:   15 * time.Second,
+	// 5. create a default HTTP client, if needed
+	if c.httpClient == nil {
+		c.httpClient = &http.Client{
+			Timeout: 15 * time.Second,
+		}
 	}
 
-	// 6. Create API client with middlewares
-	middlewares := []api.Middleware{
-		api.LoggingMiddleware(slog.Default()),
-		api.RetryMiddleware(api.DefaultRetryPolicy()),
-	}
+	// 6. attach the auth transport
+	c.httpClient.Transport = authTransport
 
+	// 7. create API client with middlewares
 	apiClient := api.New(c.baseURL, api.Options{
-		HTTPClient:  httpClient,
-		Middlewares: middlewares,
+		HTTPClient: c.httpClient,
+		Middlewares: []api.Middleware{
+			api.LoggingMiddleware(c.logger),
+			api.RetryMiddleware(api.DefaultRetryPolicy()),
+		},
 	})
 
 	return apiClient
 }
-
-// type LabClient struct {
-// 	// Embed or compose internal services
-// }
-//
-// func (c *LabClient) Get(ctx context.Context, id string, deep bool) (*models.Lab, error)
-// func (c *LabClient) Create(ctx context.Context, lab *models.Lab) (*models.Lab, error)

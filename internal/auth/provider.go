@@ -1,3 +1,4 @@
+// Package auth provides auth service
 package auth
 
 import (
@@ -13,8 +14,8 @@ import (
 	"time"
 )
 
-// UsernamePasswordProvider implements TokenProvider using username/password authentication
-type UsernamePasswordProvider struct {
+// AuthProvider implements TokenProvider using username/password authentication
+type AuthProvider struct {
 	baseURL     string
 	username    string
 	password    string
@@ -23,8 +24,8 @@ type UsernamePasswordProvider struct {
 	client *http.Client
 }
 
-// UsernamePasswordConfig configures the username/password provider
-type UsernamePasswordConfig struct {
+// AuthConfig configures the username/password provider
+type AuthConfig struct {
 	BaseURL     string
 	Username    string
 	Password    string
@@ -35,8 +36,8 @@ type UsernamePasswordConfig struct {
 	InsecureSkipVerify bool
 }
 
-// NewUsernamePasswordProvider creates a new username/password token provider
-func NewUsernamePasswordProvider(config UsernamePasswordConfig) *UsernamePasswordProvider {
+// NewAuthProvider creates a new username/password token provider
+func NewAuthProvider(config AuthConfig) *AuthProvider {
 	if config.Timeout == 0 {
 		config.Timeout = 10 * time.Second
 	}
@@ -54,7 +55,7 @@ func NewUsernamePasswordProvider(config UsernamePasswordConfig) *UsernamePasswor
 		Transport: transport,
 	}
 
-	return &UsernamePasswordProvider{
+	return &AuthProvider{
 		baseURL:     config.BaseURL,
 		username:    config.Username,
 		password:    config.Password,
@@ -64,8 +65,8 @@ func NewUsernamePasswordProvider(config UsernamePasswordConfig) *UsernamePasswor
 }
 
 // FetchToken implements TokenProvider
-func (p *UsernamePasswordProvider) FetchToken(ctx context.Context) (string, time.Time, error) {
-	// If we have a preset token, use it once
+func (p *AuthProvider) FetchToken(ctx context.Context) (string, time.Time, error) {
+	// if we have a preset token, use it once, while it's valid
 	if p.presetToken != "" {
 		slog.Debug("Using preset token")
 		token := p.presetToken
@@ -80,7 +81,7 @@ func (p *UsernamePasswordProvider) FetchToken(ctx context.Context) (string, time
 }
 
 // authenticateWithPassword performs username/password authentication
-func (p *UsernamePasswordProvider) authenticateWithPassword(ctx context.Context) (string, time.Time, error) {
+func (p *AuthProvider) authenticateWithPassword(ctx context.Context) (string, time.Time, error) {
 	slog.Debug("Authenticating with username/password", "username", p.username)
 
 	// Prepare request body
@@ -151,13 +152,13 @@ func (p *UsernamePasswordProvider) authenticateWithPassword(ctx context.Context)
 
 // SetPresetToken sets a token to use on the next FetchToken call
 // Useful for scenarios where you have a valid token but need to initialize the provider
-func (p *UsernamePasswordProvider) SetPresetToken(token string) {
+func (p *AuthProvider) SetPresetToken(token string) {
 	slog.Debug("Setting preset token")
 	p.presetToken = token
 }
 
 // UpdateCredentials updates the username and password
-func (p *UsernamePasswordProvider) UpdateCredentials(username, password string) {
+func (p *AuthProvider) UpdateCredentials(username, password string) {
 	slog.Debug("Updating credentials", "username", username)
 	p.username = username
 	p.password = password
@@ -175,31 +176,4 @@ type authResponse struct {
 	Username string `json:"username"`
 	Token    string `json:"token"`
 	Admin    bool   `json:"admin"`
-}
-
-// StaticTokenProvider implements TokenProvider for static/long-lived tokens
-type StaticTokenProvider struct {
-	token  string
-	expiry time.Time
-}
-
-// NewStaticTokenProvider creates a provider for static tokens
-func NewStaticTokenProvider(token string, expiry time.Time) *StaticTokenProvider {
-	return &StaticTokenProvider{
-		token:  token,
-		expiry: expiry,
-	}
-}
-
-// FetchToken implements TokenProvider
-func (p *StaticTokenProvider) FetchToken(ctx context.Context) (string, time.Time, error) {
-	slog.Debug("Using static token")
-	return p.token, p.expiry, nil
-}
-
-// UpdateToken updates the static token and expiry
-func (p *StaticTokenProvider) UpdateToken(token string, expiry time.Time) {
-	slog.Debug("Updating static token", "expiry", expiry)
-	p.token = token
-	p.expiry = expiry
 }

@@ -1,3 +1,5 @@
+// Package models provides the models for Cisco Modeling Labs
+// here: user related types
 package models
 
 // {

@@ -1,3 +1,5 @@
+// Package models provides the models for Cisco Modeling Labs
+// here: link related types
 package models
 
 const (

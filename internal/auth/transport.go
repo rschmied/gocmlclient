@@ -8,52 +8,24 @@ import (
 
 // Transport wraps an HTTP RoundTripper to automatically add authentication
 type Transport struct {
-	// Base is the underlying HTTP transport
-	Base http.RoundTripper
-
-	// Manager handles token lifecycle
-	Manager *Manager
-
-	// Configuration
-	// skipAuthEndpoints []string // Endpoints that don't need auth (e.g., /auth)
-}
-
-// TransportConfig configures the auth transport
-type TransportConfig struct {
-	Base    http.RoundTripper
-	Manager *Manager
-	// SkipAuthEndpoints []string
+	Base    http.RoundTripper // underlying HTTP transport
+	Manager *Manager          // handles token lifecycle
 }
 
 // NewTransport creates a new authenticated transport
-func NewTransport(config TransportConfig) *Transport {
-	if config.Base == nil {
-		config.Base = http.DefaultTransport
+func NewTransport(base http.RoundTripper, manager *Manager) *Transport {
+	if base == nil {
+		base = http.DefaultTransport
 	}
 
-	// if config.SkipAuthEndpoints == nil {
-	// 	config.SkipAuthEndpoints = []string{
-	// 		"/api/v0/auth",
-	// 		"/api/v0/auth_extended",
-	// 		"/api/v0/authok",
-	// 	}
-	// }
-
 	return &Transport{
-		Base:    config.Base,
-		Manager: config.Manager,
-		// skipAuthEndpoints: config.SkipAuthEndpoints,
+		Base:    base,
+		Manager: manager,
 	}
 }
 
 // RoundTrip implements http.RoundTripper
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	// Skip authentication for certain endpoints
-	// if t.shouldSkipAuth(req) {
-	// 	slog.Debug("Skipping authentication for endpoint", "path", req.URL.Path)
-	// 	return t.Base.RoundTrip(req)
-	// }
-
 	// Clone the request to avoid modifying the original
 	reqWithAuth := req.Clone(req.Context())
 
@@ -107,19 +79,6 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return res, nil
 }
 
-// shouldSkipAuth determines if authentication should be skipped for a request
-// func (t *Transport) shouldSkipAuth(req *http.Request) bool {
-// 	path := req.URL.Path
-//
-// 	for _, skipPath := range t.skipAuthEndpoints {
-// 		if strings.HasSuffix(path, skipPath) {
-// 			return true
-// 		}
-// 	}
-//
-// 	return false
-// }
-
 // drainAndClose drains and closes a response body
 func drainAndClose(r io.ReadCloser) error {
 	if r == nil {
@@ -136,7 +95,6 @@ func (t *Transport) Middleware() func(http.RoundTripper) http.RoundTripper {
 		return &Transport{
 			Base:    base,
 			Manager: t.Manager,
-			// skipAuthEndpoints: t.skipAuthEndpoints,
 		}
 	}
 }

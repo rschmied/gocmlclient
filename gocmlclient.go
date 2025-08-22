@@ -1,3 +1,4 @@
+// Package gocmlclient provides a client for Cisco Modeling Labs
 package gocmlclient
 
 import (
