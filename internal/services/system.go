@@ -1,4 +1,4 @@
-package cmlclient
+package services
 
 import (
 	"context"
@@ -7,7 +7,26 @@ import (
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/rschmied/gocmlclient/internal/api"
+	cmlerrors "github.com/rschmied/gocmlclient/pkg/errors"
 )
+
+const systeminfoAPI string = "system_information"
+
+// SystemService provides system-related operations
+type SystemService struct {
+	apiClient        *api.Client
+	compatibilityErr error
+	version          string
+	useNamedConfigs  bool
+}
+
+// NewSystemService creates a new lab service
+func NewSystemService(apiClient *api.Client) *SystemService {
+	return &SystemService{
+		apiClient: apiClient,
+	}
+}
 
 // the 2.4.0.dev is likely wrong, should be -dev (dash, not dot):
 // {
@@ -29,26 +48,26 @@ const (
 func versionError(got string) error {
 	return fmt.Errorf(
 		"server not compatible, want %s, got %s (%w)",
-		versionConstraint, got, ErrSystemNotReady,
+		versionConstraint, got, cmlerrors.ErrSystemNotReady,
 	)
 }
 
-func (c *Client) versionCheck(ctx context.Context) error {
-	c.compatibilityErr = nil
+func (s *SystemService) versionCheck(ctx context.Context) error {
+	s.compatibilityErr = nil
 	sv := systemVersion{}
-	if err := c.GetJSON(ctx, systeminfoAPI, nil, &sv); err != nil {
+	if err := s.apiClient.GetJSON(ctx, systeminfoAPI, nil, &sv); err != nil {
 		return fmt.Errorf("system info error %w", err)
 	}
 
 	if !sv.Ready {
-		return ErrSystemNotReady
+		return cmlerrors.ErrSystemNotReady
 	}
 
 	// set the version so VersionCheck can use it
-	c.version = sv.Version
+	s.version = sv.Version
 
 	// use the exported VersionCheck function
-	compatible, err := c.VersionCheck(ctx, versionConstraint)
+	compatible, err := s.VersionCheck(ctx, versionConstraint)
 	if err != nil {
 		return err
 	}
@@ -59,18 +78,18 @@ func (c *Client) versionCheck(ctx context.Context) error {
 
 	// Handle named configs constraint check (no error possible as we've ready
 	// checked the version above, it would have returned with an error there)
-	namedConfigsSupported, _ := c.checkVersionConstraint(c.version, namedConfigsConstraint)
+	namedConfigsSupported, _ := s.checkVersionConstraint(s.version, namedConfigsConstraint)
 	if namedConfigsSupported {
 		slog.Info("named configs supported")
 	} else {
-		c.useNamedConfigs = false
+		s.useNamedConfigs = false
 	}
 
 	return nil
 }
 
 // checkVersionConstraint is a helper function to check version against constraint
-func (c *Client) checkVersionConstraint(version, constraintStr string) (bool, error) {
+func (s *SystemService) checkVersionConstraint(version, constraintStr string) (bool, error) {
 	constraint, err := semver.NewConstraint(constraintStr)
 	if err != nil {
 		return false, err
@@ -97,29 +116,29 @@ func (c *Client) checkVersionConstraint(version, constraintStr string) (bool, er
 }
 
 // Version returns the CML controller version
-func (c *Client) Version() string {
-	return c.version
+func (s *SystemService) Version() string {
+	return s.version
 }
 
 // VersionCheck checks if the client version satisfies the provided semantic
 // version constraint.
-func (c *Client) VersionCheck(ctx context.Context, constraintStr string) (bool, error) {
-	if len(c.version) == 0 {
+func (s *SystemService) VersionCheck(ctx context.Context, constraintStr string) (bool, error) {
+	if len(s.version) == 0 {
 		slog.Error("version unknown")
 		return false, fmt.Errorf("version unknown")
 	}
 
-	return c.checkVersionConstraint(c.version, constraintStr)
+	return s.checkVersionConstraint(s.version, constraintStr)
 }
 
 // UseNamedConfigs turns on the use of named configs (only with 2.7.0 and
 // newer)
-func (c *Client) UseNamedConfigs() {
+func (s *SystemService) UseNamedConfigs() {
 	slog.Info("USE named configs")
-	c.useNamedConfigs = true
+	s.useNamedConfigs = true
 }
 
 // Ready returns nil if the system is compatible and ready
-func (c *Client) Ready(ctx context.Context) error {
-	return c.versionCheck(ctx)
+func (s *SystemService) Ready(ctx context.Context) error {
+	return s.versionCheck(ctx)
 }

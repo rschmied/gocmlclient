@@ -1,4 +1,4 @@
-package cmlclient
+package errors
 
 import "errors"
 
