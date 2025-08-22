@@ -33,11 +33,11 @@ func versionError(got string) error {
 	)
 }
 
-func (c *Client) versionCheck(ctx context.Context, depth int32) error {
+func (c *Client) versionCheck(ctx context.Context) error {
 	c.compatibilityErr = nil
 	sv := systemVersion{}
-	if err := c.jsonGet(ctx, systeminfoAPI, &sv, depth); err != nil {
-		return fmt.Errorf("system info error %d (%w)", depth, err)
+	if err := c.GetJSON(ctx, systeminfoAPI, nil, &sv); err != nil {
+		return fmt.Errorf("system info error %w", err)
 	}
 
 	if !sv.Ready {
@@ -55,6 +55,7 @@ func (c *Client) versionCheck(ctx context.Context, depth int32) error {
 	if !compatible {
 		return versionError(sv.Version)
 	}
+	slog.Info("client is compatible")
 
 	// Handle named configs constraint check (no error possible as we've ready
 	// checked the version above, it would have returned with an error there)
@@ -81,7 +82,7 @@ func (c *Client) checkVersionConstraint(version, constraintStr string) (bool, er
 		return false, fmt.Errorf("version doesn't match expected format")
 	}
 
-	slog.Info("controller", "version", version)
+	slog.Info("checkVersion", "version", version, "contraint", constraintStr)
 	if len(m[3]) > 0 {
 		slog.Warn("this is a DEV version", "version", version)
 	}
@@ -120,7 +121,5 @@ func (c *Client) UseNamedConfigs() {
 
 // Ready returns nil if the system is compatible and ready
 func (c *Client) Ready(ctx context.Context) error {
-	// we can safely assume depth 0 as the API endpoint does not require
-	// authentication
-	return c.versionCheck(ctx, 0)
+	return c.versionCheck(ctx)
 }

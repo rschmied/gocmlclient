@@ -44,7 +44,7 @@ type ImageDefinition struct {
 // ImageDefinitions returns a list of image definitions known to the controller.
 func (c *Client) ImageDefinitions(ctx context.Context) ([]ImageDefinition, error) {
 	imgDef := []ImageDefinition{}
-	err := c.jsonGet(ctx, "image_definitions", &imgDef, 0)
+	err := c.GetJSON(ctx, "image_definitions", nil, &imgDef)
 	if err != nil {
 		return nil, err
 	}

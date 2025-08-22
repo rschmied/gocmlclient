@@ -1,7 +1,6 @@
 package cmlclient
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -58,7 +57,7 @@ func (llist linkList) MarshalJSON() ([]byte, error) {
 func (c *Client) getLinkIDsForLab(ctx context.Context, lab *Lab) (IDlist, error) {
 	api := fmt.Sprintf("labs/%s/links", lab.ID)
 	linkIDlist := &IDlist{}
-	err := c.jsonGet(ctx, api, linkIDlist, 0)
+	err := c.GetJSON(ctx, api, nil, linkIDlist)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +69,7 @@ func (c *Client) getLinksForLab(ctx context.Context, lab *Lab, linkIDlist IDlist
 	for _, linkID := range linkIDlist {
 		api := fmt.Sprintf("labs/%s/links/%s", lab.ID, linkID)
 		link := &Link{}
-		err := c.jsonGet(ctx, api, link, 0)
+		err := c.GetJSON(ctx, api, nil, link)
 		if err != nil {
 			return err
 		}
@@ -87,7 +86,7 @@ func (c *Client) getLinksForLab(ctx context.Context, lab *Lab, linkIDlist IDlist
 func (c *Client) LinkGet(ctx context.Context, labID, linkID string, deep bool) (*Link, error) {
 	api := fmt.Sprintf("labs/%s/links/%s", labID, linkID)
 	link := &Link{}
-	err := c.jsonGet(ctx, api, link, 0)
+	err := c.GetJSON(ctx, api, nil, link)
 	if err != nil {
 		return nil, err
 	}
@@ -218,16 +217,10 @@ func (c *Client) LinkCreate(ctx context.Context, link *Link) (*Link, error) {
 		DstInt: link.DstID,
 	}
 
-	buf := &bytes.Buffer{}
-	err = json.NewEncoder(buf).Encode(newLink)
-	if err != nil {
-		return nil, err
-	}
-
 	newLinkResult := struct {
 		ID string `json:"id"`
 	}{}
-	err = c.jsonPost(ctx, api, buf, &newLinkResult, 0)
+	err = c.PostJSON(ctx, api, nil, newLink, &newLinkResult)
 	if err != nil {
 		return nil, err
 	}
@@ -239,5 +232,5 @@ func (c *Client) LinkCreate(ctx context.Context, link *Link) (*Link, error) {
 // provided in the link arg.
 func (c *Client) LinkDestroy(ctx context.Context, link *Link) error {
 	api := fmt.Sprintf("labs/%s/links/%s", link.LabID, link.ID)
-	return c.jsonDelete(ctx, api, 0)
+	return c.DeleteJSON(ctx, api, nil)
 }

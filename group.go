@@ -1,9 +1,7 @@
 package cmlclient
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 )
@@ -45,7 +43,7 @@ type GroupList []*Group
 // Groups retrieves the list of all groups which exist on the controller.
 func (c *Client) Groups(ctx context.Context) (GroupList, error) {
 	groups := GroupList{}
-	err := c.jsonGet(ctx, "groups", &groups, 0)
+	err := c.GetJSON(ctx, "groups", nil, &groups)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +57,7 @@ func (c *Client) Groups(ctx context.Context) (GroupList, error) {
 // GroupByName tries to get the group with the provided `name`.
 func (c *Client) GroupByName(ctx context.Context, name string) (*Group, error) {
 	group := Group{}
-	err := c.jsonGet(ctx, fmt.Sprintf("groups/%s/id", name), &group, 0)
+	err := c.GetJSON(ctx, fmt.Sprintf("groups/%s/id", name), nil, &group)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +67,7 @@ func (c *Client) GroupByName(ctx context.Context, name string) (*Group, error) {
 // GroupGet retrieves the group with the provided `id` (a UUIDv4).
 func (c *Client) GroupGet(ctx context.Context, id string) (*Group, error) {
 	group := Group{}
-	err := c.jsonGet(ctx, fmt.Sprintf("groups/%s", id), &group, 0)
+	err := c.GetJSON(ctx, fmt.Sprintf("groups/%s", id), nil, &group)
 	if err != nil {
 		return nil, err
 	}
@@ -78,19 +76,14 @@ func (c *Client) GroupGet(ctx context.Context, id string) (*Group, error) {
 
 // GroupDestroy deletes the group identified by the `id` (a UUIDv4).
 func (c *Client) GroupDestroy(ctx context.Context, id string) error {
-	return c.jsonDelete(ctx, fmt.Sprintf("groups/%s", id), 0)
+	return c.DeleteJSON(ctx, fmt.Sprintf("groups/%s", id), nil)
 }
 
 // GroupCreate creates a new group on the controller based on the data provided
 // in the passed group parameter.
 func (c *Client) GroupCreate(ctx context.Context, group *Group) (*Group, error) {
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(group)
-	if err != nil {
-		return nil, err
-	}
 	result := Group{}
-	err = c.jsonPost(ctx, "groups", buf, &result, 0)
+	err := c.PostJSON(ctx, "groups", nil, group, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -101,13 +94,8 @@ func (c *Client) GroupCreate(ctx context.Context, group *Group) (*Group, error) 
 func (c *Client) GroupUpdate(ctx context.Context, group *Group) (*Group, error) {
 	groupID := group.ID
 	group.ID = ""
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(group)
-	if err != nil {
-		return nil, err
-	}
 	result := Group{}
-	err = c.jsonPatch(ctx, fmt.Sprintf("groups/%s", groupID), buf, &result, 0)
+	err := c.PatchJSON(ctx, fmt.Sprintf("groups/%s", groupID), group, &result)
 	if err != nil {
 		return nil, err
 	}

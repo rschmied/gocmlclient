@@ -1,9 +1,7 @@
 package cmlclient
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 )
@@ -71,9 +69,9 @@ func (iface Interface) IsPhysical() bool {
 func (c *Client) getInterfacesForNode(ctx context.Context, node *Node) error {
 	// with the data=true option, we get not only the list of IDs but the
 	// interfaces themselves as well!
-	api := fmt.Sprintf("labs/%s/nodes/%s/interfaces?data=true", node.LabID, node.ID)
+	api := fmt.Sprintf("labs/%s/nodes/%s/interfaces", node.LabID, node.ID)
 	interfaceList := InterfaceList{}
-	err := c.jsonGet(ctx, api, &interfaceList, 0)
+	err := c.GetJSON(ctx, api, map[string]string{"data": "true"}, &interfaceList)
 	if err != nil {
 		return err
 	}
@@ -82,9 +80,7 @@ func (c *Client) getInterfacesForNode(ctx context.Context, node *Node) error {
 	sort.Slice(interfaceList, func(i, j int) bool {
 		return interfaceList[i].Slot < interfaceList[j].Slot
 	})
-	c.mu.Lock()
 	node.Interfaces = interfaceList
-	c.mu.Unlock()
 	return nil
 }
 
@@ -124,7 +120,7 @@ func (c *Client) getInterfacesForNode(ctx context.Context, node *Node) error {
 // InterfaceGet returns the interface identified by its `ID` (iface.ID).
 func (c *Client) InterfaceGet(ctx context.Context, iface *Interface) (*Interface, error) {
 	api := fmt.Sprintf("labs/%s/interfaces/%s", iface.LabID, iface.ID)
-	err := c.jsonGet(ctx, api, iface, 0)
+	err := c.GetJSON(ctx, api, nil, iface)
 	return iface, err
 }
 
@@ -146,12 +142,6 @@ func (c *Client) InterfaceCreate(ctx context.Context, labID, nodeID string, slot
 		Slot: slotPtr,
 	}
 
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(newIface)
-	if err != nil {
-		return nil, err
-	}
-
 	// This is quite awkward, not even sure if it's a good REST design
 	// practice: "Returns a JSON object that identifies the interface that was
 	// created. In the case of bulk interface creation, returns a JSON array of
@@ -163,7 +153,7 @@ func (c *Client) InterfaceCreate(ctx context.Context, labID, nodeID string, slot
 	api := fmt.Sprintf("labs/%s/interfaces", labID)
 	if slotPtr == nil {
 		result := Interface{}
-		err = c.jsonPost(ctx, api, buf, &result, 0)
+		err := c.PostJSON(ctx, api, nil, newIface, &result)
 		if err != nil {
 			return nil, err
 		}
@@ -173,7 +163,7 @@ func (c *Client) InterfaceCreate(ctx context.Context, labID, nodeID string, slot
 	// this is when a slot has been provided; the API provides now a list of
 	// interfaces
 	result := []Interface{}
-	err = c.jsonPost(ctx, api, buf, &result, 0)
+	err := c.PostJSON(ctx, api, nil, newIface, &result)
 	if err != nil {
 		return nil, err
 	}

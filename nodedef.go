@@ -55,7 +55,7 @@ func (nd NodeDefinition) serialPorts() int {
 // populated.
 func (c *Client) NodeDefinitions(ctx context.Context) (NodeDefinitionMap, error) {
 	nd := []NodeDefinition{}
-	err := c.jsonGet(ctx, "simplified_node_definitions", &nd, 0)
+	err := c.GetJSON(ctx, "simplified_node_definitions", nil, &nd)
 	if err != nil {
 		return nil, err
 	}

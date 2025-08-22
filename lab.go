@@ -1,9 +1,7 @@
 package cmlclient
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -141,14 +139,8 @@ func (c *Client) LabCreate(ctx context.Context, lab Lab) (*Lab, error) {
 		// Groups:      lab.Groups, // can't set at create
 	}
 
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(postAlias)
-	if err != nil {
-		return nil, err
-	}
-
 	la := &labAlias{}
-	err = c.jsonPost(ctx, "labs", buf, &la, 0)
+	err := c.PostJSON(ctx, "labs", nil, postAlias, &la)
 	if err != nil {
 		return nil, err
 	}
@@ -167,15 +159,9 @@ func (c *Client) LabUpdate(ctx context.Context, lab Lab) (*Lab, error) {
 		Groups:      lab.Groups,
 	}
 
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(patchAlias)
-	if err != nil {
-		return nil, err
-	}
-
 	la := &labAlias{}
 	api := fmt.Sprintf("labs/%s", lab.ID)
-	err = c.jsonPatch(ctx, api, buf, &la, 0)
+	err := c.PatchJSON(ctx, api, patchAlias, &la)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +175,7 @@ func (c *Client) LabUpdate(ctx context.Context, lab Lab) (*Lab, error) {
 func (c *Client) LabImport(ctx context.Context, topo string) (*Lab, error) {
 	topoReader := strings.NewReader(topo)
 	labImport := &LabImport{}
-	err := c.jsonPost(ctx, "import", topoReader, labImport, 0)
+	err := c.PostJSON(ctx, "import", nil, topoReader, labImport)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +188,7 @@ func (c *Client) LabImport(ctx context.Context, topo string) (*Lab, error) {
 
 // LabStart starts all nodes of the lab identified by the `id` (a UUIDv4).
 func (c *Client) LabStart(ctx context.Context, id string) error {
-	return c.jsonPut(ctx, fmt.Sprintf("labs/%s/start", id), 0)
+	return c.PutJSON(ctx, fmt.Sprintf("labs/%s/start", id), nil)
 }
 
 // HasLabConverged checks if all nodes of the lab identified by the `id`
@@ -210,7 +196,7 @@ func (c *Client) LabStart(ctx context.Context, id string) error {
 func (c *Client) HasLabConverged(ctx context.Context, id string) (bool, error) {
 	api := fmt.Sprintf("labs/%s/check_if_converged", id)
 	converged := false
-	err := c.jsonGet(ctx, api, &converged, 0)
+	err := c.GetJSON(ctx, api, nil, &converged)
 	if err != nil {
 		return false, err
 	}
@@ -219,17 +205,17 @@ func (c *Client) HasLabConverged(ctx context.Context, id string) (bool, error) {
 
 // LabStop stops all nodes of the lab identified by the `id` (a UUIDv4).
 func (c *Client) LabStop(ctx context.Context, id string) error {
-	return c.jsonPut(ctx, fmt.Sprintf("labs/%s/stop", id), 0)
+	return c.PutJSON(ctx, fmt.Sprintf("labs/%s/stop", id), nil)
 }
 
 // LabWipe wipes the lab identified by the `id` (a UUIDv4).
 func (c *Client) LabWipe(ctx context.Context, id string) error {
-	return c.jsonPut(ctx, fmt.Sprintf("labs/%s/wipe", id), 0)
+	return c.PutJSON(ctx, fmt.Sprintf("labs/%s/wipe", id), nil)
 }
 
 // LabDestroy deletes the lab identified by the `id` (a UUIDv4).
 func (c *Client) LabDestroy(ctx context.Context, id string) error {
-	return c.jsonDelete(ctx, fmt.Sprintf("labs/%s", id), 0)
+	return c.DeleteJSON(ctx, fmt.Sprintf("labs/%s", id), nil)
 }
 
 // LabGetByTitle returns the lab identified by its `title`. For the use of
@@ -237,7 +223,7 @@ func (c *Client) LabDestroy(ctx context.Context, id string) error {
 func (c *Client) LabGetByTitle(ctx context.Context, title string, deep bool) (*Lab, error) {
 	var data map[string]map[string]*labAlias
 
-	err := c.jsonGet(ctx, "populate_lab_tiles", &data, 0)
+	err := c.GetJSON(ctx, "populate_lab_tiles", nil, &data)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +248,7 @@ func (c *Client) LabGetByTitle(ctx context.Context, title string, deep bool) (*L
 func (c *Client) LabGet(ctx context.Context, id string, deep bool) (*Lab, error) {
 	api := fmt.Sprintf("labs/%s", id)
 	la := &labAlias{}
-	err := c.jsonGet(ctx, api, la, 0)
+	err := c.GetJSON(ctx, api, nil, la)
 	if err != nil {
 		return nil, err
 	}

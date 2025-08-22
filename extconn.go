@@ -61,7 +61,7 @@ type ExtConn struct {
 func (c *Client) ExtConnGet(ctx context.Context, extConnID string) (*ExtConn, error) {
 	api := fmt.Sprintf("system/external_connectors/%s", extConnID)
 	extconn := &ExtConn{}
-	err := c.jsonGet(ctx, api, extconn, 0)
+	err := c.GetJSON(ctx, api, nil, extconn)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (c *Client) ExtConnGet(ctx context.Context, extConnID string) (*ExtConn, er
 // ExtConnectors returns all external connectors on the system
 func (c *Client) ExtConnectors(ctx context.Context) ([]*ExtConn, error) {
 	extconnlist := make([]*ExtConn, 0)
-	err := c.jsonGet(ctx, "system/external_connectors", &extconnlist, 0)
+	err := c.GetJSON(ctx, "system/external_connectors", nil, &extconnlist)
 	if err != nil {
 		return nil, err
 	}

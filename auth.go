@@ -1,96 +1,96 @@
 package cmlclient
 
 import (
-	"bytes"
 	"context"
-	"crypto/x509"
-	"encoding/json"
-	"errors"
+	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
+	"sync"
+	"time"
 )
 
-// {
-// 	"username": "admin",
-// 	"id": "90f84e38-a71c-4d57-8d90-00fa8a197385",
-// 	"token": "123.123.123jwtdata",
-// 	"admin": false
-// }
-
-type Auth struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-	Token    string `json:"token"`
-	Admin    bool   `json:"admin"`
+type TokenProvider interface {
+	FetchToken(ctx context.Context) (string, time.Time, error)
+	// RefreshToken(ctx context.Context) (string, time.Time, error)
 }
 
-type userPass struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+type AuthManager struct {
+	provider TokenProvider
+	mu       sync.RWMutex
+	token    string
+	// refreshToken string
+	expiry time.Time
 }
 
-func (up userPass) valid() bool {
-	return len(up.Username) > 0 && len(up.Password) > 0
+func NewAuthManager(provider TokenProvider) *AuthManager {
+	return &AuthManager{provider: provider}
 }
 
-// technically, authokAPI requires auth, but it's used specifically to test
-// whether auth is OK, so it will take a different path
-func (c *Client) authRequired(api *url.URL) bool {
-	url := api.String()
-	return !(strings.HasSuffix(url, authAPI) ||
-		strings.HasSuffix(url, authokAPI) ||
-		strings.HasSuffix(url, systeminfoAPI))
+func (a *AuthManager) GetToken(ctx context.Context) (string, error) {
+	a.mu.RLock()
+	if a.token != "" && time.Now().Before(a.expiry) {
+		a.mu.RUnlock()
+		return a.token, nil
+	}
+	a.mu.RUnlock()
+	return a.ForceRefresh(ctx)
 }
 
-func (c *Client) authenticate(ctx context.Context, userpass userPass, depth int32) error {
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(userpass)
+func (a *AuthManager) ForceRefresh(ctx context.Context) (string, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	tok, exp, err := a.provider.FetchToken(ctx)
 	if err != nil {
-		return err
+		slog.Error("auth failed", "err", err)
+		return "", err
 	}
-	auth := &Auth{}
-	err = c.jsonPost(ctx, authAPI, buf, auth, depth)
+	a.token, a.expiry = tok, exp
+	return tok, nil
+}
+
+type AuthTransport struct {
+	Base http.RoundTripper
+	Auth *AuthManager
+}
+
+func (t *AuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	base := t.Base
+	if base == nil {
+		base = http.DefaultTransport
+	}
+
+	// if strings.HasSuffix(req.URL.Path, authAPI) {
+	// 	return base.RoundTrip(req)
+	// }
+
+	ctx := req.Context()
+	r2 := req.Clone(ctx)
+
+	tok, err := t.Auth.GetToken(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	slog.Info("user auth", "id", auth.ID, "is_admin", strconv.FormatBool(auth.Admin))
-	c.apiToken = auth.Token
-	return nil
+	r2.Header.Set("Authorization", "Bearer "+tok)
+
+	res, err := base.RoundTrip(r2)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode == http.StatusUnauthorized {
+		_ = drainAndClose(res.Body)
+		newTok, err := t.Auth.ForceRefresh(ctx)
+		if err != nil {
+			return nil, err
+		}
+		r2 = req.Clone(ctx)
+		r2.Header.Set("Authorization", "Bearer "+newTok)
+		return base.RoundTrip(r2)
+	}
+	return res, nil
 }
 
-// SetToken sets a specific API token to be used. A token takes precedence over
-// a username/password. However, if the token expires, the username/password
-// are used to authorize the client again. An error is raised if no token and
-// no username/password are provided or if the token expires when no
-// username/password are set.
-func (c *Client) SetToken(token string) {
-	c.apiToken = token
-}
-
-// SetUsernamePassword sets the username and the password to be used with the
-// client for all authentications.
-func (c *Client) SetUsernamePassword(username, password string) {
-	c.userpass = userPass{
-		username, password,
-	}
-}
-
-// SetCACert sets a specific X.509 CA certificate to use with the client.
-// If no cert is set, the system trust anchors are used for cert verification.
-func (c *Client) SetCACert(cert []byte) error {
-	caCertPool := x509.NewCertPool()
-	ok := caCertPool.AppendCertsFromPEM(cert)
-	if !ok {
-		return errors.New("failed to parse root certificate")
-	}
-	httpClient, ok := c.httpClient.(*http.Client)
-	if !ok {
-		return errors.New("can't set certs on mocked client")
-	}
-	tr := httpClient.Transport.(*http.Transport)
-	tr.TLSClientConfig.RootCAs = caCertPool
-	return nil
+func drainAndClose(r io.ReadCloser) error {
+	_, _ = io.Copy(io.Discard, r)
+	return r.Close()
 }

@@ -1,7 +1,6 @@
 package cmlclient
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -255,14 +254,17 @@ func (node nodePatchPostAlias) MarshalJSON() ([]byte, error) {
 }
 
 func (c *Client) getNodesForLab(ctx context.Context, lab *Lab) error {
-	api := fmt.Sprintf("labs/%s/nodes?data=true", lab.ID)
+	api := fmt.Sprintf("labs/%s/nodes", lab.ID)
 
+	parms := map[string]string{}
+	parms["data"] = "true"
 	if c.useNamedConfigs {
-		api += "&operational=true&exclude_configurations=false"
+		parms["operational"] = "true"
+		parms["exclude_configurations"] = "false"
 	}
 
 	nodes := &nodeList{}
-	err := c.jsonGet(ctx, api, nodes, 0)
+	err := c.GetJSON(ctx, api, parms, nodes)
 	if err != nil {
 		return err
 	}
@@ -271,9 +273,7 @@ func (c *Client) getNodesForLab(ctx context.Context, lab *Lab) error {
 	for _, node := range *nodes {
 		nodeMap[node.ID] = node
 	}
-	c.mu.Lock()
 	lab.Nodes = nodeMap
-	c.mu.Unlock()
 
 	return nil
 }
@@ -281,15 +281,9 @@ func (c *Client) getNodesForLab(ctx context.Context, lab *Lab) error {
 func (c *Client) nodeSetConfigData(ctx context.Context, node *Node, data any) error {
 	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
 
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(data)
-	if err != nil {
-		return err
-	}
-
 	// API returns the node ID of the updated node
 	nodeID := ""
-	err = c.jsonPatch(ctx, api, buf, &nodeID, 0)
+	err := c.PatchJSON(ctx, api, data, &nodeID)
 	if err != nil {
 		return err
 	}
@@ -325,15 +319,9 @@ func (c *Client) NodeUpdate(ctx context.Context, node *Node) (*Node, error) {
 
 	postAlias := newNodeAlias(node, true)
 
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(postAlias)
-	if err != nil {
-		return nil, err
-	}
-
 	// API returns "just" the node ID of the updated node
 	nodeID := ""
-	err = c.jsonPatch(ctx, api, buf, &nodeID, 0)
+	err := c.PatchJSON(ctx, api, postAlias, &nodeID)
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +331,7 @@ func (c *Client) NodeUpdate(ctx context.Context, node *Node) (*Node, error) {
 // NodeStart starts the given node.
 func (c *Client) NodeStart(ctx context.Context, node *Node) error {
 	api := fmt.Sprintf("labs/%s/nodes/%s/state/start", node.LabID, node.ID)
-	err := c.jsonPut(ctx, api, 0)
+	err := c.PutJSON(ctx, api, nil)
 	if err != nil {
 		return err
 	}
@@ -353,7 +341,7 @@ func (c *Client) NodeStart(ctx context.Context, node *Node) error {
 // NodeStop stops the given node.
 func (c *Client) NodeStop(ctx context.Context, node *Node) error {
 	api := fmt.Sprintf("labs/%s/nodes/%s/state/stop", node.LabID, node.ID)
-	err := c.jsonPut(ctx, api, 0)
+	err := c.PutJSON(ctx, api, nil)
 	if err != nil {
 		return err
 	}
@@ -366,11 +354,6 @@ func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
 	// TODO: inconsistent attributes lab_title vs title, ..
 	node.State = NodeStateDefined
 	postAlias := newNodeAlias(node, false)
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(postAlias)
-	if err != nil {
-		return nil, err
-	}
 
 	newNode := Node{}
 
@@ -380,8 +363,9 @@ func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
 	// }
 
 	// we want those "default" interfaces in the node
-	api := fmt.Sprintf("labs/%s/nodes?populate_interfaces=true", node.LabID)
-	err = c.jsonPost(ctx, api, buf, &newNode, 0)
+	api := fmt.Sprintf("labs/%s/nodes", node.LabID)
+	parms := map[string]string{"populate_interfaces": "true"}
+	err := c.PostJSON(ctx, api, parms, postAlias, &newNode)
 	if err != nil {
 		return nil, err
 	}
@@ -395,15 +379,10 @@ func (c *Client) NodeCreate(ctx context.Context, node *Node) (*Node, error) {
 	// it's required to be set to empty from the struct
 	postAlias.NodeDefinition = ""
 
-	buf.Reset()
-	err = json.NewEncoder(buf).Encode(postAlias)
-	if err != nil {
-		return nil, err
-	}
 	api = fmt.Sprintf("labs/%s/nodes/%s", node.LabID, newNode.ID)
 	// the return of the patch API is simply the node ID as a string!
 	// FIX: inconsistency of patch API
-	err = c.jsonPatch(ctx, api, buf, nil, 0)
+	err = c.PatchJSON(ctx, api, postAlias, nil)
 	if err != nil {
 		// For consistency, remove the created node that can't be updated. This
 		// assumes that the error was because of the provided data and not because
@@ -430,22 +409,24 @@ func (c *Client) NodeGet(ctx context.Context, node *Node) (*Node, error) {
 	var err error
 	newNode := Node{}
 	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
+	parms := map[string]string{}
 	if c.useNamedConfigs {
-		api += "?operational=true&exclude_configurations=false"
+		parms["operational"] = "true"
+		parms["exclude_configurations"] = "false"
 	}
-	err = c.jsonGet(ctx, api, &newNode, 0)
+	err = c.GetJSON(ctx, api, parms, &newNode)
 	return &newNode, err
 }
 
 // NodeDestroy deletes the node from the controller.
 func (c *Client) NodeDestroy(ctx context.Context, node *Node) error {
 	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
-	return c.jsonDelete(ctx, api, 0)
+	return c.DeleteJSON(ctx, api, nil)
 }
 
 // NodeWipe removes all runtime data from a node on the controller/compute.
 // E.g. it will remove the actual VM and its associated disks.
 func (c *Client) NodeWipe(ctx context.Context, node *Node) error {
 	api := fmt.Sprintf("labs/%s/nodes/%s/wipe_disks", node.LabID, node.ID)
-	return c.jsonPut(ctx, api, 0)
+	return c.PutJSON(ctx, api, nil)
 }

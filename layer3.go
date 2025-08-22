@@ -22,7 +22,7 @@ type l3interface struct {
 func (c *Client) getL3Info(ctx context.Context, id string) (*l3nodes, error) {
 	api := fmt.Sprintf("labs/%s/layer3_addresses", id)
 	l3n := &l3nodes{}
-	err := c.jsonGet(ctx, api, l3n, 0)
+	err := c.GetJSON(ctx, api, nil, l3n)
 	if err != nil {
 		return nil, err
 	}

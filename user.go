@@ -1,11 +1,10 @@
 package cmlclient
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
+	"time"
 )
 
 // {
@@ -80,10 +79,11 @@ func newUserAlias(user *User) userPatchPostAlias {
 func (c *Client) UserGet(ctx context.Context, id string) (*User, error) {
 	api := fmt.Sprintf("users/%s", id)
 	user := &User{}
-	err := c.jsonGet(ctx, api, user, 0)
+	err := c.GetJSON(ctx, api, nil, user)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("### user", user)
 	return user, nil
 }
 
@@ -91,7 +91,7 @@ func (c *Client) UserGet(ctx context.Context, id string) (*User, error) {
 func (c *Client) UserByName(ctx context.Context, name string) (*User, error) {
 	api := fmt.Sprintf("users/%s/id", name)
 	var userID string
-	err := c.jsonGet(ctx, api, &userID, 0)
+	err := c.GetJSON(ctx, api, nil, &userID)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (c *Client) UserByName(ctx context.Context, name string) (*User, error) {
 // Users retrieves the list of all users which exist on the controller.
 func (c *Client) Users(ctx context.Context) (UserList, error) {
 	users := UserList{}
-	err := c.jsonGet(ctx, "users", &users, 0)
+	err := c.GetJSON(ctx, "users", nil, &users)
 	if err != nil {
 		return nil, err
 	}
@@ -114,19 +114,14 @@ func (c *Client) Users(ctx context.Context) (UserList, error) {
 
 // UserDestroy deletes the user identified by the `id` (a UUIDv4).
 func (c *Client) UserDestroy(ctx context.Context, id string) error {
-	return c.jsonDelete(ctx, fmt.Sprintf("users/%s", id), 0)
+	return c.DeleteJSON(ctx, fmt.Sprintf("users/%s", id), nil)
 }
 
 // UserCreate creates a new user on the controller based on the data provided
 // in the passed user parameter.
 func (c *Client) UserCreate(ctx context.Context, user *User) (*User, error) {
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(user)
-	if err != nil {
-		return nil, err
-	}
 	result := User{}
-	err = c.jsonPost(ctx, "users", buf, &result, 0)
+	err := c.PostJSON(ctx, "users", nil, user, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -136,16 +131,13 @@ func (c *Client) UserCreate(ctx context.Context, user *User) (*User, error) {
 // UserUpdate updates the given user which must exist.
 func (c *Client) UserUpdate(ctx context.Context, user *User) (*User, error) {
 	patchAlias := newUserAlias(user)
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(patchAlias)
-	if err != nil {
-		return nil, err
-	}
 	result := User{}
-	err = c.jsonPatch(ctx, fmt.Sprintf("users/%s", user.ID), buf, &result, 0)
+	err := c.PatchJSON(ctx, fmt.Sprintf("users/%s", user.ID), patchAlias, &result)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("### sleeping", patchAlias)
+	time.Sleep(5 * time.Second)
 	return c.UserGet(ctx, result.ID)
 }
 
@@ -153,7 +145,7 @@ func (c *Client) UserUpdate(ctx context.Context, user *User) (*User, error) {
 func (c *Client) UserGroups(ctx context.Context, id string) (GroupList, error) {
 	api := fmt.Sprintf("users/%s/groups", id)
 	idList := []string{}
-	err := c.jsonGet(ctx, api, &idList, 0)
+	err := c.GetJSON(ctx, api, nil, &idList)
 	if err != nil {
 		return nil, err
 	}
