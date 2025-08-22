@@ -1,3 +1,4 @@
+// Package client provides a Cisco Modeling Labs API client
 package client
 
 import (

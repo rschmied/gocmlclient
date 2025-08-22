@@ -1,4 +1,4 @@
-// Example: internal/services/lab.go
+// Package services, lab specific
 package services
 
 import (
