@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"time"
 
@@ -76,9 +77,10 @@ func main() {
 
 	c, err := gocml.New(
 		"https://localhost:8443",
+		client.WithHTTPClient(http.DefaultClient),
 		client.WithInsecureTLS(),
-		// client.WithUsernamePassword(username, password),
-		client.WithToken(token),
+		client.WithUsernamePassword(username, password),
+		// client.WithToken(token),
 		// client.WithLogger(logger),
 	)
 	if err != nil {
@@ -86,14 +88,23 @@ func main() {
 		return
 	}
 
-	// This will automatically authenticate and add Bearer token
-	err = c.System.Ready(ctx)
+	id := "8742cc17-bc3c-4ccd-aa01-f15e0decbd11"
+	lab, err := c.Labs.Get(ctx, id, false)
 	if err != nil {
 		slog.Error("Failed to get system info", "err", err)
 		return
 	}
 
-	slog.Info("Successfully retrieved system info")
+	slog.Info("Successfully retrieved system info", "lab", lab)
+
+	// // This will automatically authenticate and add Bearer token
+	// err = c.System.Ready(ctx)
+	// if err != nil {
+	// 	slog.Error("Failed to get system info", "err", err)
+	// 	return
+	// }
+
+	// slog.Info("Successfully retrieved system info")
 
 	// // Check auth stats
 	// stats := authTransport.Stats()

@@ -4,7 +4,6 @@ package auth
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,8 +31,9 @@ type AuthConfig struct {
 	PresetToken string // Optional: token to use before authentication
 
 	// HTTP client configuration
-	Timeout            time.Duration
-	InsecureSkipVerify bool
+	Timeout time.Duration
+	// InsecureSkipVerify bool
+	HTTPclient *http.Client
 }
 
 // NewAuthProvider creates a new username/password token provider
@@ -42,25 +42,23 @@ func NewAuthProvider(config AuthConfig) *AuthProvider {
 		config.Timeout = 10 * time.Second
 	}
 
-	// Create HTTP client for authentication (no auth middleware)
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: config.InsecureSkipVerify,
-		},
-		Proxy: http.ProxyFromEnvironment,
-	}
-
-	client := &http.Client{
-		Timeout:   config.Timeout,
-		Transport: transport,
-	}
+	// // Create HTTP client for authentication (no auth middleware)
+	// transport := api.NewSaneTransport(config.InsecureSkipVerify)
+	//
+	// if config.HTTPclient == nil {
+	// 	panic("qwe")
+	// 	config.HTTPclient = &http.Client{
+	// 		Timeout:   config.Timeout,
+	// 		Transport: transport,
+	// 	}
+	// }
 
 	return &AuthProvider{
 		baseURL:     config.BaseURL,
 		username:    config.Username,
 		password:    config.Password,
 		presetToken: config.PresetToken,
-		client:      client,
+		client:      config.HTTPclient,
 	}
 }
 

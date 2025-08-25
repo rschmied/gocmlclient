@@ -1,36 +1,54 @@
 package auth
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 )
 
 // Transport wraps an HTTP RoundTripper to automatically add authentication
 type Transport struct {
-	Base    http.RoundTripper // underlying HTTP transport
-	Manager *Manager          // handles token lifecycle
+	base              http.RoundTripper // underlying HTTP transport
+	manager           *Manager          // handles token lifecycle
+	skipAuthEndpoints []string          // endpoints that don't need auth (e.g., /auth)
 }
 
 // NewTransport creates a new authenticated transport
-func NewTransport(base http.RoundTripper, manager *Manager) *Transport {
+func NewTransport(base http.RoundTripper, manager *Manager, skip []string) *Transport {
 	if base == nil {
+		fmt.Println("### using default transport")
 		base = http.DefaultTransport
 	}
 
+	if skip == nil {
+		skip = []string{
+			"/api/v0/auth",
+			"/api/v0/auth_extended",
+			"/api/v0/authok",
+		}
+	}
 	return &Transport{
-		Base:    base,
-		Manager: manager,
+		base:              base,
+		manager:           manager,
+		skipAuthEndpoints: skip,
 	}
 }
 
 // RoundTrip implements http.RoundTripper
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	fmt.Println("###### i am called")
+	// Skip authentication for certain endpoints
+	if t.shouldSkipAuth(req) {
+		slog.Debug("Skipping authentication for endpoint", "path", req.URL.Path)
+		return t.base.RoundTrip(req)
+	}
 	// Clone the request to avoid modifying the original
 	reqWithAuth := req.Clone(req.Context())
 
 	// Get authentication token
-	token, err := t.Manager.GetToken(req.Context())
+	token, err := t.manager.GetToken(req.Context())
 	if err != nil {
 		slog.Error("Failed to get authentication token", "error", err)
 		return nil, err
@@ -46,7 +64,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	)
 
 	// Execute the request
-	res, err := t.Base.RoundTrip(reqWithAuth)
+	res, err := t.base.RoundTrip(reqWithAuth)
 	if err != nil {
 		return nil, err
 	}
@@ -59,10 +77,10 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		_ = drainAndClose(res.Body)
 
 		// Invalidate the current token
-		t.Manager.InvalidateToken()
+		t.manager.InvalidateToken()
 
 		// Get a fresh token
-		newToken, err := t.Manager.ForceRefresh(req.Context())
+		newToken, err := t.manager.ForceRefresh(req.Context())
 		if err != nil {
 			slog.Error("Failed to refresh token after 401", "error", err)
 			return nil, err
@@ -73,10 +91,23 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		retryReq.Header.Set("Authorization", "Bearer "+newToken)
 
 		slog.Debug("Retrying request with fresh token")
-		return t.Base.RoundTrip(retryReq)
+		return t.base.RoundTrip(retryReq)
 	}
 
 	return res, nil
+}
+
+// shouldSkipAuth determines if authentication should be skipped for a request
+func (t *Transport) shouldSkipAuth(req *http.Request) bool {
+	path := req.URL.Path
+
+	for _, skipPath := range t.skipAuthEndpoints {
+		if strings.HasSuffix(path, skipPath) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // drainAndClose drains and closes a response body
@@ -90,19 +121,20 @@ func drainAndClose(r io.ReadCloser) error {
 
 // Middleware creates an API middleware from the auth transport
 // This is useful when you want to use the auth logic with the middleware system
-func (t *Transport) Middleware() func(http.RoundTripper) http.RoundTripper {
-	return func(base http.RoundTripper) http.RoundTripper {
-		return &Transport{
-			Base:    base,
-			Manager: t.Manager,
-		}
-	}
-}
-
-// Stats returns authentication statistics from the underlying manager
-func (t *Transport) Stats() Stats {
-	if t.Manager == nil {
-		return Stats{}
-	}
-	return t.Manager.Stats()
-}
+// func (t *Transport) Middleware() func(http.RoundTripper) http.RoundTripper {
+// 	return func(base http.RoundTripper) http.RoundTripper {
+// 		return &Transport{
+// 			base:              base,
+// 			manager:           t.manager,
+// 			skipAuthEndpoints: t.skipAuthEndpoints,
+// 		}
+// 	}
+// }
+//
+// // Stats returns authentication statistics from the underlying manager
+// func (t *Transport) Stats() Stats {
+// 	if t.manager == nil {
+// 		return Stats{}
+// 	}
+// 	return t.manager.Stats()
+// }

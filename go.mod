@@ -7,4 +7,6 @@ require (
 	github.com/lmittmann/tint v1.1.2
 )
 
+require github.com/jarcoal/httpmock v1.4.1
+
 // replace github.com/rschmied/mockresponder => /home/rschmied/Projects/mockresponder

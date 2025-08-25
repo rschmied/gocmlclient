@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"path"
 	"syscall"
-	"time"
 
 	"github.com/rschmied/gocmlclient/pkg/errors"
 )
@@ -41,9 +40,10 @@ type Options struct {
 
 // New creates a new low-level API client
 func New(baseURL string, opts Options) *Client {
-	if opts.HTTPClient == nil {
-		opts.HTTPClient = &http.Client{Timeout: 15 * time.Second}
-	}
+	// if opts.HTTPClient == nil {
+	// 	panic("qew")
+	// 	opts.HTTPClient = &http.Client{Timeout: 15 * time.Second}
+	// }
 
 	do := func(req *http.Request) (*http.Response, error) {
 		return opts.HTTPClient.Do(req)
