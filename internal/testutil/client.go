@@ -1,9 +1,8 @@
-// File: internal/testutil/client.go
+// Package testutil provides some common test functions
 package testutil
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -38,9 +37,7 @@ func NewAPIClient(t *testing.T) (*api.Client, func()) {
 
 // NewAPIClientWithConfig creates a test API client with custom config
 func NewAPIClientWithConfig(t *testing.T, config ClientConfig) (*api.Client, func()) {
-	fmt.Println("is live")
 	if IsLiveTesting() {
-		fmt.Println("LIVE")
 		return newLiveClient(t, config)
 	}
 	return newMockClient(t, config)
@@ -104,7 +101,6 @@ func newLiveClient(t *testing.T, config ClientConfig) (*api.Client, func()) {
 		HTTPClient: httpClient,
 	})
 
-	fmt.Println("yes")
 	return apiClient, func() {}
 }
 
@@ -135,6 +131,3 @@ func SetupCommonMocks() {
 	httpmock.RegisterResponder("GET", "https://mock/api/v0/system_information",
 		httpmock.NewStringResponder(200, `{"ready":true,"version":"2.8.1","build":"123"}`))
 }
-
-// Then in your test files:
-// File: internal/services/system_test.go
