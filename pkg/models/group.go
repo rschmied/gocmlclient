@@ -26,6 +26,7 @@ type GroupLab struct {
 	ID         string `json:"id"`
 	Permission string `json:"permission"`
 }
+
 type Group struct {
 	ID          string     `json:"id,omitempty"`
 	Description string     `json:"description"`

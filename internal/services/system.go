@@ -118,6 +118,10 @@ func (s *SystemService) checkVersionConstraint(version, constraintStr string) (b
 
 // Version returns the CML controller version
 func (s *SystemService) Version() string {
+	// should check if version has ever been set?
+	if len(s.version) == 0 {
+		_ = s.version
+	}
 	return s.version
 }
 

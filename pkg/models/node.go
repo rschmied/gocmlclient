@@ -2,6 +2,12 @@
 // here: node related types
 package models
 
+import (
+	"encoding/json"
+	"fmt"
+	"sort"
+)
+
 const (
 	NodeStateDefined = "DEFINED_ON_CORE"
 	NodeStateStopped = "STOPPED"
@@ -43,4 +49,136 @@ type Node struct {
 	ComputeID       string         `json:"compute_id"`
 
 	// Configurations is not exported, it's overloaded within the API
+}
+
+// {
+// 	"boot_disk_size": 0,
+// 	"compute_id": "9c2519bf-dda6-4d31-942e-8068a6349b5e",
+// 	"configuration": "bridge0",
+// 	"cpu_limit": 100,
+// 	"cpus": 0,
+// 	"data_volume": 0,
+// 	"hide_links": false,
+// 	"id": "9efb1503-7e2a-4d2a-959e-865209f1acc0",
+// 	"image_definition": null,
+// 	"lab_id": "52d5c824-e10c-450a-b9c5-b700bd3bc17a",
+// 	"label": "ext-conn-0",
+// 	"node_definition": "external_connector",
+// 	"ram": 0,
+// 	"tags": [],
+// 	"vnc_key": "",
+// 	"x": 317,
+// 	"y": 341,
+// 	"config_filename": "noname",
+// 	"config_mediatype": "ISO",
+// 	"config_image_path": "/var/local/virl2/images/52d5c824-e10c-450a-b9c5-b700bd3bc17a/9efb1503-7e2a-4d2a-959e-865209f1acc0/config.img",
+// 	"cpu_model": null,
+// 	"data_image_path": "/var/local/virl2/images/52d5c824-e10c-450a-b9c5-b700bd3bc17a/9efb1503-7e2a-4d2a-959e-865209f1acc0/data.img",
+// 	"disk_image": null,
+// 	"disk_image_2": null,
+// 	"disk_image_3": null,
+// 	"disk_image_path": null,
+// 	"disk_image_path_2": null,
+// 	"disk_image_path_3": null,
+// 	"disk_driver": null,
+// 	"driver_id": "external_connector",
+// 	"efi_boot": false,
+// 	"image_dir": "/var/local/virl2/images/52d5c824-e10c-450a-b9c5-b700bd3bc17a/9efb1503-7e2a-4d2a-959e-865209f1acc0",
+// 	"libvirt_image_dir": "/var/lib/libvirt/images/virl-base-images",
+// 	"nic_driver": null,
+// 	"number_of_serial_devices": 0,
+// 	"serial_devices": [],
+// 	"video_memory": 0,
+// 	"video_model": null,
+// 	"state": "BOOTED",
+// 	"boot_progress": "Booted"
+//   }
+
+func (nmap NodeMap) MarshalJSON() ([]byte, error) {
+	nodeList := []*Node{}
+	for _, node := range nmap {
+		nodeList = append(nodeList, node)
+	}
+	// we want this as a stable sort by node UUID
+	sort.Slice(nodeList, func(i, j int) bool {
+		return nodeList[i].ID < nodeList[j].ID
+	})
+
+	return json.Marshal(nodeList)
+}
+
+func (n *Node) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" || string(data) == `""` {
+		return nil
+	}
+
+	type nodeAlias Node
+
+	var tmpNode struct {
+		nodeAlias
+		Configs any `json:"configuration"`
+	}
+
+	// Unmarshal the JSON into the tmpNode struct.
+	if err := json.Unmarshal(data, &tmpNode); err != nil {
+		return err
+	}
+
+	na := tmpNode.nodeAlias
+
+	switch thing := tmpNode.Configs.(type) {
+	case nil:
+		na.Configuration = nil
+	case string:
+		na.Configuration = &thing
+	case []any:
+		b, err := json.Marshal(thing)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(b, &na.Configurations)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unexpected type: %T", thing)
+	}
+	*n = (Node)(na)
+
+	return nil
+}
+
+func (node *Node) MarshalJSON() ([]byte, error) {
+	type alias Node
+	if len(node.Configurations) > 0 {
+		node.Configuration = nil
+		return json.Marshal(&struct {
+			*alias
+			NamedConfig []NodeConfig `json:"configuration"`
+		}{
+			(*alias)(node),
+			node.Configurations,
+		})
+	}
+	return json.Marshal((*alias)(node))
+}
+
+func (node Node) SameConfig(other Node) bool {
+	if node.Configuration != nil && other.Configuration != nil && *other.Configuration != *node.Configuration {
+		return false
+	}
+
+	if len(node.Configurations) != len(other.Configurations) {
+		return false
+	}
+
+	for idx, cfg := range node.Configurations {
+		if cfg.Name != other.Configurations[idx].Name {
+			return false
+		}
+		if cfg.Content != other.Configurations[idx].Content {
+			return false
+		}
+	}
+	return true
 }

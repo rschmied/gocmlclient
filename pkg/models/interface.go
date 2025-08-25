@@ -52,3 +52,15 @@ type (
 	}
 	InterfaceList []*Interface
 )
+
+func (i Interface) Exists() bool {
+	return i.State != IfaceStateDefined
+}
+
+func (i Interface) Runs() bool {
+	return i.State == IfaceStateStarted
+}
+
+func (i Interface) IsPhysical() bool {
+	return i.Type == IfaceTypePhysical
+}

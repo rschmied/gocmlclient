@@ -2,6 +2,12 @@
 // here: lab related types
 package models
 
+import (
+	"context"
+
+	cmlerror "github.com/rschmied/gocmlclient/pkg/errors"
+)
+
 // {
 // 	"state": "STOPPED",
 // 	"created": "2023-02-08T10:02:43+00:00",
@@ -56,4 +62,53 @@ type Lab struct {
 	Nodes       NodeMap      `json:"nodes"`
 	Links       LinkList     `json:"links"`
 	Groups      LabGroupList `json:"groups"`
+}
+
+// CanBeWiped returns `true` when all nodes in the lab are wiped.
+func (l *Lab) CanBeWiped() bool {
+	if len(l.Nodes) == 0 {
+		return l.State != LabStateDefined
+	}
+	for _, node := range l.Nodes {
+		if node.State != NodeStateDefined {
+			return false
+		}
+	}
+	return true
+}
+
+// Running returns `true` if at least one node is running (started or booted).
+func (l *Lab) Running() bool {
+	for _, node := range l.Nodes {
+		if node.State != NodeStateDefined && node.State != NodeStateStopped {
+			return true
+		}
+	}
+	return false
+}
+
+// Booted returns `true` if all nodes in the lab are in booted state.
+func (l *Lab) Booted() bool {
+	for _, node := range l.Nodes {
+		if node.State != NodeStateBooted {
+			return false
+		}
+	}
+	return true
+}
+
+// NodeByLabel returns the node of a lab identified by its `label“ or an error
+// if not found.
+func (l *Lab) NodeByLabel(ctx context.Context, label string) (*Node, error) {
+	for _, node := range l.Nodes {
+		if node.Label == label {
+			return node, nil
+		}
+	}
+	return nil, cmlerror.ErrElementNotFound
+}
+
+type LabImport struct {
+	ID       string   `json:"id"`
+	Warnings []string `json:"warnings"`
 }

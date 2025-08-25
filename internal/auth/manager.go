@@ -18,19 +18,17 @@ type TokenProvider interface {
 type Manager struct {
 	provider TokenProvider
 
-	// Token state (protected by mutex)
+	// token state (protected by mutex)
 	mu     sync.RWMutex
 	token  string
 	expiry time.Time
 
-	// Configuration
-	refreshBuffer time.Duration // How early to refresh before expiry
+	// provider configuration
+	refreshBuffer time.Duration // how early to refresh before expiry
 }
 
 // Config configures the auth manager
 type Config struct {
-	// How long before token expiry to trigger refresh
-	// Default: 30 seconds
 	RefreshBuffer time.Duration
 }
 
@@ -53,21 +51,16 @@ func NewManager(provider TokenProvider, config Config) *Manager {
 	}
 }
 
-// GetToken returns a valid authentication token
-// If the current token is expired or about to expire, it will automatically refresh
+// GetToken returns a valid authentication token. if the current token is
+// expired or about to expire, it will automatically refresh
 func (m *Manager) GetToken(ctx context.Context) (string, error) {
 	m.mu.RLock()
-
-	// Check if we have a valid token
 	if m.token != "" && m.isTokenValid() {
 		token := m.token
 		m.mu.RUnlock()
 		return token, nil
 	}
-
 	m.mu.RUnlock()
-
-	// Token is invalid/expired, refresh it
 	return m.refreshToken(ctx)
 }
 
@@ -76,8 +69,7 @@ func (m *Manager) ForceRefresh(ctx context.Context) (string, error) {
 	return m.refreshToken(ctx)
 }
 
-// InvalidateToken marks the current token as invalid
-// This is useful when receiving 401 responses
+// InvalidateToken marks the current token as invalid (e.g. 401)
 func (m *Manager) InvalidateToken() {
 	m.mu.Lock()
 	defer m.mu.Unlock()

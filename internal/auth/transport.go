@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -18,7 +17,6 @@ type Transport struct {
 // NewTransport creates a new authenticated transport
 func NewTransport(base http.RoundTripper, manager *Manager, skip []string) *Transport {
 	if base == nil {
-		fmt.Println("### using default transport")
 		base = http.DefaultTransport
 	}
 
@@ -29,6 +27,7 @@ func NewTransport(base http.RoundTripper, manager *Manager, skip []string) *Tran
 			"/api/v0/authok",
 		}
 	}
+
 	return &Transport{
 		base:              base,
 		manager:           manager,
@@ -38,12 +37,14 @@ func NewTransport(base http.RoundTripper, manager *Manager, skip []string) *Tran
 
 // RoundTrip implements http.RoundTripper
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	fmt.Println("###### i am called")
 	// Skip authentication for certain endpoints
 	if t.shouldSkipAuth(req) {
-		slog.Debug("Skipping authentication for endpoint", "path", req.URL.Path)
+		slog.Debug("skip auth", "url", req.URL.Path)
 		return t.base.RoundTrip(req)
 	}
+
+	slog.Debug("add auth", "method", req.Method, "url", req.URL.String())
+
 	// Clone the request to avoid modifying the original
 	reqWithAuth := req.Clone(req.Context())
 
@@ -102,11 +103,14 @@ func (t *Transport) shouldSkipAuth(req *http.Request) bool {
 	path := req.URL.Path
 
 	for _, skipPath := range t.skipAuthEndpoints {
-		if strings.HasSuffix(path, skipPath) {
+		// Use both exact match and suffix match for flexibility
+		if path == skipPath || strings.HasSuffix(path, skipPath) {
+			slog.Debug("shouldSkipAuth MATCH", "path", path, "skipPath", skipPath)
 			return true
 		}
 	}
 
+	slog.Debug("shouldSkipAuth NO MATCH, will add auth", "path", path)
 	return false
 }
 

@@ -42,16 +42,8 @@ func NewAuthProvider(config AuthConfig) *AuthProvider {
 		config.Timeout = 10 * time.Second
 	}
 
-	// // Create HTTP client for authentication (no auth middleware)
-	// transport := api.NewSaneTransport(config.InsecureSkipVerify)
-	//
-	// if config.HTTPclient == nil {
-	// 	panic("qwe")
-	// 	config.HTTPclient = &http.Client{
-	// 		Timeout:   config.Timeout,
-	// 		Transport: transport,
-	// 	}
-	// }
+	// this panics if there's no client provided
+	_ = config.HTTPclient
 
 	return &AuthProvider{
 		baseURL:     config.BaseURL,
