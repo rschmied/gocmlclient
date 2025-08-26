@@ -28,12 +28,9 @@ type AuthConfig struct {
 	BaseURL     string
 	Username    string
 	Password    string
-	PresetToken string // Optional: token to use before authentication
-
-	// HTTP client configuration
-	Timeout time.Duration
-	// InsecureSkipVerify bool
-	HTTPclient *http.Client
+	PresetToken string
+	Client      *http.Client
+	Timeout     time.Duration
 }
 
 // NewAuthProvider creates a new username/password token provider
@@ -43,14 +40,14 @@ func NewAuthProvider(config AuthConfig) *AuthProvider {
 	}
 
 	// this panics if there's no client provided
-	_ = config.HTTPclient
+	_ = config.Client
 
 	return &AuthProvider{
 		baseURL:     config.BaseURL,
 		username:    config.Username,
 		password:    config.Password,
 		presetToken: config.PresetToken,
-		client:      config.HTTPclient,
+		client:      config.Client,
 	}
 }
 

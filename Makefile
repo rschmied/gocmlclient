@@ -3,7 +3,8 @@ NAME := coverage
 .PHONY: cover clean
 
 cover:
-	go test -v -coverprofile $(NAME).out ./...
+	# TEST_LIVE=1 go test -v -cover -coverprofile $(NAME).out -coverpkg=./internal/api,./internal/auth,./pkg/client,./pkg/models ./...
+	TEST_LIVE=1 go test -v -cover -coverprofile $(NAME).out -coverpkg=./internal/...,./pkg/... ./...
 	go tool cover -html $(NAME).out -o $(NAME).html
 	open $(NAME).html
 

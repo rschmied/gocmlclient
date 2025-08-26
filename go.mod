@@ -6,7 +6,6 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/jarcoal/httpmock v1.4.1
 	github.com/lmittmann/tint v1.1.2
-	golang.org/x/sync v0.16.0
 )
 
 require (

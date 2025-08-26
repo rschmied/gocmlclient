@@ -100,7 +100,7 @@ func newLiveClient(t *testing.T, config ClientConfig) (*api.Client, func()) {
 			Username:    config.Username,
 			Password:    config.Password,
 			PresetToken: config.Token,
-			HTTPclient:  httpClient,
+			Client:      httpClient,
 		})
 
 		manager := auth.NewManager(provider, auth.DefaultConfig())
