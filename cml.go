@@ -1,3 +1,5 @@
+// Package cmlclient provides a client that can talk to a Cisco Modeling Labs
+// server (CML).
 package cmlclient
 
 import (

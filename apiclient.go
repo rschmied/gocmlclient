@@ -45,7 +45,6 @@ func (c *Client) apiRequest(ctx context.Context, method string, path string, dat
 	req.Header.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	req.Header.Set("Pragma", "no-cache")
 	req.Header.Set("Expires", "0")
-	// req.Header.Set("Connection", "close")
 	if data != nil {
 		req.Header.Set("Content-Type", contentType)
 	}
@@ -57,7 +56,11 @@ func (c *Client) doAPI(ctx context.Context, req *http.Request, depth int32) ([]b
 	if c.state.get() == stateInitial {
 		c.state.set(stateCheckVersion)
 		c.compatibilityErr = c.versionCheck(ctx, depth)
-		c.state.set(stateAuthRequired)
+		if len(c.apiToken) > 0 {
+			c.state.set(stateAuthenticated)
+		} else {
+			c.state.set(stateAuthRequired)
+		}
 	}
 	if c.compatibilityErr != nil {
 		return nil, c.compatibilityErr
@@ -72,9 +75,10 @@ func (c *Client) doAPI(ctx context.Context, req *http.Request, depth int32) ([]b
 	}
 
 retry:
-	if c.state.get() == stateAuthenticated && len(c.apiToken) > 0 {
-		setTokenHeader(req, c.apiToken)
-	}
+	// fmt.Println("path", req.URL.Path)
+	// if !strings.HasSuffix(req.URL.Path, authAPI) && c.state.get() == stateAuthenticated {
+	// 	setTokenHeader(req, c.apiToken)
+	// }
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		if urlError, ok := (err).(*url.Error); ok {
@@ -100,13 +104,13 @@ retry:
 	}
 	// no authorization and not retrying already
 	if res.StatusCode == http.StatusUnauthorized {
-		invalid_token := len(c.apiToken) > 0
+		invalidToken := len(c.apiToken) > 0
 		c.apiToken = ""
 		slog.Info("need to authenticate")
 		c.state.set(stateAuthRequired)
 		if !c.userpass.valid() {
 			errmsg := "no credentials provided"
-			if invalid_token {
+			if invalidToken {
 				errmsg = "invalid token but " + errmsg
 			}
 			return nil, errors.New(errmsg)

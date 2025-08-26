@@ -56,7 +56,7 @@ var (
 			"state": "STOPPED"
 		}
 	]`)
-	lab_layer3 = []byte(`{
+	labLayer3 = []byte(`{
 		"node1": {
 		  "name": "alpine-0",
 		  "interfaces": {
@@ -163,7 +163,7 @@ func TestClient_GetLab(t *testing.T) {
 			mr.MockRespList{
 				mr.MockResp{Data: demoLab},
 				mr.MockResp{Data: links, URL: `/links$`},
-				mr.MockResp{Data: lab_layer3, URL: `layer3_addresses$`},
+				mr.MockResp{Data: labLayer3, URL: `layer3_addresses$`},
 				mr.MockResp{Data: ownerUser, URL: `/users/.+$`},
 				mr.MockResp{Data: nodes, URL: `/nodes\?data=true$`},
 				mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
@@ -223,7 +223,7 @@ func TestClient_ImportLab(t *testing.T) {
 				mr.MockResp{Data: demoLab},
 				// these responses are needed for not shallow...
 				mr.MockResp{Data: links, URL: `/links$`},
-				mr.MockResp{Data: lab_layer3, URL: `/layer3_addresses$`},
+				mr.MockResp{Data: labLayer3, URL: `/layer3_addresses$`},
 				mr.MockResp{Data: ownerUser, URL: `/users/.+$`},
 				mr.MockResp{Data: nodes, URL: `/nodes\?data=true$`},
 				mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},
@@ -542,7 +542,7 @@ func TestClient_LabGetByTitle(t *testing.T) {
 
 	dataWithUser := append(data, mr.MockRespList{
 		mr.MockResp{Data: links, URL: `/links$`},
-		mr.MockResp{Data: lab_layer3, URL: `layer3_addresses$`},
+		mr.MockResp{Data: labLayer3, URL: `layer3_addresses$`},
 		mr.MockResp{Data: ownerUser, URL: `/users/.+$`},
 		mr.MockResp{Data: nodes, URL: `/nodes\?data=true$`},
 		mr.MockResp{Data: ifacesn1, URL: `/node1/interfaces\?data=true$`},

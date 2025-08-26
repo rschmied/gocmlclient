@@ -28,7 +28,7 @@ var (
 		"state": "STOPPED"
 	}`)
 
-	node1_namedConfigs = []byte(`{
+	node1NamedConfigs = []byte(`{
 		"id": "node1",
 		"lab_id": "lab1",
 		"label": "alpine-0",
@@ -150,6 +150,40 @@ func TestClient_NodeSetConfig(t *testing.T) {
 	}
 }
 
+func TestClient_NodeCreateWithNamedConfigs(t *testing.T) {
+	tc := newAuthedTestAPIclient()
+	tc.client.useNamedConfigs = true
+
+	dataWithUser := mr.MockRespList{
+		// post returns a partial node object, need to update
+		mr.MockResp{Data: node1},
+		// patch returns just the node ID
+		mr.MockResp{Data: []byte(`"node1"`)},
+		// re-read returns the now patched node object
+		mr.MockResp{Data: node1NamedConfigs},
+	}
+	tc.mr.SetData(dataWithUser)
+
+	t.Run("CreateWithNamedConfigs", func(t *testing.T) {
+		tc.mr.SetData(dataWithUser)
+		node := Node{
+			LabID: "lab99", ID: "node99", X: 100, Y: 100,
+			Tags: []string{"newtag"},
+			Configurations: []NodeConfig{
+				{Name: "default", Content: "bla"},
+				{Name: "second", Content: "something"},
+			},
+		}
+		resultNode, err := tc.client.NodeCreate(tc.ctx, &node)
+		_ = resultNode
+		if err != nil {
+			t.Errorf("Client.NodeCreate() error = %v", err)
+			return
+		}
+		assert.True(t, tc.mr.Empty())
+	})
+}
+
 func TestClient_NodeUpdate(t *testing.T) {
 	tc := newAuthedTestAPIclient()
 
@@ -221,9 +255,6 @@ func TestClient_NodeFuncs(t *testing.T) {
 		{"bad", mr.MockRespList{mr.MockResp{Code: 404}}, true},
 	}
 
-	node99 := &Node{LabID: "lab99", ID: "node99"}
-	lab := &Lab{ID: "lab99", Nodes: make(NodeMap)}
-	lab.Nodes["node99"] = node99
 	for tfname, tf := range funcs {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -245,7 +276,7 @@ func TestClient_NodeSetNamedConfigs(t *testing.T) {
 
 	dataWithUser := mr.MockRespList{
 		mr.MockResp{Data: []byte("\"node1\""), URL: `/labs/lab1/nodes/node1$`},
-		mr.MockResp{Data: node1_namedConfigs, URL: `/labs/lab1/nodes/node1.*exclude_configurations=false$`},
+		mr.MockResp{Data: node1NamedConfigs, URL: `/labs/lab1/nodes/node1.*exclude_configurations=false$`},
 	}
 
 	tests := []struct {
@@ -299,48 +330,56 @@ func TestNode_SameConfig(t *testing.T) {
 		{"test", fields{Configuration: nil}, Node{Configuration: nil}, true},
 		{"test", fields{Configuration: &one1}, Node{Configuration: &one2}, true},
 		{"test", fields{Configuration: &one1}, Node{Configuration: &two}, false},
-		{"test", fields{
-			Configurations: []NodeConfig{
-				{
-					Name:    "bla",
-					Content: "this",
+		{
+			"test",
+			fields{
+				Configurations: []NodeConfig{
+					{
+						Name:    "bla",
+						Content: "this",
+					},
 				},
 			},
-		},
 			Node{Configurations: []NodeConfig{}},
 			false,
 		},
-		{"test", fields{
-			Configurations: []NodeConfig{
-				{
-					Name:    "bla",
-					Content: "this",
+		{
+			"test",
+			fields{
+				Configurations: []NodeConfig{
+					{
+						Name:    "bla",
+						Content: "this",
+					},
 				},
 			},
-		},
-			Node{Configurations: []NodeConfig{
-				{
-					Name:    "bla",
-					Content: "somethingelse",
+			Node{
+				Configurations: []NodeConfig{
+					{
+						Name:    "bla",
+						Content: "somethingelse",
+					},
 				},
-			},
 			},
 			false,
 		},
-		{"test", fields{
-			Configurations: []NodeConfig{
-				{
-					Name:    "bla",
-					Content: "this",
+		{
+			"test",
+			fields{
+				Configurations: []NodeConfig{
+					{
+						Name:    "bla",
+						Content: "this",
+					},
 				},
 			},
-		},
-			Node{Configurations: []NodeConfig{
-				{
-					Name:    "something",
-					Content: "this",
+			Node{
+				Configurations: []NodeConfig{
+					{
+						Name:    "something",
+						Content: "this",
+					},
 				},
-			},
 			},
 			false,
 		},
@@ -388,5 +427,4 @@ func TestNode_UnmarshalJSON(t *testing.T) {
 			t.Errorf("Node.UnmarshalJSON() expected error, got nil")
 		}
 	})
-
 }
