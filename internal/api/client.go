@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
@@ -69,7 +68,7 @@ func (c *Client) Request(ctx context.Context, method, endpoint string, query map
 	}
 	u.Path = path.Join(u.Path, endpoint)
 
-	// Add query parameters
+	// add query parameters
 	if len(query) > 0 {
 		q := u.Query()
 		for k, v := range query {
@@ -78,7 +77,7 @@ func (c *Client) Request(ctx context.Context, method, endpoint string, query map
 		u.RawQuery = q.Encode()
 	}
 
-	// Prepare request body
+	// prepare request body
 	var bodyReader io.Reader
 	var contentLength int
 	if body != nil {
@@ -90,52 +89,23 @@ func (c *Client) Request(ctx context.Context, method, endpoint string, query map
 		contentLength = len(bodyBytes)
 	}
 
-	// Create request
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	// Set headers
 	if body != nil {
 		req.Header.Set("Content-Type", ContentTypeJSON)
 		req.Header.Set("Content-Length", fmt.Sprintf("%d", contentLength))
 	}
 
-	slog.Warn("body", "len", contentLength)
-
-	// Execute request
+	// execute request
 	res, err := c.do(req)
 	if err != nil {
 		return nil, c.wrapConnectionError(err)
 	}
 
 	return res, nil
-}
-
-// Get makes a GET request
-func (c *Client) Get(ctx context.Context, endpoint string, query map[string]string) (*http.Response, error) {
-	return c.Request(ctx, http.MethodGet, endpoint, query, nil)
-}
-
-// Post makes a POST request
-func (c *Client) Post(ctx context.Context, endpoint string, body any) (*http.Response, error) {
-	return c.Request(ctx, http.MethodPost, endpoint, nil, body)
-}
-
-// Put makes a PUT request
-func (c *Client) Put(ctx context.Context, endpoint string, body any) (*http.Response, error) {
-	return c.Request(ctx, http.MethodPut, endpoint, nil, body)
-}
-
-// Patch makes a PATCH request
-func (c *Client) Patch(ctx context.Context, endpoint string, body any) (*http.Response, error) {
-	return c.Request(ctx, http.MethodPatch, endpoint, nil, body)
-}
-
-// Delete makes a DELETE request
-func (c *Client) Delete(ctx context.Context, endpoint string) (*http.Response, error) {
-	return c.Request(ctx, http.MethodDelete, endpoint, nil, nil)
 }
 
 // DoJSON makes a request and handles JSON marshaling/unmarshaling
