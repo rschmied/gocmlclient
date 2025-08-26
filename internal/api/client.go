@@ -40,16 +40,15 @@ type Options struct {
 
 // New creates a new low-level API client
 func New(baseURL string, opts Options) *Client {
-	// if opts.HTTPClient == nil {
-	// 	panic("qew")
-	// 	opts.HTTPClient = &http.Client{Timeout: 15 * time.Second}
-	// }
+	// panic early if called without a client set
+	_ = opts.HTTPClient
 
+	// get the inner do func (e.g. the one that connects to the the API)
 	do := func(req *http.Request) (*http.Response, error) {
 		return opts.HTTPClient.Do(req)
 	}
 
-	// Apply middlewares in reverse order (last middleware wraps first)
+	// apply middlewares in reverse order (last middleware wraps first)
 	for i := len(opts.Middlewares) - 1; i >= 0; i-- {
 		do = opts.Middlewares[i](do)
 	}
@@ -108,8 +107,8 @@ func (c *Client) Request(ctx context.Context, method, endpoint string, query map
 	return res, nil
 }
 
-// DoJSON makes a request and handles JSON marshaling/unmarshaling
-func (c *Client) DoJSON(ctx context.Context, method, endpoint string, query map[string]string, reqBody, resBody any) error {
+// doJSON makes a request and handles JSON marshaling/unmarshaling
+func (c *Client) doJSON(ctx context.Context, method, endpoint string, query map[string]string, reqBody, resBody any) error {
 	// prepend API base path
 	apiEndpoint := path.Join(APIBasePath, endpoint)
 
@@ -136,27 +135,27 @@ func (c *Client) DoJSON(ctx context.Context, method, endpoint string, query map[
 
 // GetJSON makes a GET request with JSON handling
 func (c *Client) GetJSON(ctx context.Context, endpoint string, query map[string]string, out any) error {
-	return c.DoJSON(ctx, http.MethodGet, endpoint, query, nil, out)
+	return c.doJSON(ctx, http.MethodGet, endpoint, query, nil, out)
 }
 
 // PostJSON makes a POST request with JSON handling
 func (c *Client) PostJSON(ctx context.Context, endpoint string, query map[string]string, in, out any) error {
-	return c.DoJSON(ctx, http.MethodPost, endpoint, query, in, out)
+	return c.doJSON(ctx, http.MethodPost, endpoint, query, in, out)
 }
 
 // PutJSON makes a PUT request with JSON handling
 func (c *Client) PutJSON(ctx context.Context, endpoint string, in any) error {
-	return c.DoJSON(ctx, http.MethodPut, endpoint, nil, in, nil)
+	return c.doJSON(ctx, http.MethodPut, endpoint, nil, in, nil)
 }
 
 // PatchJSON makes a PATCH request with JSON handling
 func (c *Client) PatchJSON(ctx context.Context, endpoint string, in, out any) error {
-	return c.DoJSON(ctx, http.MethodPatch, endpoint, nil, in, out)
+	return c.doJSON(ctx, http.MethodPatch, endpoint, nil, in, out)
 }
 
 // DeleteJSON makes a DELETE request with JSON handling
 func (c *Client) DeleteJSON(ctx context.Context, endpoint string, out any) error {
-	return c.DoJSON(ctx, http.MethodDelete, endpoint, nil, nil, out)
+	return c.doJSON(ctx, http.MethodDelete, endpoint, nil, nil, out)
 }
 
 // marshalBody handles different body types and converts them to JSON bytes

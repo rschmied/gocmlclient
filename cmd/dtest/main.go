@@ -80,9 +80,9 @@ func main() {
 		"https://localhost:8443",
 		client.WithHTTPClient(http.DefaultClient),
 		client.WithInsecureTLS(),
-		// client.WithUsernamePassword(username, password),
+		client.WithUsernamePassword(username, password),
 		client.WithToken(token),
-		// client.WithLogger(logger),
+		client.WithLogger(slog.Default()),
 	)
 	if err != nil {
 		slog.Error("new", "err", err)
