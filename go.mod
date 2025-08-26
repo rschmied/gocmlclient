@@ -4,7 +4,6 @@ go 1.24.6
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/lmittmann/tint v1.1.2
 	github.com/rschmied/mockresponder v1.0.4
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/sync v0.16.0

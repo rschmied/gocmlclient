@@ -9,6 +9,9 @@ Lists the changes in the gocmlclient package.
 - updated some tests
 - added VersionCheck function, can provide a SemVer constraint to check if
 controller version is within expected version
+- removed cmd/ctest
+- changed some names from snake case to camel case (golang "compliant")
+- a bit of re-formatting on all files (white space, casing, linting)
 
 ## Version 0.1.0
 
