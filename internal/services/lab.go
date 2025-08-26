@@ -7,8 +7,6 @@ import (
 	"log/slog"
 	"strings"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
@@ -22,6 +20,7 @@ const (
 type LabService struct {
 	apiClient *api.Client
 	Interface InterfaceServiceInterface
+	Link      LinkServiceInterface
 	Node      NodeServiceInterface
 	User      UserServiceInterface
 }
@@ -33,119 +32,79 @@ func NewLabService(apiClient *api.Client) *LabService {
 	}
 }
 
-type labAlias struct {
-	models.Lab
-	OwnerID string `json:"owner"`
-}
-
-// type labPatchPostAlias struct {
-// 	Title       string `json:"title,omitempty"`
-// 	Description string `json:"description,omitempty"`
-// 	Notes       string `json:"notes,omitempty"`
-// 	// Groups      LabGroupList `json:"groups,omitempty"`
-// }
-
-// API request/response types (internal to the service)
-type labCreateRequest struct {
-	Title       string `json:"title,omitempty"`
-	Description string `json:"description,omitempty"`
-	Notes       string `json:"notes,omitempty"`
-}
-
-type labUpdateRequest struct {
-	Title       string             `json:"title,omitempty"`
-	Description string             `json:"description,omitempty"`
-	Notes       string             `json:"notes,omitempty"`
-	Groups      []*models.LabGroup `json:"groups,omitempty"`
-}
-
-type labResponse struct {
-	ID          string             `json:"id"`
-	State       string             `json:"state"`
-	Created     string             `json:"created"`
-	Modified    string             `json:"modified"`
-	Title       string             `json:"lab_title"`
-	Description string             `json:"lab_description"`
-	Notes       string             `json:"lab_notes"`
-	OwnerID     string             `json:"owner"`
-	NodeCount   int                `json:"node_count"`
-	LinkCount   int                `json:"link_count"`
-	Groups      []*models.LabGroup `json:"groups"`
-}
-
-func (r *labResponse) toLab() *models.Lab {
-	return &models.Lab{
-		ID:          r.ID,
-		State:       r.State,
-		Created:     r.Created,
-		Modified:    r.Modified,
-		Title:       r.Title,
-		Description: r.Description,
-		Notes:       r.Notes,
-		Owner:       &models.User{ID: r.OwnerID},
-		NodeCount:   r.NodeCount,
-		LinkCount:   r.LinkCount,
-		Groups:      r.Groups,
-		Nodes:       make(models.NodeMap),
-		Links:       []*models.Link{},
-	}
+type labCreate struct {
+	Title        string                        `json:"title,omitempty"`
+	Description  string                        `json:"description,omitempty"`
+	Notes        string                        `json:"notes,omitempty"`
+	Owner        models.UUID                   `json:"owner,omitempty"`
+	Associations models.AssociationUsersGroups `json:"associations,omitzero"`
 }
 
 // Create creates a new lab on the controller
-func (s *LabService) Create(ctx context.Context, lab *models.Lab) (*models.Lab, error) {
+func (s *LabService) Create(ctx context.Context, lab models.Lab) (*models.Lab, error) {
 	// Use the alias type for API communication (handles inconsistent field names)
-	postData := labCreateRequest{
+	postData := labCreate{
 		Title:       lab.Title,
 		Description: lab.Description,
 		Notes:       lab.Notes,
+		Owner:       lab.Owner,
+		// Associations: lab.EffectivePermissions,
 	}
 
-	var response labResponse
-	err := s.apiClient.PostJSON(ctx, "labs", nil, postData, &response)
+	result := &models.Lab{}
+	err := s.apiClient.PostJSON(ctx, "labs", nil, postData, result)
 	if err != nil {
 		return nil, fmt.Errorf("create lab: %w", err)
 	}
 
-	// Update the lab with the ID from the response
-	lab.ID = response.ID
+	// // Update the lab with the ID from the response
+	// lab.ID = result.ID
 
 	// Update with full data (handles groups, owner, etc.)
-	return s.Update(ctx, lab)
+	// return s.Update(ctx, *result)
+	return result, nil
 }
 
 // GetByID retrieves a lab by ID
-func (s *LabService) GetByID(ctx context.Context, id string, deep bool) (*models.Lab, error) {
+func (s *LabService) GetByID(ctx context.Context, id models.UUID, deep bool) (*models.Lab, error) {
 	api := fmt.Sprintf("%s/%s", labAPI, id)
-	la := &labAlias{}
-	err := s.apiClient.GetJSON(ctx, api, nil, la)
+	result := &models.Lab{}
+	err := s.apiClient.GetJSON(ctx, api, nil, result)
 	if err != nil {
 		return nil, err
 	}
-	if !deep {
-		la.Owner = &models.User{ID: la.OwnerID}
-		return &la.Lab, nil
-	}
-	return s.fillLabData(ctx, la)
+	_ = deep
+	// if !deep {
+	// 	// la.Owner = &models.User{ID: la.OwnerID}
+	// 	return &result, nil
+	// }
+	// return s.fillLabData(ctx, la)
+	return result, nil
 }
 
 // Update updates a lab's metadata
-func (s *LabService) Update(ctx context.Context, lab *models.Lab) (*models.Lab, error) {
-	endpoint := fmt.Sprintf("%s/%s", labAPI, lab.ID)
-
-	updateData := labUpdateRequest{
+func (s *LabService) Update(ctx context.Context, lab models.Lab) (*models.Lab, error) {
+	updateData := labCreate{
 		Title:       lab.Title,
 		Description: lab.Description,
 		Notes:       lab.Notes,
-		Groups:      lab.Groups,
+		Owner:       lab.Owner,
+		// Associations: lab.EffectivePermissions,
 	}
 
-	var response labResponse
-	err := s.apiClient.PatchJSON(ctx, endpoint, updateData, &response)
+	// var result labResponse
+	result := &models.Lab{}
+	labID := lab.ID
+	lab.ID = "" // ensure no ID
+	endpoint := fmt.Sprintf("%s/%s", labAPI, labID)
+	err := s.apiClient.PatchJSON(ctx, endpoint, updateData, result)
 	if err != nil {
-		return nil, fmt.Errorf("update lab %s: %w", lab.ID, err)
+		// return nil, fmt.Errorf("update lab %s: %w", labID, err)
+		return nil, err
 	}
 
-	return response.toLab(), nil
+	return result, nil
+	// return response.toLab(), nil
 }
 
 // Start starts all nodes in a lab
@@ -173,8 +132,8 @@ func (s *LabService) Import(ctx context.Context, topology string) (*models.Lab, 
 	topoReader := strings.NewReader(topology)
 
 	var importResponse struct {
-		ID       string   `json:"id"`
-		Warnings []string `json:"warnings"`
+		ID       models.UUID `json:"id"`
+		Warnings []string    `json:"warnings"`
 	}
 
 	err := s.apiClient.PostJSON(ctx, importAPI, nil, topoReader, &importResponse)
@@ -190,8 +149,19 @@ func (s *LabService) Import(ctx context.Context, topology string) (*models.Lab, 
 	return s.GetByID(ctx, importResponse.ID, true)
 }
 
+// Wipe wipes the lab identified by the `id` (a UUIDv4).
+func (s *LabService) Wipe(ctx context.Context, id models.UUID) error {
+	return s.apiClient.PutJSON(ctx, fmt.Sprintf("labs/%s/wipe", id), nil)
+}
+
+// Delete deletes the lab identified by the `id` (a UUIDv4).
+func (s *LabService) Delete(ctx context.Context, id models.UUID) error {
+	fmt.Println("###", id)
+	return s.apiClient.DeleteJSON(ctx, fmt.Sprintf("labs/%s", id), nil)
+}
+
 // HasConverged checks if all nodes in the lab have converged (are in BOOTED state)
-func (s *LabService) HasConverged(ctx context.Context, id string) (bool, error) {
+func (s *LabService) HasConverged(ctx context.Context, id models.UUID) (bool, error) {
 	endpoint := fmt.Sprintf("%s/%s/check_if_converged", labAPI, id)
 
 	var converged bool
@@ -204,102 +174,127 @@ func (s *LabService) HasConverged(ctx context.Context, id string) (bool, error) 
 }
 
 // fillLabData fetches additional lab data for deep queries
-func (s *LabService) fillLabData(ctx context.Context, la *labAlias) (*models.Lab, error) {
-	var err error
-	g, ctx := errgroup.WithContext(ctx)
+// func (s *LabService) fillLabData(ctx context.Context, la *labAlias) (*models.Lab, error) {
+// 	var err error
+// 	g, ctx := errgroup.WithContext(ctx)
+//
+// 	g.Go(func() error {
+// 		defer slog.Debug("user done")
+// 		// retrieve the user by ID
+// 		la.Owner, err = s.User.GetByID(ctx, la.OwnerID)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		// FIXME: endpoint is deprecated...!?
+// 		// // fill the groups the user is member of
+// 		// groups, err := s.User.Groups(ctx, la.OwnerID)
+// 		// if err != nil {
+// 		// 	return err
+// 		// }
+// 		// for _, group := range groups {
+// 		// 	la.Owner.Groups = append(la.Owner.Groups, group.ID)
+// 		// }
+// 		return nil
+// 	})
+//
+// 	lab := &la.Lab
+//
+// 	// need to ensure that this block finishes before the others run
+// 	ch := make(chan struct{})
+// 	g.Go(func() error {
+// 		defer func() {
+// 			slog.Debug("nodes/interfaces done")
+// 			// two sync points, we can run the API endpoints but we need to
+// 			// wait for the node data to be read until we can add the layer3
+// 			// info (1) and the link info (2)
+// 			ch <- struct{}{}
+// 			ch <- struct{}{}
+// 		}()
+// 		slog.Warn("get nodes")
+// 		err := s.Node.GetNodesForLab(ctx, lab)
+// 		if err != nil {
+// 			slog.Error("get nodes", "err", err)
+// 			return err
+// 		}
+// 		slog.Warn("get interfaces")
+// 		for _, node := range lab.Nodes {
+// 			ifaceList, err := s.Interface.GetInterfacesForNode(ctx, lab.ID, node.ID)
+// 			if err != nil {
+// 				slog.Error("get interfaces", "err", err)
+// 				return err
+// 			}
+// 			node.Interfaces = ifaceList
+// 		}
+// 		return nil
+// 	})
+//
+// 	g.Go(func() error {
+// 		defer slog.Debug("l3info done")
+// 		l3info, err := s.getL3Info(ctx, lab.ID)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		slog.Debug("l3info read")
+// 		// wait for node data read complete
+// 		<-ch
+// 		// map and merge the l3 data...
+// 		for nid, l3data := range *l3info {
+// 			if node, found := lab.Nodes[nid]; found {
+// 				for mac, l3i := range l3data.Interfaces {
+// 					for _, iface := range node.Interfaces {
+// 						if iface.MACaddress == mac {
+// 							iface.IP4 = l3i.IP4
+// 							iface.IP6 = l3i.IP6
+// 							break
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 		slog.Debug("l3info loop done")
+// 		return nil
+// 	})
+//
+// 	g.Go(func() error {
+// 		defer slog.Debug("links done")
+// 		// wait for node data read complete
+// 		<-ch
+// 		linkList, err := s.Link.GetLinksForLab(ctx, lab)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		lab.Links = linkList
+// 		return nil
+// 	})
+//
+// 	if err := g.Wait(); err != nil {
+// 		slog.Error("error", "err", err)
+// 		return nil, err
+// 	}
+// 	slog.Debug("wait done")
+// 	return lab, nil
+// }
 
-	g.Go(func() error {
-		defer slog.Debug("user done")
-		// retrieve the user by ID
-		la.Owner, err = s.User.GetByID(ctx, la.OwnerID)
-		if err != nil {
-			return err
-		}
-		// FIXME: endpoint is deprecated...!?
-		// // fill the groups the user is member of
-		// groups, err := s.User.Groups(ctx, la.OwnerID)
-		// if err != nil {
-		// 	return err
-		// }
-		// for _, group := range groups {
-		// 	la.Owner.Groups = append(la.Owner.Groups, group.ID)
-		// }
-		return nil
-	})
+type l3nodes map[string]*l3node
 
-	lab := &la.Lab
+type l3node struct {
+	Name       string                 `json:"name"`
+	Interfaces map[string]l3interface `json:"interfaces"`
+}
 
-	// need to ensure that this block finishes before the others run
-	// ch := make(chan struct{})
-	g.Go(func() error {
-		defer func() {
-			slog.Debug("nodes/interfaces done")
-			// two sync points, we can run the API endpoints but we need to
-			// wait for the node data to be read until we can add the layer3
-			// info (1) and the link info (2)
-			// ch <- struct{}{}
-			// ch <- struct{}{}
-		}()
-		slog.Warn("get nodes")
-		err := s.Node.GetNodesForLab(ctx, lab)
-		if err != nil {
-			slog.Error("get nodes", "err", err)
-			return err
-		}
-		slog.Warn("get interfaces")
-		for _, node := range lab.Nodes {
-			err = s.Interface.GetInterfacesForNode(ctx, node)
-			if err != nil {
-				slog.Error("get interfaces", "err", err)
-				return err
-			}
-		}
-		return nil
-	})
-	//
-	// g.Go(func() error {
-	// 	defer slog.Debug("l3info done")
-	// 	l3info, err := c.getL3Info(ctx, lab.ID)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	slog.Debug("l3info read")
-	// 	// wait for node data read complete
-	// 	<-ch
-	// 	// map and merge the l3 data...
-	// 	for nid, l3data := range *l3info {
-	// 		if node, found := lab.Nodes[nid]; found {
-	// 			for mac, l3i := range l3data.Interfaces {
-	// 				for _, iface := range node.Interfaces {
-	// 					if iface.MACaddress == mac {
-	// 						iface.IP4 = l3i.IP4
-	// 						iface.IP6 = l3i.IP6
-	// 						break
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// 	slog.Debug("l3info loop done")
-	// 	return nil
-	// })
-	//
-	// g.Go(func() error {
-	// 	defer slog.Debug("links done")
-	// 	idlist, err := c.getLinkIDsForLab(ctx, lab)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	slog.Debug("links read")
-	// 	// wait for node data read complete
-	// 	<-ch
-	// 	return c.getLinksForLab(ctx, lab, idlist)
-	// })
+type l3interface struct {
+	ID    string   `json:"id"`
+	Label string   `json:"label"`
+	IP4   []string `json:"ip4"`
+	IP6   []string `json:"ip6"`
+}
 
-	if err := g.Wait(); err != nil {
-		slog.Error("error", "err", err)
+func (s *LabService) getL3Info(ctx context.Context, id string) (*l3nodes, error) {
+	api := fmt.Sprintf("labs/%s/layer3_addresses", id)
+	l3n := &l3nodes{}
+	err := s.apiClient.GetJSON(ctx, api, nil, l3n)
+	if err != nil {
 		return nil, err
 	}
-	slog.Debug("wait done")
-	return lab, nil
+	return l3n, nil
 }

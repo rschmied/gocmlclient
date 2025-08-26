@@ -3,11 +3,14 @@ package testutil
 
 import (
 	"crypto/tls"
+	"log/slog"
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/jarcoal/httpmock"
+	"github.com/lmittmann/tint"
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/auth"
 )
@@ -32,6 +35,13 @@ func DefaultConfig() ClientConfig {
 
 // NewAPIClient creates a test API client - either mock or live based on TEST_LIVE env var
 func NewAPIClient(t *testing.T) (*api.Client, func()) {
+	slog.SetDefault(slog.New(
+		tint.NewHandler(os.Stderr, &tint.Options{
+			AddSource:  true,
+			Level:      slog.LevelDebug,
+			TimeFormat: time.Kitchen,
+		}),
+	))
 	return NewAPIClientWithConfig(t, DefaultConfig())
 }
 
@@ -45,6 +55,7 @@ func NewAPIClientWithConfig(t *testing.T, config ClientConfig) (*api.Client, fun
 
 // IsLiveTesting returns true if running against live backend
 func IsLiveTesting() bool {
+	// return true
 	return os.Getenv("TEST_LIVE") != ""
 }
 

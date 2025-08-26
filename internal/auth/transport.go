@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"bytes"
 	"io"
 	"log/slog"
 	"net/http"
@@ -44,6 +45,18 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	slog.Debug("add auth", "method", req.Method, "url", req.URL.String())
+
+	// Store the request body in a buffer for potential retries
+	var reqBodyBuf []byte
+	if req.Body != nil {
+		var err error
+		reqBodyBuf, err = io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		// Restore the original request body for the first attempt
+		req.Body = io.NopCloser(bytes.NewReader(reqBodyBuf))
+	}
 
 	// Clone the request to avoid modifying the original
 	reqWithAuth := req.Clone(req.Context())
@@ -90,6 +103,11 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		// Retry with the new token
 		retryReq := req.Clone(req.Context())
 		retryReq.Header.Set("Authorization", "Bearer "+newToken)
+
+		// Re-create the request body from the buffer
+		if reqBodyBuf != nil {
+			retryReq.Body = io.NopCloser(bytes.NewReader(reqBodyBuf))
+		}
 
 		slog.Debug("Retrying request with fresh token")
 		return t.base.RoundTrip(retryReq)

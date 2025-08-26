@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -88,12 +89,15 @@ func main() {
 		return
 	}
 
-	id := "8742cc17-bc3c-4ccd-aa01-f15e0decbd11"
+	id := "20c0efde-cdaf-4dad-b6df-dd568ddf6e8d"
 	lab, err := c.LabGet(ctx, id, true)
 	if err != nil {
 		slog.Error("Failed to get lab", "err", err)
 		return
 	}
 
-	slog.Info("Successfully retrieved lab", "lab", lab, "owner", lab.Owner.Fullname)
+	// slog.Info("Successfully retrieved lab", "lab", lab, "owner", lab.Owner.Fullname)
+	slog.Info("Successfully retrieved lab", "lab", lab, "owner", lab.Owner)
+
+	json.NewEncoder(os.Stdout).Encode(lab)
 }

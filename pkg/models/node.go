@@ -21,13 +21,13 @@ type NodeConfig struct {
 }
 
 type SerialDevice struct {
-	ConsoleKey   string `json:"console_key"`
-	DeviceNumber int    `json:"device_number"`
+	ConsoleKey   UUID `json:"console_key"`
+	DeviceNumber int  `json:"device_number"`
 }
 
 type Node struct {
-	ID              string         `json:"id"`
-	LabID           string         `json:"lab_id"`
+	ID              UUID           `json:"id"`
+	LabID           UUID           `json:"lab_id"`
 	Label           string         `json:"label"`
 	X               int            `json:"x"`
 	Y               int            `json:"y"`
@@ -44,9 +44,9 @@ type Node struct {
 	BootDiskSize    int            `json:"boot_disk_size"`
 	Interfaces      InterfaceList  `json:"interfaces,omitempty"`
 	Tags            []string       `json:"tags"`
-	VNCkey          string         `json:"vnc_key"`
+	VNCkey          UUID           `json:"vnc_key"`
 	SerialDevices   []SerialDevice `json:"serial_devices"`
-	ComputeID       string         `json:"compute_id"`
+	ComputeID       UUID           `json:"compute_id"`
 
 	// Configurations is not exported, it's overloaded within the API
 }
@@ -148,31 +148,31 @@ func (n *Node) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (node *Node) MarshalJSON() ([]byte, error) {
+func (n *Node) MarshalJSON() ([]byte, error) {
 	type alias Node
-	if len(node.Configurations) > 0 {
-		node.Configuration = nil
+	if len(n.Configurations) > 0 {
+		n.Configuration = nil
 		return json.Marshal(&struct {
 			*alias
 			NamedConfig []NodeConfig `json:"configuration"`
 		}{
-			(*alias)(node),
-			node.Configurations,
+			(*alias)(n),
+			n.Configurations,
 		})
 	}
-	return json.Marshal((*alias)(node))
+	return json.Marshal((*alias)(n))
 }
 
-func (node Node) SameConfig(other Node) bool {
-	if node.Configuration != nil && other.Configuration != nil && *other.Configuration != *node.Configuration {
+func (n *Node) SameConfig(other *Node) bool {
+	if n.Configuration != nil && other.Configuration != nil && *other.Configuration != *n.Configuration {
 		return false
 	}
 
-	if len(node.Configurations) != len(other.Configurations) {
+	if len(n.Configurations) != len(other.Configurations) {
 		return false
 	}
 
-	for idx, cfg := range node.Configurations {
+	for idx, cfg := range n.Configurations {
 		if cfg.Name != other.Configurations[idx].Name {
 			return false
 		}

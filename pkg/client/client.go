@@ -19,6 +19,7 @@ type Client struct {
 	// services
 	Interface *services.InterfaceService
 	Lab       *services.LabService
+	Link      *services.LinkService
 	Node      *services.NodeService
 	System    *services.SystemService
 	Group     *services.GroupService
@@ -44,6 +45,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 		apiClient: apiClient,
 		Interface: services.NewInterfaceService(apiClient),
 		Lab:       services.NewLabService(apiClient),
+		Link:      services.NewLinkService(apiClient),
 		Node:      services.NewNodeService(apiClient, true),
 		System:    services.NewSystemService(apiClient),
 		Group:     services.NewGroupService(apiClient),
@@ -52,6 +54,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 
 	// inject dependencies
 	c.Lab.Interface = c.Interface
+	c.Lab.Link = c.Link
 	c.Lab.User = c.User
 	c.Lab.Node = c.Node
 	c.User.Group = c.Group
@@ -114,7 +117,8 @@ func newAPIClient(c *Config) *api.Client {
 		HTTPClient: c.httpClient,
 		Middlewares: []api.Middleware{
 			// api.LoggingMiddleware(c.logger),
-			api.RetryMiddleware(api.DefaultRetryPolicy()),
+			api.LogRequestBodyMiddleware(c.logger),
+			// 	api.RetryMiddleware(api.DefaultRetryPolicy()),
 		},
 	})
 

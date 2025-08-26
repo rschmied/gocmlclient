@@ -7,5 +7,5 @@ import (
 )
 
 func (c *Client) LabGet(ctx context.Context, id string, deep bool) (*models.Lab, error) {
-	return c.Lab.GetByID(ctx, id, deep)
+	return c.Lab.GetByID(ctx, models.UUID(id), deep)
 }

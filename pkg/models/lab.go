@@ -29,39 +29,38 @@ import (
 // 	]
 // }
 
+type LabState string
+
 const (
-	LabStateDefined = "DEFINED_ON_CORE"
-	LabStateStopped = "STOPPED"
-	LabStateStarted = "STARTED"
-	LabStateBooted  = "BOOTED"
+	LabStateDefined LabState = "DEFINED_ON_CORE"
+	LabStateStopped LabState = "STOPPED"
+	LabStateStarted LabState = "STARTED"
+	LabStateBooted  LabState = "BOOTED"
 )
 
-type LabGroup struct {
-	ID         string `json:"id"`
-	Name       string `json:"name,omitempty"`
-	Permission string `json:"permission"`
-}
-
 type (
-	NodeMap      map[string]*Node
-	LinkList     []*Link
-	LabGroupList []*LabGroup
+	NodeMap  map[UUID]*Node
+	LinkList []*Link
 )
 
 type Lab struct {
-	ID          string       `json:"id"`
-	State       string       `json:"state"`
-	Created     string       `json:"created"`
-	Modified    string       `json:"modified"`
-	Title       string       `json:"lab_title"`
-	Description string       `json:"lab_description"`
-	Notes       string       `json:"lab_notes"`
-	Owner       *User        `json:"owner"`
-	NodeCount   int          `json:"node_count"`
-	LinkCount   int          `json:"link_count"`
-	Nodes       NodeMap      `json:"nodes"`
-	Links       LinkList     `json:"links"`
-	Groups      LabGroupList `json:"groups"`
+	ID                   UUID        `json:"id"`
+	State                LabState    `json:"state,omitempty"`
+	Created              string      `json:"created,omitempty"`
+	Modified             string      `json:"modified,omitempty"`
+	Title                string      `json:"lab_title,omitempty"`
+	Description          string      `json:"lab_description,omitempty"`
+	Notes                string      `json:"lab_notes,omitempty"`
+	Owner                UUID        `json:"owner,omitempty"`
+	OwnerUsername        string      `json:"owner_username,omitempty"`
+	OwnerFullname        string      `json:"OwnerFullname,omitempty"`
+	NodeCount            int         `json:"node_count,omitempty"`
+	LinkCount            int         `json:"link_count,omitempty"`
+	EffectivePermissions Permissions `json:"effective_permissions,omitempty"`
+
+	// non-schema helpers
+	Nodes NodeMap  `json:"nodes,omitempty"`
+	Links LinkList `json:"links,omitempty"`
 }
 
 // CanBeWiped returns `true` when all nodes in the lab are wiped.

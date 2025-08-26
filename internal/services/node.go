@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/pkg/models"
@@ -12,6 +13,7 @@ import (
 // NodeServiceInterface defines methods needed by other services
 type NodeServiceInterface interface {
 	GetNodesForLab(ctx context.Context, lab *models.Lab) error
+	GetByID(ctx context.Context, labID, id models.UUID) (*models.Node, error)
 }
 
 // NodeService provides node-related operations
@@ -82,7 +84,7 @@ func newNodeAlias(node *models.Node, update bool) nodePatchPostAlias {
 		npp.NodeDefinition = node.NodeDefinition
 	}
 
-	// slog.Warn("NODE", slog.Any("node", node), slog.Any("npp", npp))
+	slog.Warn("NODE", slog.Any("node", node), slog.Any("npp", npp))
 
 	return npp
 }
@@ -133,12 +135,12 @@ func (s *NodeService) setConfigData(ctx context.Context, node *models.Node, data
 	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
 
 	// API returns the node ID of the updated node
-	nodeID := ""
+	var nodeID models.UUID = ""
 	err := s.apiClient.PatchJSON(ctx, api, data, &nodeID)
 	if err != nil {
 		return err
 	}
-	_, err = s.GetByID(ctx, node)
+	_, err = s.GetByID(ctx, node.LabID, nodeID)
 	return err
 }
 
@@ -171,12 +173,12 @@ func (s *NodeService) Update(ctx context.Context, node *models.Node) (*models.No
 	postAlias := newNodeAlias(node, true)
 
 	// API returns "just" the node ID of the updated node
-	nodeID := ""
+	var nodeID models.UUID = ""
 	err := s.apiClient.PatchJSON(ctx, api, postAlias, &nodeID)
 	if err != nil {
 		return nil, err
 	}
-	return s.GetByID(ctx, node)
+	return s.GetByID(ctx, node.LabID, nodeID)
 }
 
 // Start starts the given node.
@@ -250,18 +252,18 @@ func (s *NodeService) Create(ctx context.Context, node *models.Node) (*models.No
 	node.Interfaces = models.InterfaceList{}
 
 	// fetch the node again, with all data
-	return s.GetByID(ctx, node)
+	return s.GetByID(ctx, node.LabID, node.ID)
 }
 
 // GetByID returns the node identified by its `ID` and `LabID` in the provided node.
-func (s *NodeService) GetByID(ctx context.Context, node *models.Node) (*models.Node, error) {
+func (s *NodeService) GetByID(ctx context.Context, labID, id models.UUID) (*models.Node, error) {
 	// SIMPLE-5052 -- results are different for simplified=true vs false for
 	// the inherited values. In the simplified case, all values are always
 	// null.
 
 	var err error
 	newNode := models.Node{}
-	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
+	api := fmt.Sprintf("labs/%s/nodes/%s", labID, id)
 	queryParms := map[string]string{}
 	if s.useNamedConfigs {
 		queryParms["operational"] = "true"

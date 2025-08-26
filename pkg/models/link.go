@@ -22,19 +22,15 @@ const (
 
 // Link defines the data structure for a CML link between nodes.
 type Link struct {
-	ID      string `json:"id"`
-	LabID   string `json:"lab_id"`
+	ID      UUID   `json:"id"`
+	LabID   UUID   `json:"lab_id"`
 	State   string `json:"state"`
 	Label   string `json:"label"`
-	PCAPkey string `json:"link_capture_key"`
-	SrcID   string `json:"interface_a"`
-	DstID   string `json:"interface_b"`
-	SrcNode string `json:"node_a"`
-	DstNode string `json:"node_b"`
+	PCAPkey UUID   `json:"link_capture_key"`
+	SrcID   UUID   `json:"interface_a"`
+	DstID   UUID   `json:"interface_b"`
+	SrcNode UUID   `json:"node_a"`
+	DstNode UUID   `json:"node_b"`
 	SrcSlot int    `json:"slot_a"`
 	DstSlot int    `json:"slot_b"`
-
-	// not exported, needed for internal linking
-	ifaceA *Interface
-	ifaceB *Interface
 }

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
@@ -101,6 +102,8 @@ func (c *Client) Request(ctx context.Context, method, endpoint string, query map
 		req.Header.Set("Content-Length", fmt.Sprintf("%d", contentLength))
 	}
 
+	slog.Warn("body", "len", contentLength)
+
 	// Execute request
 	res, err := c.do(req)
 	if err != nil {
@@ -137,7 +140,7 @@ func (c *Client) Delete(ctx context.Context, endpoint string) (*http.Response, e
 
 // DoJSON makes a request and handles JSON marshaling/unmarshaling
 func (c *Client) DoJSON(ctx context.Context, method, endpoint string, query map[string]string, reqBody, resBody any) error {
-	// Prepend API base path
+	// prepend API base path
 	apiEndpoint := path.Join(APIBasePath, endpoint)
 
 	res, err := c.Request(ctx, method, apiEndpoint, query, reqBody)
@@ -228,5 +231,6 @@ func (c *Client) handleHTTPError(res *http.Response) error {
 		return fmt.Errorf("HTTP %d: failed to read error response", res.StatusCode)
 	}
 
-	return fmt.Errorf("HTTP %d: %s", res.StatusCode, string(body))
+	// return fmt.Errorf("HTTP %d: %s", res.StatusCode, string(body))
+	return fmt.Errorf("%s", string(body))
 }
