@@ -31,8 +31,8 @@ type (
 		Label       string      `json:"label"`
 		Slot        int         `json:"slot"`
 		Type        IfaceType   `json:"type"`
-		IsConnected bool        `json:"is_connected"`
 		State       IfaceState  `json:"state"`
+		IsConnected bool        `json:"is_connected"`
 		Operational Operational `json:"operational"`
 
 		// extra

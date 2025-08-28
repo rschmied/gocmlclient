@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/rschmied/gocmlclient/internal/common"
 )
 
 // AuthProvider implements TokenProvider using username/password authentication
@@ -94,7 +96,7 @@ func (p *AuthProvider) authenticateWithPassword(ctx context.Context) (string, ti
 		return "", time.Time{}, fmt.Errorf("create auth request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", common.ContentTypeJSON)
 
 	// Execute request
 	slog.Debug("Sending authentication request", "url", authURL)

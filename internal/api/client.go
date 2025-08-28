@@ -12,12 +12,12 @@ import (
 	"path"
 	"syscall"
 
+	"github.com/rschmied/gocmlclient/internal/common"
 	"github.com/rschmied/gocmlclient/pkg/errors"
 )
 
 const (
-	ContentTypeJSON = "application/json"
-	APIBasePath     = "/api/v0/"
+	APIBasePath = "/api/v0/"
 )
 
 // DoFunc represents the signature for making HTTP requests
@@ -94,7 +94,7 @@ func (c *Client) Request(ctx context.Context, method, endpoint string, query map
 	}
 
 	if body != nil {
-		req.Header.Set("Content-Type", ContentTypeJSON)
+		req.Header.Set("Content-Type", common.ContentTypeJSON)
 		req.Header.Set("Content-Length", fmt.Sprintf("%d", contentLength))
 	}
 

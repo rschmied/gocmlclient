@@ -8,11 +8,13 @@ import (
 	"sort"
 )
 
+type NodeState string
+
 const (
-	NodeStateDefined = "DEFINED_ON_CORE"
-	NodeStateStopped = "STOPPED"
-	NodeStateStarted = "STARTED"
-	NodeStateBooted  = "BOOTED"
+	NodeStateDefined NodeState = "DEFINED_ON_CORE"
+	NodeStateStopped NodeState = "STOPPED"
+	NodeStateStarted NodeState = "STARTED"
+	NodeStateBooted  NodeState = "BOOTED"
 )
 
 type NodeConfig struct {
@@ -26,27 +28,28 @@ type SerialDevice struct {
 }
 
 type Node struct {
-	ID              UUID           `json:"id"`
-	LabID           UUID           `json:"lab_id"`
-	Label           string         `json:"label"`
-	X               int            `json:"x"`
-	Y               int            `json:"y"`
-	HideLinks       bool           `json:"hide_links"`
-	NodeDefinition  string         `json:"node_definition"`
-	ImageDefinition string         `json:"image_definition"`
-	Configuration   *string        `json:"configuration"`
-	Configurations  []NodeConfig   `json:"-"`
-	CPUs            int            `json:"cpus"`
-	CPUlimit        int            `json:"cpu_limit"`
-	RAM             int            `json:"ram"`
-	State           string         `json:"state"`
-	DataVolume      int            `json:"data_volume"`
-	BootDiskSize    int            `json:"boot_disk_size"`
-	Interfaces      InterfaceList  `json:"interfaces,omitempty"`
-	Tags            []string       `json:"tags"`
-	VNCkey          UUID           `json:"vnc_key"`
-	SerialDevices   []SerialDevice `json:"serial_devices"`
-	ComputeID       UUID           `json:"compute_id"`
+	ID              UUID   `json:"id"`
+	LabID           UUID   `json:"lab_id"`
+	Label           string `json:"label"`
+	X               int    `json:"x"`
+	Y               int    `json:"y"`
+	HideLinks       bool   `json:"hide_links"`
+	NodeDefinition  string `json:"node_definition"`
+	ImageDefinition string `json:"image_definition"`
+	// TODO: can a configuration simply be the empty string (e.g. is null handling required)
+	Configuration  *string        `json:"configuration"`
+	Configurations []NodeConfig   `json:"-"`
+	CPUs           int            `json:"cpus"`
+	CPUlimit       int            `json:"cpu_limit"`
+	RAM            int            `json:"ram"`
+	State          NodeState      `json:"state"`
+	DataVolume     int            `json:"data_volume"`
+	BootDiskSize   int            `json:"boot_disk_size"`
+	Interfaces     InterfaceList  `json:"interfaces,omitempty"`
+	Tags           []string       `json:"tags"`
+	VNCkey         UUID           `json:"vnc_key"`
+	SerialDevices  []SerialDevice `json:"serial_devices"`
+	ComputeID      UUID           `json:"compute_id"`
 
 	// Configurations is not exported, it's overloaded within the API
 }
