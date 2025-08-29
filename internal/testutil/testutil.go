@@ -25,9 +25,9 @@ type ClientConfig struct {
 func DefaultConfig() ClientConfig {
 	return ClientConfig{
 		BaseURL:  GetEnvOrDefault("CML_HOST", "https://controller"),
-		Username: os.Getenv("CML_USER"),
-		Password: os.Getenv("CML_PASS"),
-		Token:    os.Getenv("CML_TOKEN"),
+		Username: GetEnvOrDefault("CML_USER", "dummy"),
+		Password: GetEnvOrDefault("CML_PASS", "fake"),
+		Token:    GetEnvOrDefault("CML_TOKEN", ""),
 	}
 }
 
