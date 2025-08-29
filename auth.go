@@ -56,7 +56,10 @@ func (c *Client) authenticate(ctx context.Context, userpass userPass, depth int3
 	if err != nil {
 		return err
 	}
-	slog.Info("user auth", "id", auth.ID, "is_admin", strconv.FormatBool(auth.Admin))
+	slog.Debug("user auth", "id", auth.ID,
+		"is_admin", strconv.FormatBool(auth.Admin),
+		"token", auth.Token,
+	)
 	c.apiToken = auth.Token
 	return nil
 }
@@ -90,7 +93,28 @@ func (c *Client) SetCACert(cert []byte) error {
 	if !ok {
 		return errors.New("can't set certs on mocked client")
 	}
-	tr := httpClient.Transport.(*http.Transport)
-	tr.TLSClientConfig.RootCAs = caCertPool
+	tr, ok := httpClient.Transport.(*http.Transport)
+	if ok {
+		tr.TLSClientConfig.RootCAs = caCertPool
+	}
 	return nil
+}
+
+func (c *Client) SetHTTPClient(client apiClient, verbose bool) {
+	_ = verbose
+	c.httpClient = client
+	do := client.Do
+	// middlewares := []Middleware{
+	// 	UserAgentMiddleware("gocmlclient"),
+	// }
+	// if verbose {
+	// 	middlewares = append(middlewares, []Middleware{
+	// 		LoggingMiddleware(slog.Default()),
+	// 		LogRequestBodyMiddleware(slog.Default()),
+	// 	}...)
+	// }
+	// for i := len(middlewares) - 1; i >= 0; i-- {
+	// 	do = middlewares[i](do)
+	// }
+	c.do = do
 }

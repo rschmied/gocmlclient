@@ -3,6 +3,7 @@ package cmlclient
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 )
@@ -68,4 +69,27 @@ func TestLabLiveServer(t *testing.T) {
 			t.Fatalf("failed to destroy lab definitions: %v", err)
 		}
 	})
+}
+
+func Test_newDefaultClient(t *testing.T) {
+	tests := []struct {
+		name         string
+		insecureSkip bool
+	}{
+		{"skip", true},
+		{"noskip", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := newDefaultClient(tt.insecureSkip)
+			if tr, ok := got.Transport.(*http.Transport); ok {
+				skip := tr.TLSClientConfig.InsecureSkipVerify
+				if skip != tt.insecureSkip {
+					t.Errorf("newDefaultClient() = %v, want %v", skip, tt.insecureSkip)
+				}
+			} else {
+				t.Fatal("unexpected transprt")
+			}
+		})
+	}
 }

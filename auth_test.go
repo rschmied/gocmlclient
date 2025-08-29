@@ -175,7 +175,7 @@ func TestClient_SetCACert(t *testing.T) {
 
 	// can't use this with a mock responder
 	mrClient, _ := mr.NewMockResponder()
-	c.httpClient = mrClient
+	c.SetHTTPClient(mrClient, true)
 	err = c.SetCACert(certPEMBlock)
 	assert.Error(t, err)
 }

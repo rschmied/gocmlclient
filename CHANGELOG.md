@@ -2,6 +2,12 @@
 
 Lists the changes in the gocmlclient package.
 
+## Version 0.1.2
+
+- rollback the token insertion / no auth from 0.1.1 -- it doesn't work. This
+needs a much more radical approach (e.g. a fundamental re-design)
+- added comprehensive auth tests using httpmock (which is the de-facto standard)
+
 ## Version 0.1.1
 
 - don't do auth at all when a token is provided

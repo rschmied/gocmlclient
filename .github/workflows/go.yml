@@ -21,13 +21,13 @@ jobs:
     - name: Build
       run: go build -v ./...
 
-    # - name: Test
-    #   run: go test -v -covermode=count -coverprofile=coverage.out
-    #   run: go test -v ./...
-
     - name: Run Unit tests
       run: |
-        go test -race -covermode atomic -coverprofile=covprofile ./...
+        # don't measure coverage on the testutil internal package which is
+        # test-only. get a list of all packages, excluding the 'testutil'
+        # package
+        PACKAGES_TO_TEST=$(go list ./... | grep -v '/testutil')
+        go test -race -covermode atomic -coverprofile=covprofile $PACKAGES_TO_TEST
 
     - name: Install goveralls
       run: go install github.com/mattn/goveralls@latest
