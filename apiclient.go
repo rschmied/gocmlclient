@@ -75,10 +75,10 @@ func (c *Client) doAPI(ctx context.Context, req *http.Request, depth int32) ([]b
 	}
 
 retry:
-	// fmt.Println("path", req.URL.Path)
-	// if !strings.HasSuffix(req.URL.Path, authAPI) && c.state.get() == stateAuthenticated {
-	// 	setTokenHeader(req, c.apiToken)
-	// }
+	// insert token when we're authenticated (from retrying)
+	if c.state.get() == stateAuthenticated {
+		setTokenHeader(req, c.apiToken)
+	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		if urlError, ok := (err).(*url.Error); ok {
