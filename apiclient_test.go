@@ -17,7 +17,7 @@ type testClient struct {
 func newTestAPIclient() testClient {
 	c := New("https://controller", true)
 	mrClient, ctx := mr.NewMockResponder()
-	c.httpClient = mrClient
+	c.SetHTTPClient(mrClient, true)
 	c.SetUsernamePassword("user", "pass")
 	return testClient{c, mrClient, ctx}
 }

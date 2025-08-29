@@ -36,7 +36,7 @@ var versionTestCases = []struct {
 func TestClient_VersionCheck(t *testing.T) {
 	c := New("https://bla.bla", true)
 	mrClient, ctx := mr.NewMockResponder()
-	c.httpClient = mrClient
+	c.SetHTTPClient(mrClient, true)
 	c.useNamedConfigs = true
 	c.state.set(stateAuthenticated)
 
@@ -148,6 +148,7 @@ func TestClient_NotReady(t *testing.T) {
 	c := New("https://bla.bla", true)
 	mrClient, ctx := mr.NewMockResponder()
 	c.httpClient = mrClient
+	c.do = mrClient.Do
 	c.state.set(stateAuthenticated)
 
 	mrClient.SetData(mr.MockRespList{

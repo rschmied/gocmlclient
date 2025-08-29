@@ -26,7 +26,7 @@ func setTokenHeader(req *http.Request, token string) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 }
 
-func (c *Client) apiRequest(ctx context.Context, method string, path string, data io.Reader) (*http.Request, error) {
+func (c *Client) apiRequest(ctx context.Context, method, path string, data io.Reader) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		method,
@@ -56,18 +56,14 @@ func (c *Client) doAPI(ctx context.Context, req *http.Request, depth int32) ([]b
 	if c.state.get() == stateInitial {
 		c.state.set(stateCheckVersion)
 		c.compatibilityErr = c.versionCheck(ctx, depth)
-		if len(c.apiToken) > 0 {
-			c.state.set(stateAuthenticated)
-		} else {
-			c.state.set(stateAuthRequired)
-		}
+		c.state.set(stateAuthRequired)
 	}
 	if c.compatibilityErr != nil {
 		return nil, c.compatibilityErr
 	}
 
 	if c.state.get() != stateAuthenticated && c.authRequired(req.URL) {
-		slog.Info("needs auth")
+		slog.Info("needs auth", "state", c.state)
 		c.state.set(stateAuthenticating)
 		if err := c.jsonGet(ctx, authokAPI, nil, depth); err != nil {
 			return nil, err
@@ -76,10 +72,10 @@ func (c *Client) doAPI(ctx context.Context, req *http.Request, depth int32) ([]b
 
 retry:
 	// insert token when we're authenticated (from retrying)
-	if c.state.get() == stateAuthenticated {
+	if c.state.get() == stateAuthenticated && len(c.apiToken) > 0 {
 		setTokenHeader(req, c.apiToken)
 	}
-	res, err := c.httpClient.Do(req)
+	res, err := c.do(req)
 	if err != nil {
 		if urlError, ok := (err).(*url.Error); ok {
 			if urlError.Timeout() || urlError.Temporary() {

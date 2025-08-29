@@ -4,6 +4,13 @@ github.com/Masterminds/semver/v3
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
+# github.com/jarcoal/httpmock v1.4.1
+## explicit; go 1.18
+github.com/jarcoal/httpmock
+github.com/jarcoal/httpmock/internal
+# github.com/lmittmann/tint v1.1.2
+## explicit; go 1.21
+github.com/lmittmann/tint
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
