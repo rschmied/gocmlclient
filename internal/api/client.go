@@ -2,7 +2,6 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 	"path"
 	"syscall"
 
+	"github.com/rschmied/gocmlclient/internal/httputil"
 	"github.com/rschmied/gocmlclient/pkg/errors"
 )
 
@@ -61,42 +61,12 @@ func New(baseURL string, opts Options) *Client {
 
 // Request makes a raw HTTP request to the API
 func (c *Client) Request(ctx context.Context, method, endpoint string, query map[string]string, body any) (*http.Response, error) {
-	u, err := url.Parse(c.baseURL)
+	req, err := httputil.BuildRequest(ctx, c.baseURL, method, endpoint, query, body)
 	if err != nil {
-		return nil, fmt.Errorf("invalid base URL: %w", err)
-	}
-	u.Path = path.Join(u.Path, endpoint)
-
-	// add query parameters
-	if len(query) > 0 {
-		q := u.Query()
-		for k, v := range query {
-			q.Set(k, v)
-		}
-		u.RawQuery = q.Encode()
+		return nil, err
 	}
 
-	// prepare request body
-	var bodyReader io.Reader
-	var contentLength int
-	if body != nil {
-		bodyBytes, err := c.marshalBody(body)
-		if err != nil {
-			return nil, fmt.Errorf("marshal body: %w", err)
-		}
-		bodyReader = bytes.NewReader(bodyBytes)
-		contentLength = len(bodyBytes)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, u.String(), bodyReader)
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-
-	if body != nil {
-		req.Header.Set("Content-Type", ContentTypeJSON)
-		req.Header.Set("Content-Length", fmt.Sprintf("%d", contentLength))
-	}
+	// HTTP client will automatically set Content-Length for known body sizes
 
 	// execute request
 	res, err := c.do(req)
@@ -156,25 +126,6 @@ func (c *Client) PatchJSON(ctx context.Context, endpoint string, in, out any) er
 // DeleteJSON makes a DELETE request with JSON handling
 func (c *Client) DeleteJSON(ctx context.Context, endpoint string, out any) error {
 	return c.doJSON(ctx, http.MethodDelete, endpoint, nil, nil, out)
-}
-
-// marshalBody handles different body types and converts them to JSON bytes
-func (c *Client) marshalBody(body any) ([]byte, error) {
-	switch v := body.(type) {
-	case *bytes.Buffer:
-		return v.Bytes(), nil
-	case bytes.Buffer:
-		return v.Bytes(), nil
-	case string:
-		return []byte(v), nil
-	case []byte:
-		return v, nil
-	case io.Reader:
-		return io.ReadAll(v)
-	default:
-		// For structs/maps, marshal to JSON
-		return json.Marshal(v)
-	}
 }
 
 // wrapConnectionError converts syscall errors to domain errors

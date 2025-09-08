@@ -2,15 +2,15 @@
 package auth
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"time"
+
+	"github.com/rschmied/gocmlclient/internal/httputil"
 )
 
 // AuthProvider implements TokenProvider using username/password authentication
@@ -77,27 +77,14 @@ func (p *AuthProvider) authenticateWithPassword(ctx context.Context) (string, ti
 		Password: p.password,
 	}
 
-	bodyBytes, err := json.Marshal(reqBody)
+	// Use shared request building logic
+	req, err := httputil.BuildRequest(ctx, p.baseURL, "POST", "/api/v0/auth_extended", nil, reqBody)
 	if err != nil {
-		return "", time.Time{}, fmt.Errorf("marshal auth request: %w", err)
+		return "", time.Time{}, fmt.Errorf("build auth request: %w", err)
 	}
-
-	// Build auth URL
-	authURL, err := url.JoinPath(p.baseURL, "/api/v0/auth_extended")
-	if err != nil {
-		return "", time.Time{}, fmt.Errorf("build auth URL: %w", err)
-	}
-
-	// Create request
-	req, err := http.NewRequestWithContext(ctx, "POST", authURL, bytes.NewReader(bodyBytes))
-	if err != nil {
-		return "", time.Time{}, fmt.Errorf("create auth request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
 
 	// Execute request
-	slog.Debug("Sending authentication request", "url", authURL)
+	slog.Debug("Sending authentication request", "url", req.URL.String())
 	res, err := p.client.Do(req)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("auth request failed: %w", err)
