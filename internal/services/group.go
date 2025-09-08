@@ -14,6 +14,9 @@ type GroupServiceInterface interface {
 	GetByID(ctx context.Context, id models.UUID) (*models.Group, error)
 }
 
+// Ensure GroupService implements interface
+var _ GroupServiceInterface = (*GroupService)(nil)
+
 const (
 	groupAPI = "groups"
 )

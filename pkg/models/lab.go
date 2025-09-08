@@ -43,6 +43,11 @@ type (
 	LinkList []*Link
 )
 
+type LabImport struct {
+	ID       string   `json:"id"`
+	Warnings []string `json:"warnings"`
+}
+
 type Lab struct {
 	ID                   UUID        `json:"id"`
 	State                LabState    `json:"state,omitempty"`
@@ -53,7 +58,7 @@ type Lab struct {
 	Notes                string      `json:"lab_notes,omitempty"`
 	Owner                UUID        `json:"owner,omitempty"`
 	OwnerUsername        string      `json:"owner_username,omitempty"`
-	OwnerFullname        string      `json:"OwnerFullname,omitempty"`
+	OwnerFullname        string      `json:"owner_fullname,omitempty"`
 	NodeCount            int         `json:"node_count,omitempty"`
 	LinkCount            int         `json:"link_count,omitempty"`
 	EffectivePermissions Permissions `json:"effective_permissions,omitempty"`
@@ -105,9 +110,4 @@ func (l *Lab) NodeByLabel(ctx context.Context, label string) (*Node, error) {
 		}
 	}
 	return nil, cmlerror.ErrElementNotFound
-}
-
-type LabImport struct {
-	ID       string   `json:"id"`
-	Warnings []string `json:"warnings"`
 }
