@@ -25,7 +25,7 @@ func TestLabCreate(t *testing.T) {
 			httpmock.NewJsonResponderOrPanic(204, nil))
 	}
 
-	service := NewLabService(client)
+	service := NewLabService(client, nil, nil, nil, nil)
 	ctx := context.Background()
 
 	lab := models.LabCreateRequest{Title: "this"}

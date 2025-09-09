@@ -2,9 +2,12 @@ package api
 
 import (
 	"bytes"
+	"crypto/x509"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -148,6 +151,28 @@ func (e *HTTPError) Error() string {
 	return http.StatusText(e.StatusCode)
 }
 
+// isTLSCertificateError checks if an error is a TLS/certificate validation error
+func isTLSCertificateError(err error) bool {
+	// Import needed: "crypto/x509"
+	var (
+		unknownAuthorityErr *x509.UnknownAuthorityError
+		hostnameErr         *x509.HostnameError
+		certInvalidErr      *x509.CertificateInvalidError
+	)
+
+	if errors.As(err, &unknownAuthorityErr) ||
+		errors.As(err, &hostnameErr) ||
+		errors.As(err, &certInvalidErr) {
+		return true
+	}
+
+	// Also check for string-based matching as fallback
+	errStr := err.Error()
+	return strings.Contains(errStr, "x509:") ||
+		strings.Contains(errStr, "certificate") ||
+		strings.Contains(errStr, "TLS handshake")
+}
+
 // isRetryableStatus checks if an HTTP status code is retryable
 func isRetryableStatus(statusCode int) bool {
 	switch statusCode {
@@ -171,6 +196,11 @@ func isRetryableError(err error) bool {
 	// Check for HTTP errors
 	if httpErr, ok := err.(*HTTPError); ok {
 		return isRetryableStatus(httpErr.StatusCode)
+	}
+
+	// Check for TLS/certificate validation errors - these should NOT be retried
+	if isTLSCertificateError(err) {
+		return false
 	}
 
 	// Check for network/timeout errors

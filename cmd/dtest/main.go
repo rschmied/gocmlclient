@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -15,21 +17,39 @@ import (
 )
 
 func main() {
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), "\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "Environment variables required:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  CML_HOST      Cisco Modeling Labs host URL\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  CML_TOKEN     API token (preferred)\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  or\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  CML_USER      Username\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  CML_PASS      Password\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "Flags:\n")
+		flag.PrintDefaults()
+	}
 	host, hostOK := os.LookupEnv("CML_HOST")
 	username, userOK := os.LookupEnv("CML_USER")
 	password, passwordOK := os.LookupEnv("CML_PASS")
 	token, tokenOK := os.LookupEnv("CML_TOKEN")
 	if !hostOK {
-		slog.Error("CML_HOST is required!")
+		slog.Error("CML_HOST environment variable is required!")
 		return
+	}
+	if tokenOK && (userOK || passwordOK) {
+		slog.Warn("Both CML_TOKEN and CML_USER/CML_PASS provided - using token authentication")
 	}
 	if !tokenOK && (!userOK || !passwordOK) {
-		slog.Error("either CML_TOKEN or CML_USERNAME and CML_PASSWORD env vars must be present!")
+		slog.Error("Authentication required: either CML_TOKEN or both CML_USER and CML_PASS environment variables must be set!")
 		return
 	}
-	_ = token
-	_ = username
-	_ = password
+
+	// Parse command line flags
+	noNamedConfigs := flag.Bool("no-named-configs", false, "Enable named configurations")
+	insecureTLS := flag.Bool("insecure", false, "Skip TLS certificate verification")
+	flag.Parse()
 
 	ctx := context.Background()
 
@@ -41,14 +61,22 @@ func main() {
 		}),
 	))
 
-	c, err := gocml.New(
-		host,
+	options := []client.Option{
 		client.WithHTTPClient(http.DefaultClient),
-		client.WithInsecureTLS(),
 		client.WithUsernamePassword(username, password),
 		client.WithToken(token),
 		client.WithLogger(slog.Default()),
-	)
+	}
+	// insecure TLS is NOT the default
+	if *insecureTLS {
+		options = append(options, client.WithInsecureTLS())
+	}
+	// named configs is the default
+	if !*noNamedConfigs {
+		options = append(options, client.WithNamedConfigs())
+	}
+
+	c, err := gocml.New(host, options...)
 	if err != nil {
 		slog.Error("new", "err", err)
 		return

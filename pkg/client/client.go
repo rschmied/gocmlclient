@@ -40,24 +40,23 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 
 	apiClient := newAPIClient(cfg)
 
+	groupService := services.NewGroupService(apiClient)
+	userService := services.NewUserService(apiClient, groupService)
+	nodeService := services.NewNodeService(apiClient, cfg.namedConfigs)
+	interfaceService := services.NewInterfaceService(apiClient)
+	linkService := services.NewLinkService(apiClient)
+
 	c := &Client{
 		config:    cfg,
 		apiClient: apiClient,
-		Interface: services.NewInterfaceService(apiClient),
-		Lab:       services.NewLabService(apiClient),
-		Link:      services.NewLinkService(apiClient),
-		Node:      services.NewNodeService(apiClient, true),
+		Lab:       services.NewLabService(apiClient, interfaceService, linkService, userService, nodeService),
+		Interface: interfaceService,
+		Link:      linkService,
+		Node:      nodeService,
+		Group:     groupService,
+		User:      userService,
 		System:    services.NewSystemService(apiClient),
-		Group:     services.NewGroupService(apiClient),
-		User:      services.NewUserService(apiClient),
 	}
-
-	// inject dependencies
-	c.Lab.Interface = c.Interface
-	c.Lab.Link = c.Link
-	c.Lab.User = c.User
-	c.Lab.Node = c.Node
-	c.User.Group = c.Group
 
 	// check version
 	// c.System.Ready(context.Background())

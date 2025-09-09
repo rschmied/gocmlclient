@@ -26,7 +26,7 @@ type LabService struct {
 }
 
 // NewLabService creates a new lab service
-func NewLabService(apiClient *api.Client) *LabService {
+func NewLabService(apiClient *api.Client, iface InterfaceServiceInterface, link LinkServiceInterface, user UserServiceInterface, node NodeServiceInterface) *LabService {
 	return &LabService{
 		apiClient: apiClient,
 	}

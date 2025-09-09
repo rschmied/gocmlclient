@@ -13,6 +13,7 @@ type Config struct {
 	password           string
 	token              string
 	insecureSkipVerify bool
+	namedConfigs       bool
 	httpClient         *http.Client
 	logger             *slog.Logger
 }
@@ -45,5 +46,11 @@ func WithHTTPClient(hc *http.Client) Option {
 func WithLogger(l *slog.Logger) Option {
 	return func(c *Config) {
 		c.logger = l
+	}
+}
+
+func WithNamedConfigs() Option {
+	return func(c *Config) {
+		c.namedConfigs = true
 	}
 }

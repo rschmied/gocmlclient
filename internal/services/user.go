@@ -27,7 +27,7 @@ type UserService struct {
 }
 
 // NewUserService creates a new user service
-func NewUserService(apiClient *api.Client) *UserService {
+func NewUserService(apiClient *api.Client, group GroupServiceInterface) *UserService {
 	return &UserService{
 		apiClient: apiClient,
 	}
