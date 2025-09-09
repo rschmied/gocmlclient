@@ -379,11 +379,11 @@ func TestConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 	errChan := make(chan error, numGoroutines*numCalls)
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < numCalls; j++ {
+			for range numCalls {
 				_, err := manager.GetToken(context.Background())
 				if err != nil {
 					errChan <- err
@@ -454,8 +454,7 @@ func BenchmarkGetToken(b *testing.B) {
 		b.Fatalf("warmup failed: %v", err)
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := manager.GetToken(context.Background())
 		if err != nil {
 			b.Fatalf("GetToken failed: %v", err)
@@ -471,8 +470,7 @@ func BenchmarkGetTokenWithRefresh(b *testing.B) {
 
 	manager := NewManager(provider, DefaultConfig())
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Invalidate token to force refresh
 		manager.InvalidateToken()
 

@@ -12,6 +12,7 @@ type Config struct {
 	username           string
 	password           string
 	token              string
+	tokenStorageFile   string
 	insecureSkipVerify bool
 	namedConfigs       bool
 	httpClient         *http.Client
@@ -34,6 +35,12 @@ func WithInsecureTLS() Option {
 func WithToken(token string) Option {
 	return func(c *Config) {
 		c.token = token
+	}
+}
+
+func WithTokenStorageFile(filename string) Option {
+	return func(c *Config) {
+		c.tokenStorageFile = filename
 	}
 }
 

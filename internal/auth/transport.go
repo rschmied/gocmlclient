@@ -64,7 +64,6 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Get authentication token
 	token, err := t.manager.GetToken(req.Context())
 	if err != nil {
-		slog.Error("Failed to get authentication token", "error", err)
 		return nil, err
 	}
 

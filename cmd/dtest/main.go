@@ -13,8 +13,28 @@ import (
 	"github.com/lmittmann/tint"
 	gocml "github.com/rschmied/gocmlclient"
 	"github.com/rschmied/gocmlclient/pkg/client"
+	"github.com/rschmied/gocmlclient/pkg/errors"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
+
+// handleError centrally processes and logs errors with appropriate context
+func handleError(operation string, err error) {
+	if err == nil {
+		return
+	}
+
+	// Handle TLS certificate errors with user-friendly messaging
+	if errors.IsTLSCertificateError(err) {
+		slog.Error("TLS certificate verification failed",
+			"operation", operation,
+			"error", err.Error(),
+			"solution", "Use -insecure flag to skip certificate verification or provide valid CA certificates")
+		return
+	}
+
+	// For other errors, log with context but avoid deep unwrapping
+	slog.Error("Operation failed", "operation", operation, "error", err.Error())
+}
 
 func main() {
 	flag.Usage = func() {
@@ -47,8 +67,9 @@ func main() {
 	}
 
 	// Parse command line flags
-	noNamedConfigs := flag.Bool("no-named-configs", false, "Enable named configurations")
+	noNamedConfigs := flag.Bool("no-named-configs", false, "Disable named configurations")
 	insecureTLS := flag.Bool("insecure", false, "Skip TLS certificate verification")
+	tokenFile := flag.String("tokenfile", "", "Specify file to save token, use memory storage otherwise")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -75,10 +96,13 @@ func main() {
 	if !*noNamedConfigs {
 		options = append(options, client.WithNamedConfigs())
 	}
+	if len(*tokenFile) > 0 {
+		options = append(options, client.WithTokenStorageFile(*tokenFile))
+	}
 
 	c, err := gocml.New(host, options...)
 	if err != nil {
-		slog.Error("new", "err", err)
+		handleError("create client", err)
 		return
 	}
 	slog.Debug("test")
@@ -91,25 +115,25 @@ func main() {
 		// Associations: models.AssociationUsersGroups{},
 	})
 	if err != nil {
-		slog.Error("Failed to create lab", "err", err)
+		handleError("create lab", err)
 		return
 	}
 	err = c.Lab.Delete(ctx, newLab.ID)
 	if err != nil {
-		slog.Error("Failed to delete lab", "err", err)
+		handleError("delete lab", err)
 		return
 	}
 
 	id := "20c0efde-cdaf-4dad-b6df-dd568ddf6e8d"
 	lab, err := c.LabGet(ctx, id, true)
 	if err != nil {
-		slog.Error("Failed to get lab", "err", err)
+		handleError("get lab", err)
 		return
 	}
 
 	owner, err := c.User.GetByID(ctx, lab.Owner)
 	if err != nil {
-		slog.Error("Failed to get user", "err", err)
+		handleError("get user", err)
 		return
 	}
 	slog.Info("owner", "user", owner)

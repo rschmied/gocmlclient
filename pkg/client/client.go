@@ -38,7 +38,10 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 		opt(cfg)
 	}
 
-	apiClient := newAPIClient(cfg)
+	apiClient, err := newAPIClient(cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	groupService := services.NewGroupService(apiClient)
 	userService := services.NewUserService(apiClient, groupService)
@@ -64,7 +67,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	return c, nil
 }
 
-func newAPIClient(c *Config) *api.Client {
+func newAPIClient(c *Config) (*api.Client, error) {
 	// 1. create or use provided HTTP client
 	if c.httpClient == nil {
 		c.httpClient = &http.Client{
@@ -92,8 +95,18 @@ func newAPIClient(c *Config) *api.Client {
 		baseTransport = http.DefaultTransport
 	}
 
-	// 4. create token provider - it will use the SAME http client
-	// but the auth transport will skip auth endpoints
+	// Create file storage
+	var storage auth.TokenStorage
+	if len(c.tokenStorageFile) > 0 {
+		var err error
+		storage, err = auth.NewFileStorage(c.tokenStorageFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// 4. create token provider - it will use the SAME http client but the auth
+	//    transport will skip auth endpoints
 	provider := auth.NewAuthProvider(auth.AuthConfig{
 		BaseURL:     c.baseURL,
 		Username:    c.username,
@@ -102,16 +115,22 @@ func newAPIClient(c *Config) *api.Client {
 		Client:      c.httpClient,
 	})
 
-	// 5. create the auth manager
-	manager := auth.NewManager(provider, auth.DefaultConfig())
+	// 5. create manager with token storage (default is memory storage)
+	config := auth.DefaultConfig()
+	if storage != nil {
+		config.Storage = storage
+	}
 
-	// 6. create authenticated transport that wraps the base transport
+	// 6. create the auth manager
+	manager := auth.NewManager(provider, config)
+
+	// 7. create authenticated transport that wraps the base transport
 	authTransport := auth.NewTransport(baseTransport, manager, nil)
 
-	// 7. set the auth transport on the client
+	// 8. set the auth transport on the client
 	c.httpClient.Transport = authTransport
 
-	// 8. create API client with middlewares
+	// 9. create API client with middlewares
 	apiClient := api.New(c.baseURL, api.Options{
 		HTTPClient: c.httpClient,
 		Middlewares: []api.Middleware{
@@ -122,5 +141,5 @@ func newAPIClient(c *Config) *api.Client {
 		},
 	})
 
-	return apiClient
+	return apiClient, nil
 }

@@ -128,7 +128,6 @@ func (m *Manager) refreshToken(ctx context.Context, force bool) (string, error) 
 
 	token, expiry, err := m.provider.FetchToken(ctx)
 	if err != nil {
-		slog.Error("Failed to fetch token", "error", err)
 		return "", fmt.Errorf("fetch token: %w", err)
 	}
 
