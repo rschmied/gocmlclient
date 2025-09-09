@@ -67,7 +67,7 @@ func main() {
 	slog.SetDefault(slog.New(
 		tint.NewHandler(os.Stderr, &tint.Options{
 			AddSource:  true,
-			Level:      slog.LevelInfo,
+			Level:      slog.LevelDebug,
 			TimeFormat: time.Kitchen,
 		}),
 	))
@@ -88,6 +88,7 @@ func main() {
 		slog.Error("new", "err", err)
 		return
 	}
+	slog.Debug("test")
 
 	id := "20c0efde-cdaf-4dad-b6df-dd568ddf6e8d"
 	lab, err := c.LabGet(ctx, id, true)

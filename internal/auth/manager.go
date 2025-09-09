@@ -8,17 +8,12 @@ import (
 	"time"
 )
 
-// TokenProvider defines the interface for token acquisition
-type TokenProvider interface {
-	// FetchToken retrieves a new authentication token
-	FetchToken(ctx context.Context) (token string, expiry time.Time, err error)
-}
-
 // Manager handles authentication token lifecycle
 type Manager struct {
 	provider TokenProvider
+	storage  TokenStorage
 
-	// token state (protected by mutex)
+	// in-memory cache for performance (backed by storage)
 	mu     sync.RWMutex
 	token  string
 	expiry time.Time
@@ -30,12 +25,14 @@ type Manager struct {
 // Config configures the auth manager
 type Config struct {
 	RefreshBuffer time.Duration
+	Storage       TokenStorage // If nil, uses MemoryStorage
 }
 
 // DefaultConfig returns sensible defaults
 func DefaultConfig() Config {
 	return Config{
 		RefreshBuffer: 30 * time.Second,
+		Storage:       NewMemoryStorage(),
 	}
 }
 
@@ -45,10 +42,26 @@ func NewManager(provider TokenProvider, config Config) *Manager {
 		config.RefreshBuffer = DefaultConfig().RefreshBuffer
 	}
 
-	return &Manager{
+	if config.Storage == nil {
+		config.Storage = NewMemoryStorage()
+	}
+
+	// Load existing token from storage if available
+	manager := &Manager{
 		provider:      provider,
+		storage:       config.Storage,
 		refreshBuffer: config.RefreshBuffer,
 	}
+
+	// Try to load existing token from storage
+	if token, expiry, err := config.Storage.Retrieve(); err == nil {
+		manager.mu.Lock()
+		manager.token = token
+		manager.expiry = expiry
+		manager.mu.Unlock()
+	}
+
+	return manager
 }
 
 // GetToken returns a valid authentication token. if the current token is
@@ -61,12 +74,12 @@ func (m *Manager) GetToken(ctx context.Context) (string, error) {
 		return token, nil
 	}
 	m.mu.RUnlock()
-	return m.refreshToken(ctx)
+	return m.refreshToken(ctx, false)
 }
 
 // ForceRefresh forces a token refresh regardless of current token state
 func (m *Manager) ForceRefresh(ctx context.Context) (string, error) {
-	return m.refreshToken(ctx)
+	return m.refreshToken(ctx, true)
 }
 
 // InvalidateToken marks the current token as invalid (e.g. 401)
@@ -77,6 +90,11 @@ func (m *Manager) InvalidateToken() {
 	slog.Debug("Invalidating current token")
 	m.token = ""
 	m.expiry = time.Time{}
+
+	// Clear token from storage
+	if err := m.storage.Clear(); err != nil {
+		slog.Warn("Failed to clear token from storage", "error", err)
+	}
 }
 
 // HasValidToken returns true if the manager has a valid token
@@ -96,12 +114,13 @@ func (m *Manager) TokenExpiry() time.Time {
 }
 
 // refreshToken acquires a new token from the provider
-func (m *Manager) refreshToken(ctx context.Context) (string, error) {
+func (m *Manager) refreshToken(ctx context.Context, force bool) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	// Double-check pattern: another goroutine might have refreshed while we waited
-	if m.token != "" && m.isTokenValid() {
+	// Skip double-check if force refresh is requested
+	if !force && m.token != "" && m.isTokenValid() {
 		return m.token, nil
 	}
 
@@ -125,9 +144,16 @@ func (m *Manager) refreshToken(ctx context.Context) (string, error) {
 	m.token = token
 	m.expiry = expiry
 
+	// Persist token to storage
+	if err := m.storage.Store(token, expiry); err != nil {
+		slog.Warn("Failed to persist token to storage", "error", err)
+		// Don't fail the refresh, just log the error
+	}
+
 	slog.Debug("Token refreshed successfully",
 		"expiry", expiry,
 		"valid_for", time.Until(expiry),
+		"storage", m.storage.Type(),
 	)
 
 	return token, nil
@@ -154,6 +180,7 @@ func (m *Manager) Stats() Stats {
 		HasToken:    m.token != "",
 		TokenExpiry: m.expiry,
 		IsValid:     m.isTokenValid(),
+		StorageType: m.storage.Type(),
 		TimeUntilRefresh: func() time.Duration {
 			if m.token == "" {
 				return 0
@@ -173,4 +200,5 @@ type Stats struct {
 	TokenExpiry      time.Time
 	IsValid          bool
 	TimeUntilRefresh time.Duration
+	StorageType      string
 }

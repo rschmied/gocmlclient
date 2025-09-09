@@ -144,13 +144,51 @@ func (c *Client) wrapConnectionError(err error) error {
 	return err
 }
 
+// APIError represents a structured API error response
+type APIError struct {
+	StatusCode int    `json:"status_code"`
+	Message    string `json:"message"`
+	Details    any    `json:"details,omitempty"`
+	RequestID  string `json:"request_id,omitempty"`
+	RawBody    string `json:"-"` // Store raw response for fallback
+}
+
+func (e *APIError) Error() string {
+	if e.Message != "" {
+		return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.Message)
+	}
+	if e.RawBody != "" {
+		return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.RawBody)
+	}
+	return fmt.Sprintf("HTTP %d", e.StatusCode)
+}
+
 // handleHTTPError reads the response body and creates an appropriate error
 func (c *Client) handleHTTPError(res *http.Response) error {
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return fmt.Errorf("HTTP %d: failed to read error response", res.StatusCode)
+		return &APIError{
+			StatusCode: res.StatusCode,
+			Message:    "failed to read error response",
+			RawBody:    err.Error(),
+		}
 	}
 
-	// return fmt.Errorf("HTTP %d: %s", res.StatusCode, string(body))
-	return fmt.Errorf("%s", string(body))
+	bodyStr := string(body)
+
+	// Try to parse as JSON error response
+	var apiErr APIError
+	if err := json.Unmarshal(body, &apiErr); err == nil && apiErr.Message != "" {
+		// Successfully parsed JSON error
+		apiErr.StatusCode = res.StatusCode
+		apiErr.RawBody = bodyStr
+		return &apiErr
+	}
+
+	// Fallback to raw error message
+	return &APIError{
+		StatusCode: res.StatusCode,
+		Message:    bodyStr,
+		RawBody:    bodyStr,
+	}
 }

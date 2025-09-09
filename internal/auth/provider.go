@@ -42,6 +42,11 @@ func NewAuthProvider(config AuthConfig) *AuthProvider {
 	// this panics if there's no client provided
 	_ = config.Client
 
+	// Set default timeout on client if not set
+	if config.Client.Timeout == 0 {
+		config.Client.Timeout = config.Timeout
+	}
+
 	return &AuthProvider{
 		baseURL:     config.BaseURL,
 		username:    config.Username,
