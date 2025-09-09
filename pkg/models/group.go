@@ -3,8 +3,9 @@
 package models
 
 type Group struct {
-	ID           UUID            `json:"id,omitempty"`
-	Description  string          `json:"description"`
+	ID          UUID   `json:"id,omitempty"`
+	Description string `json:"description"`
+	// Members is a list of users represented by their IDs
 	Members      []UUID          `json:"members"`
 	Name         string          `json:"name"`
 	Asocciations AssociationList `json:"asocciations"`

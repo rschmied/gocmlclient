@@ -16,8 +16,7 @@ import (
 )
 
 const (
-	ContentTypeJSON = "application/json"
-	APIBasePath     = "/api/v0/"
+	APIBasePath = "/api/v0/"
 )
 
 // DoFunc represents the signature for making HTTP requests
