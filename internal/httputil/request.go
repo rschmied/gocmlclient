@@ -12,6 +12,8 @@ import (
 	"path"
 )
 
+const ContentTypeJSON = "application/json"
+
 // BuildRequest creates an HTTP request with proper URL construction and body handling
 func BuildRequest(ctx context.Context, baseURL, method, endpoint string, query map[string]string, body any) (*http.Request, error) {
 	u, err := url.Parse(baseURL)
@@ -45,7 +47,7 @@ func BuildRequest(ctx context.Context, baseURL, method, endpoint string, query m
 	}
 
 	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", ContentTypeJSON)
 	}
 
 	return req, nil

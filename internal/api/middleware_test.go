@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/rschmied/gocmlclient/internal/httputil"
 )
 
 // mockLogger captures log entries for testing
@@ -201,7 +203,7 @@ func TestLoggingMiddleware(t *testing.T) {
 
 			// Create a test request
 			req, _ := http.NewRequest(tt.method, tt.url, nil)
-			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Content-Type", httputil.ContentTypeJSON)
 
 			// Execute the middleware
 			_, err := wrappedNext(req)

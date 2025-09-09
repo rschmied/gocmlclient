@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/rschmied/gocmlclient/internal/httputil"
 )
 
 func TestNewAuthProvider(t *testing.T) {
@@ -119,7 +121,7 @@ func TestFetchTokenAuthentication(t *testing.T) {
 			Admin:    true,
 		}
 
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", httputil.ContentTypeJSON)
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(response)
 	}))
@@ -209,7 +211,7 @@ func TestFetchTokenServerError(t *testing.T) {
 func TestFetchTokenInvalidResponse(t *testing.T) {
 	// Create a test server that returns invalid JSON
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", httputil.ContentTypeJSON)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("invalid json"))
 	}))
@@ -244,7 +246,7 @@ func TestFetchTokenEmptyToken(t *testing.T) {
 			Admin:    false,
 		}
 
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", httputil.ContentTypeJSON)
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(response)
 	}))
@@ -369,7 +371,7 @@ func BenchmarkFetchToken(b *testing.B) {
 			Admin:    false,
 		}
 
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", httputil.ContentTypeJSON)
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(response)
 	}))

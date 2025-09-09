@@ -157,7 +157,7 @@ func TestBuildRequest(t *testing.T) {
 			// Check Content-Type header for requests with body
 			if tt.body != nil {
 				contentType := req.Header.Get("Content-Type")
-				if contentType != "application/json" {
+				if contentType != ContentTypeJSON {
 					t.Errorf("expected Content-Type application/json, got %s", contentType)
 				}
 			}

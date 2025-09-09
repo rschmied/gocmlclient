@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/rschmied/gocmlclient/internal/httputil"
 )
 
 func TestNew(t *testing.T) {
@@ -43,7 +45,7 @@ func TestRequest(t *testing.T) {
 		if r.URL.Path != "/test" {
 			t.Errorf("expected path /test, got %s", r.URL.Path)
 		}
-		if r.Header.Get("Content-Type") != "application/json" {
+		if r.Header.Get("Content-Type") != httputil.ContentTypeJSON {
 			t.Errorf("expected Content-Type application/json, got %s", r.Header.Get("Content-Type"))
 		}
 
@@ -59,7 +61,7 @@ func TestRequest(t *testing.T) {
 		}
 
 		// Send response
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", httputil.ContentTypeJSON)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"result":"success"}`))
 	}))
