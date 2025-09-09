@@ -84,22 +84,20 @@ func main() {
 
 	options := []client.Option{
 		client.WithHTTPClient(http.DefaultClient),
-		client.WithUsernamePassword(username, password),
-		client.WithToken(token),
 		client.WithLogger(slog.Default()),
-	}
-	// insecure TLS is NOT the default
-	if *insecureTLS {
-		options = append(options, client.WithInsecureTLS())
-	}
-	// named configs is the default
-	if !*noNamedConfigs {
-		options = append(options, client.WithNamedConfigs())
-	}
-	if len(*tokenFile) > 0 {
-		options = append(options, client.WithTokenStorageFile(*tokenFile))
+		client.Conditional(*insecureTLS, client.WithInsecureTLS()),
+		client.Conditional(!*noNamedConfigs, client.WithNamedConfigs()),
+		client.Conditional(*tokenFile != "", client.WithTokenStorageFile(*tokenFile)),
 	}
 
+	// add authentication (token takes precedence)
+	if token != "" {
+		options = append(options, client.WithToken(token))
+	} else {
+		options = append(options, client.WithUsernamePassword(username, password))
+	}
+
+	// create client
 	c, err := gocml.New(host, options...)
 	if err != nil {
 		handleError("create client", err)

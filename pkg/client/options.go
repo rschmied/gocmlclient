@@ -19,6 +19,15 @@ type Config struct {
 	logger             *slog.Logger
 }
 
+func Conditional(condition bool, option Option) Option {
+	if condition {
+		return option
+	}
+	return func(c *Config) {
+		// No-op - condition is false, so don't apply the option
+	}
+}
+
 func WithUsernamePassword(username, password string) Option {
 	return func(c *Config) {
 		c.username = username
