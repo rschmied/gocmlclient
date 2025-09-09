@@ -9,17 +9,15 @@ import (
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
-// GroupServiceInterface defines methods needed by other services.
-type GroupServiceInterface interface {
-	GetByID(ctx context.Context, id models.UUID) (*models.Group, error)
-}
+const groupAPI = "groups"
 
 // Ensure GroupService implements interface
 var _ GroupServiceInterface = (*GroupService)(nil)
 
-const (
-	groupAPI = "groups"
-)
+// GroupServiceInterface defines methods needed by other services.
+type GroupServiceInterface interface {
+	GetByID(ctx context.Context, id models.UUID) (*models.Group, error)
+}
 
 // GroupService provides group-related operations.
 type GroupService struct {

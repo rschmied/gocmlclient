@@ -3,10 +3,12 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -381,6 +383,47 @@ func TestWrapConnectionError(t *testing.T) {
 	// Should be wrapped as our domain error
 	if err.Error() != "system not ready" {
 		t.Errorf("expected 'system not ready' error, got %q", err.Error())
+	}
+}
+
+// TestWrapConnectionErrorSpecific tests specific error types
+func TestWrapConnectionErrorSpecific(t *testing.T) {
+	client := &Client{}
+
+	tests := []struct {
+		name     string
+		err      error
+		expected string
+	}{
+		{
+			name:     "connection refused",
+			err:      syscall.ECONNREFUSED,
+			expected: "system not ready",
+		},
+		{
+			name:     "host unreachable",
+			err:      syscall.EHOSTUNREACH,
+			expected: "system not ready",
+		},
+		{
+			name:     "network unreachable",
+			err:      syscall.ENETUNREACH,
+			expected: "system not ready",
+		},
+		{
+			name:     "generic error",
+			err:      errors.New("generic error"),
+			expected: "generic error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := client.wrapConnectionError(tt.err)
+			if result.Error() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, result.Error())
+			}
+		})
 	}
 }
 

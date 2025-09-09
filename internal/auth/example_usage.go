@@ -70,7 +70,7 @@ func ExampleFileStorage() {
 	// Token will be persisted to file and restored on next run
 }
 
-// ExampleCustomProvider demonstrates creating a custom token provider
+// CustomProvider demonstrates creating a custom token provider
 type CustomProvider struct {
 	apiKey string
 }

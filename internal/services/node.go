@@ -10,6 +10,9 @@ import (
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
+// Ensure NodeService implements interface
+var _ NodeServiceInterface = (*NodeService)(nil)
+
 // NodeServiceInterface defines methods needed by other services
 type NodeServiceInterface interface {
 	GetNodesForLab(ctx context.Context, lab *models.Lab) error

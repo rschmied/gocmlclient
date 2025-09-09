@@ -10,3 +10,10 @@ cover:
 
 clean:
 	@bash -c "rm -f $(NAME).{html,out}"
+
+.PHONY: update
+update:
+	go get -u ./...
+	go mod verify
+	go mod download
+	go mod tidy

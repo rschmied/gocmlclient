@@ -10,6 +10,9 @@ import (
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
+// Ensure LinkService implements interface
+var _ LinkServiceInterface = (*LinkService)(nil)
+
 // LinkServiceInterface defines methods needed by other services
 type LinkServiceInterface interface {
 	// GetLinksForLab(ctx context.Context, lab *models.Lab) error

@@ -9,16 +9,19 @@ import (
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
-// InterfaceService provides interface-related operations
-type InterfaceService struct {
-	apiClient *api.Client
-}
+// Ensure InterfaceService implements interface
+var _ InterfaceServiceInterface = (*InterfaceService)(nil)
 
 // InterfaceServiceInterface defines methods needed by other services
 type InterfaceServiceInterface interface {
 	Create(ctx context.Context, labID, nodeID models.UUID, slot int) (*models.Interface, error)
 	GetByID(ctx context.Context, labID, id models.UUID) (*models.Interface, error)
 	GetInterfacesForNode(ctx context.Context, labID, id models.UUID) (models.InterfaceList, error)
+}
+
+// InterfaceService provides interface-related operations
+type InterfaceService struct {
+	apiClient *api.Client
 }
 
 // NewInterfaceService creates a new lab service

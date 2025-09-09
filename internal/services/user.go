@@ -12,6 +12,9 @@ import (
 
 const userAPI string = "users"
 
+// Ensure UserService implements interface
+var _ UserServiceInterface = (*UserService)(nil)
+
 // UserServiceInterface defines methods needed by other services
 type UserServiceInterface interface {
 	GetByID(ctx context.Context, id models.UUID) (*models.User, error)
