@@ -32,37 +32,17 @@ func NewLabService(apiClient *api.Client) *LabService {
 	}
 }
 
-type labCreate struct {
-	Title        string                        `json:"title,omitempty"`
-	Description  string                        `json:"description,omitempty"`
-	Notes        string                        `json:"notes,omitempty"`
-	Owner        models.UUID                   `json:"owner,omitempty"`
-	Associations models.AssociationUsersGroups `json:"associations,omitzero"`
-}
-
-// Create creates a new lab on the controller
-func (s *LabService) Create(ctx context.Context, lab models.Lab) (*models.Lab, error) {
-	// Use the alias type for API communication (handles inconsistent field names)
-	postData := labCreate{
-		Title:       lab.Title,
-		Description: lab.Description,
-		Notes:       lab.Notes,
-		Owner:       lab.Owner,
-		// Associations: lab.EffectivePermissions,
-	}
-
+// Create creates a new lab on the controller. Only certain fields from the
+// full Lab model are accepted during creation. Use GetByID() to retrieve the
+// complete lab object after successful creation.
+func (s *LabService) Create(ctx context.Context, lab models.LabCreateRequest) (*models.Lab, error) {
 	result := &models.Lab{}
-	err := s.apiClient.PostJSON(ctx, "labs", nil, postData, result)
+	err := s.apiClient.PostJSON(ctx, "labs", nil, lab, result)
 	if err != nil {
 		return nil, fmt.Errorf("create lab: %w", err)
 	}
-
-	// // Update the lab with the ID from the response
-	// lab.ID = result.ID
-
 	// Update with full data (handles groups, owner, etc.)
-	// return s.Update(ctx, *result)
-	return result, nil
+	return s.Update(ctx, *result)
 }
 
 // GetByID retrieves a lab by ID
@@ -84,7 +64,7 @@ func (s *LabService) GetByID(ctx context.Context, id models.UUID, deep bool) (*m
 
 // Update updates a lab's metadata
 func (s *LabService) Update(ctx context.Context, lab models.Lab) (*models.Lab, error) {
-	updateData := labCreate{
+	updateData := models.LabCreateRequest{
 		Title:       lab.Title,
 		Description: lab.Description,
 		Notes:       lab.Notes,
@@ -156,7 +136,6 @@ func (s *LabService) Wipe(ctx context.Context, id models.UUID) error {
 
 // Delete deletes the lab identified by the `id` (a UUIDv4).
 func (s *LabService) Delete(ctx context.Context, id models.UUID) error {
-	fmt.Println("###", id)
 	return s.apiClient.DeleteJSON(ctx, fmt.Sprintf("labs/%s", id), nil)
 }
 

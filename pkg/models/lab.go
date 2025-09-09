@@ -48,6 +48,17 @@ type LabImport struct {
 	Warnings []string `json:"warnings"`
 }
 
+// LabCreateRequest represents the data required to create a new lab.
+// Only certain fields from the full Lab model are accepted during creation.
+// This ensures API safety by preventing misuse of unsupported fields.
+type LabCreateRequest struct {
+	Title        string                 `json:"title,omitempty"`
+	Description  string                 `json:"description,omitempty"`
+	Notes        string                 `json:"notes,omitempty"`
+	Owner        UUID                   `json:"owner,omitempty"`
+	Associations AssociationUsersGroups `json:"associations,omitzero"`
+}
+
 type Lab struct {
 	ID                   UUID        `json:"id"`
 	State                LabState    `json:"state,omitempty"`

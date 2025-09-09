@@ -11,6 +11,7 @@ import (
 	"github.com/lmittmann/tint"
 	gocml "github.com/rschmied/gocmlclient"
 	"github.com/rschmied/gocmlclient/pkg/client"
+	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
 func main() {
@@ -35,7 +36,7 @@ func main() {
 	slog.SetDefault(slog.New(
 		tint.NewHandler(os.Stderr, &tint.Options{
 			AddSource:  true,
-			Level:      slog.LevelDebug,
+			Level:      slog.LevelInfo,
 			TimeFormat: time.Kitchen,
 		}),
 	))
@@ -54,12 +55,36 @@ func main() {
 	}
 	slog.Debug("test")
 
+	newLab, err := c.Lab.Create(ctx, models.LabCreateRequest{
+		Title: "testclientlab",
+		// Description:  "",
+		// Notes:        "",
+		// Owner:        "",
+		// Associations: models.AssociationUsersGroups{},
+	})
+	if err != nil {
+		slog.Error("Failed to create lab", "err", err)
+		return
+	}
+	err = c.Lab.Delete(ctx, newLab.ID)
+	if err != nil {
+		slog.Error("Failed to delete lab", "err", err)
+		return
+	}
+
 	id := "20c0efde-cdaf-4dad-b6df-dd568ddf6e8d"
 	lab, err := c.LabGet(ctx, id, true)
 	if err != nil {
 		slog.Error("Failed to get lab", "err", err)
 		return
 	}
+
+	owner, err := c.User.GetByID(ctx, lab.Owner)
+	if err != nil {
+		slog.Error("Failed to get user", "err", err)
+		return
+	}
+	slog.Info("owner", "user", owner)
 
 	slog.Info("Successfully retrieved lab", "lab", lab, "owner", lab.Owner)
 	json.NewEncoder(os.Stdout).Encode(lab)
