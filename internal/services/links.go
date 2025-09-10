@@ -146,7 +146,7 @@ func (s *LinkService) Create(ctx context.Context, link *models.Link) (*models.Li
 		}
 
 		matches := func(slot int, iface *models.Interface) bool {
-			return iface.IsPhysical() && !iface.IsConnected && (slot < 0 || iface.Slot == slot)
+			return iface.IsPhysical() && !iface.IsConnected && (slot < 0 || (iface.Slot != nil && *iface.Slot == slot))
 		}
 
 		for _, iface := range ifaceListA {

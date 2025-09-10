@@ -47,7 +47,16 @@ func (s *InterfaceService) GetInterfacesForNode(ctx context.Context, labID, id m
 
 	// sort the interface list by slot
 	sort.Slice(interfaceList, func(i, j int) bool {
-		return interfaceList[i].Slot < interfaceList[j].Slot
+		if interfaceList[i].Slot == nil && interfaceList[j].Slot == nil {
+			return false
+		}
+		if interfaceList[i].Slot == nil {
+			return true
+		}
+		if interfaceList[j].Slot == nil {
+			return false
+		}
+		return *interfaceList[i].Slot < *interfaceList[j].Slot
 	})
 	return interfaceList, nil
 }
@@ -56,7 +65,10 @@ func (s *InterfaceService) GetInterfacesForNode(ctx context.Context, labID, id m
 func (s *InterfaceService) GetByID(ctx context.Context, labID, id models.UUID) (*models.Interface, error) {
 	api := fmt.Sprintf("labs/%s/interfaces/%s", labID, id)
 	iface := &models.Interface{}
-	err := s.apiClient.GetJSON(ctx, api, nil, iface)
+	queryParms := map[string]string{
+		"operational": "true",
+	}
+	err := s.apiClient.GetJSON(ctx, api, queryParms, iface)
 	return iface, err
 }
 
