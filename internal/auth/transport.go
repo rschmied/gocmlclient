@@ -93,7 +93,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		t.manager.InvalidateToken()
 
 		// Get a fresh token
-		newToken, err := t.manager.ForceRefresh(req.Context())
+		newToken, err := t.manager.GetToken(req.Context())
 		if err != nil {
 			slog.Error("Failed to refresh token after 401", "error", err)
 			return nil, err

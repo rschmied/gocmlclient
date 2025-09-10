@@ -74,12 +74,7 @@ func (m *Manager) GetToken(ctx context.Context) (string, error) {
 		return token, nil
 	}
 	m.mu.RUnlock()
-	return m.refreshToken(ctx, false)
-}
-
-// ForceRefresh forces a token refresh regardless of current token state
-func (m *Manager) ForceRefresh(ctx context.Context) (string, error) {
-	return m.refreshToken(ctx, true)
+	return m.refreshToken(ctx)
 }
 
 // InvalidateToken marks the current token as invalid (e.g. 401)
@@ -114,13 +109,13 @@ func (m *Manager) TokenExpiry() time.Time {
 }
 
 // refreshToken acquires a new token from the provider
-func (m *Manager) refreshToken(ctx context.Context, force bool) (string, error) {
+func (m *Manager) refreshToken(ctx context.Context) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	// Double-check pattern: another goroutine might have refreshed while we waited
-	// Skip double-check if force refresh is requested
-	if !force && m.token != "" && m.isTokenValid() {
+	// Always check if token is valid to avoid unnecessary refreshes
+	if m.token != "" && m.isTokenValid() {
 		return m.token, nil
 	}
 

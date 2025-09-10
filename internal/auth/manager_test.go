@@ -187,37 +187,36 @@ func TestGetTokenProviderError(t *testing.T) {
 	}
 }
 
-func TestForceRefresh(t *testing.T) {
+func TestGetTokenCached(t *testing.T) {
 	provider := &mockProvider{
-		token:  "force-refresh-token",
+		token:  "cached-token",
 		expiry: time.Now().Add(time.Hour),
 	}
 
 	manager := NewManager(provider, DefaultConfig())
 
 	// First call to populate cache
-	_, err := manager.GetToken(context.Background())
+	token1, err := manager.GetToken(context.Background())
 	if err != nil {
 		t.Fatalf("initial GetToken failed: %v", err)
 	}
 
-	// Verify first call happened
-	if provider.getCallCount() != 1 {
-		t.Errorf("expected provider called 1 time after initial GetToken, got %d", provider.getCallCount())
-	}
-
-	// Force refresh should call provider again
-	token, err := manager.ForceRefresh(context.Background())
+	// Second call should return cached token without calling provider again
+	token2, err := manager.GetToken(context.Background())
 	if err != nil {
-		t.Fatalf("ForceRefresh failed: %v", err)
+		t.Fatalf("cached GetToken failed: %v", err)
 	}
 
-	if token != "force-refresh-token" {
-		t.Errorf("expected token 'force-refresh-token', got %s", token)
+	if token1 != "cached-token" {
+		t.Errorf("expected token 'cached-token', got %s", token1)
 	}
 
-	if provider.getCallCount() != 2 {
-		t.Errorf("expected provider called 2 times, got %d", provider.getCallCount())
+	if token2 != token1 {
+		t.Errorf("expected same cached token, got %s vs %s", token1, token2)
+	}
+
+	if provider.getCallCount() != 1 {
+		t.Errorf("expected provider called 1 time (cached), got %d", provider.getCallCount())
 	}
 }
 
@@ -422,7 +421,7 @@ func TestRefreshTokenDoubleCheck(t *testing.T) {
 
 	// First call starts refresh
 	go func() {
-		manager.refreshToken(context.Background(), false)
+		manager.refreshToken(context.Background())
 	}()
 
 	// Small delay to ensure first refresh starts
@@ -437,6 +436,128 @@ func TestRefreshTokenDoubleCheck(t *testing.T) {
 
 	if token != "double-check-test" {
 		t.Errorf("expected token 'double-check-test', got %s", token)
+	}
+}
+
+func TestConcurrentRefreshRace(t *testing.T) {
+	provider := &mockProvider{
+		token:  "race-test-token",
+		expiry: time.Now().Add(time.Hour),
+	}
+
+	manager := NewManager(provider, DefaultConfig())
+
+	// Expire the token to force refresh
+	manager.mu.Lock()
+	manager.token = "expired-token"
+	manager.expiry = time.Now().Add(-time.Hour)
+	manager.mu.Unlock()
+
+	const numGoroutines = 20
+	var wg sync.WaitGroup
+	results := make(chan string, numGoroutines)
+	errors := make(chan error, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			token, err := manager.GetToken(context.Background())
+			if err != nil {
+				errors <- err
+				return
+			}
+			results <- token
+		}()
+	}
+
+	wg.Wait()
+	close(results)
+	close(errors)
+
+	// Check for errors
+	errorCount := 0
+	for err := range errors {
+		t.Errorf("concurrent refresh error: %v", err)
+		errorCount++
+	}
+	if errorCount > 0 {
+		t.Fatalf("got %d errors from concurrent refreshes", errorCount)
+	}
+
+	// All results should be the same token
+	var firstToken string
+	for token := range results {
+		if firstToken == "" {
+			firstToken = token
+		} else if token != firstToken {
+			t.Errorf("inconsistent tokens: expected %s, got %s", firstToken, token)
+		}
+	}
+
+	// Provider should only be called once
+	if provider.getCallCount() != 1 {
+		t.Errorf("expected provider called 1 time, got %d", provider.getCallCount())
+	}
+}
+
+func TestConcurrent401RefreshRace(t *testing.T) {
+	provider := &mockProvider{
+		token:  "401-race-token",
+		expiry: time.Now().Add(time.Hour),
+	}
+
+	manager := NewManager(provider, DefaultConfig())
+
+	// Simulate 401: invalidate token once
+	manager.InvalidateToken()
+
+	const numGoroutines = 10
+	var wg sync.WaitGroup
+	results := make(chan string, numGoroutines)
+	errors := make(chan error, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Simulate concurrent requests trying to refresh after 401
+			token, err := manager.GetToken(context.Background())
+			if err != nil {
+				errors <- err
+				return
+			}
+			results <- token
+		}()
+	}
+
+	wg.Wait()
+	close(results)
+	close(errors)
+
+	// Check for errors
+	errorCount := 0
+	for err := range errors {
+		t.Errorf("concurrent 401 refresh error: %v", err)
+		errorCount++
+	}
+	if errorCount > 0 {
+		t.Fatalf("got %d errors from concurrent 401 refreshes", errorCount)
+	}
+
+	// All results should be the same token
+	var firstToken string
+	for token := range results {
+		if firstToken == "" {
+			firstToken = token
+		} else if token != firstToken {
+			t.Errorf("inconsistent tokens: expected %s, got %s", firstToken, token)
+		}
+	}
+
+	// Provider should only be called once despite multiple concurrent GetToken calls
+	if provider.getCallCount() != 1 {
+		t.Errorf("expected provider called 1 time, got %d", provider.getCallCount())
 	}
 }
 
