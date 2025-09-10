@@ -63,9 +63,7 @@ func (s *LinkService) GetLinksForLab(ctx context.Context, lab *models.Lab) ([]*m
 	return linkList, nil
 }
 
-// GetByID returns the link data for the given `labID` and `linkID`. If `deep`
-// is set to `true` then bot interface and node data for the given link are
-// also fetched from the controller.
+// GetByID returns the link data for the given `labID` and `linkID`.
 func (s *LinkService) GetByID(ctx context.Context, labID, linkID models.UUID) (*models.Link, error) {
 	api := fmt.Sprintf("labs/%s/links/%s", labID, linkID)
 	link := &models.Link{}
@@ -74,50 +72,9 @@ func (s *LinkService) GetByID(ctx context.Context, labID, linkID models.UUID) (*
 		return nil, err
 	}
 	if link.LabID != labID {
-		panic("no lab ID")
+		return nil, fmt.Errorf("link lab ID mismatch: expected %s, got %s", labID, link.LabID)
 	}
 	return link, nil
-
-	// link.LabID = labID
-
-	// if deep {
-	// 	var err error
-	//
-	// 	ifaceA := &internalInterface{}
-	// 	ifaceB := &internalInterface{}
-	//
-	// 	// ifaceA := &internalInterface{
-	// 	// 	ID:        link.SrcID,
-	// 	// 	LabID:     labID,
-	// 	// 	Node:      link.SrcNode,
-	// 	// 	node:      &models.Node{ID: link.SrcNode, LabID: labID},
-	// 	// 	Interface: models.Interface{},
-	// 	// }
-	// 	ifaceA.Interface, err = s.Interface.GetByID(ctx, labID, link.SrcID)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	ifaceA.node, err = s.Node.GetByID(ctx, labID, link.SrcID)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	//
-	// 	ifaceB.Interface, err = s.Interface.GetByID(ctx, labID, link.DstID)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	ifaceB.node, err = s.Node.GetByID(ctx, labID, link.DstID)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	//
-	//
-	// 	link.ifaceA = ifaceA
-	// 	link.ifaceB = ifaceB
-	// 	link.SrcSlot = ifaceA.Slot
-	// 	link.DstSlot = ifaceB.Slot
-	// }
-	// return link, err
 }
 
 // Create creates a link based on the data passed in `link`. Required
@@ -202,8 +159,11 @@ func (s *LinkService) Create(ctx context.Context, link *models.Link) (*models.Li
 		return nil, err
 	}
 
-	// FIXME: should be DEEP
-	return s.GetByID(ctx, link.LabID, newLinkResult.ID)
+	link, err = s.GetByID(ctx, link.LabID, newLinkResult.ID)
+	if err != nil {
+		return nil, err
+	}
+	return link, nil
 }
 
 // Delete removes a link from a lab identified by the Lab ID and Link ID

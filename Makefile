@@ -6,7 +6,7 @@ cover:
 	# TEST_LIVE=1 go test -v -cover -coverprofile $(NAME).out -coverpkg=./internal/...,./pkg/... ./...
 	# go test -v -cover -coverprofile $(NAME).out -covermode=atomic -coverpkg=./internal/...,./pkg/... ./...
 	go test -v -cover -coverprofile $(NAME).out -covermode=atomic ./...
-	go tool cover -func $(NAME).out
+	# go tool cover -func $(NAME).out
 
 covero: cover
 	go tool cover -html $(NAME).out -o $(NAME).html
@@ -25,3 +25,8 @@ update:
 	go mod verify
 	go mod download
 	go mod tidy
+
+.PHONY: loc
+loc:
+	@echo "=== Lines of Code ==="
+	@find . cmd pkg internal -name "*.go" -not -path "*/vendor/*" -exec wc -l {} + | awk '{total += $$1} END {print "Total:", total}'
