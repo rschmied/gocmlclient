@@ -1,15 +1,20 @@
 NAME := coverage
 
-.PHONY: cover clean
+.PHONY: cover clean covero coversum
 
 cover:
 	# TEST_LIVE=1 go test -v -cover -coverprofile $(NAME).out -coverpkg=./internal/...,./pkg/... ./...
 	# go test -v -cover -coverprofile $(NAME).out -covermode=atomic -coverpkg=./internal/...,./pkg/... ./...
 	go test -v -cover -coverprofile $(NAME).out -covermode=atomic ./...
+	go tool cover -func $(NAME).out
 
 covero: cover
 	go tool cover -html $(NAME).out -o $(NAME).html
 	open $(NAME).html
+
+coversum: cover
+	@echo "=== Package Coverage Summary ==="
+	@go tool cover -func $(NAME).out | awk '/^total:/ {print $0}'
 
 clean:
 	@bash -c "rm -f $(NAME).{html,out}"

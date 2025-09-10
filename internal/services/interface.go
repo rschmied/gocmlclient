@@ -47,18 +47,23 @@ func (s *InterfaceService) GetInterfacesForNode(ctx context.Context, labID, id m
 
 	// sort the interface list by slot
 	sort.Slice(interfaceList, func(i, j int) bool {
-		if interfaceList[i].Slot == nil && interfaceList[j].Slot == nil {
-			return false
-		}
-		if interfaceList[i].Slot == nil {
-			return true
-		}
-		if interfaceList[j].Slot == nil {
-			return false
-		}
-		return *interfaceList[i].Slot < *interfaceList[j].Slot
+		return sortInterfacesBySlot(i, j, interfaceList)
 	})
 	return interfaceList, nil
+}
+
+// sortInterfacesBySlot sorts interfaces by their slot number, with nil slots coming first
+func sortInterfacesBySlot(i, j int, interfaceList models.InterfaceList) bool {
+	if interfaceList[i].Slot == nil && interfaceList[j].Slot == nil {
+		return false
+	}
+	if interfaceList[i].Slot == nil {
+		return true
+	}
+	if interfaceList[j].Slot == nil {
+		return false
+	}
+	return *interfaceList[i].Slot < *interfaceList[j].Slot
 }
 
 // GetByID returns the interface identified by its `ID` (iface.ID).
