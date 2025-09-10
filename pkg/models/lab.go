@@ -35,7 +35,6 @@ const (
 	LabStateDefined LabState = "DEFINED_ON_CORE"
 	LabStateStopped LabState = "STOPPED"
 	LabStateStarted LabState = "STARTED"
-	LabStateBooted  LabState = "BOOTED"
 )
 
 type (
