@@ -8,7 +8,7 @@ type UserBase struct {
 	Description  string          `json:"description"`
 	Email        string          `json:"email"`
 	IsAdmin      bool            `json:"admin"`
-	Groups       []UUID          `json:"groups,omitempty"`        // deprecated?
+	Groups       []UUID          `json:"groups,omitempty"`
 	Associations AssociationList `json:"associations,omitempty"`  // with 2.9.0
 	ResourcePool *UUID           `json:"resource_pool,omitempty"` // with 2.5.0
 	OptIn        *bool           `json:"opt_in,omitempty"`        // with 2.5.0

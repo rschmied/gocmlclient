@@ -44,7 +44,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	}
 
 	groupService := services.NewGroupService(apiClient)
-	userService := services.NewUserService(apiClient, groupService)
+	userService := services.NewUserService(apiClient)
 	nodeService := services.NewNodeService(apiClient, cfg.namedConfigs)
 	interfaceService := services.NewInterfaceService(apiClient)
 	linkService := services.NewLinkService(apiClient)

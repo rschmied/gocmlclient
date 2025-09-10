@@ -23,11 +23,10 @@ type UserServiceInterface interface {
 // UserService provides user-related operations
 type UserService struct {
 	apiClient *api.Client
-	Group     GroupServiceInterface
 }
 
 // NewUserService creates a new user service
-func NewUserService(apiClient *api.Client, group GroupServiceInterface) *UserService {
+func NewUserService(apiClient *api.Client) *UserService {
 	return &UserService{
 		apiClient: apiClient,
 	}
