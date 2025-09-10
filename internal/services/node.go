@@ -10,6 +10,11 @@ import (
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
+const (
+	labsAPI  = "labs"
+	nodesAPI = "nodes"
+)
+
 // Ensure NodeService implements interface
 var _ NodeServiceInterface = (*NodeService)(nil)
 
@@ -31,6 +36,26 @@ func NewNodeService(apiClient *api.Client, useNamedConfigs bool) *NodeService {
 		apiClient:       apiClient,
 		useNamedConfigs: useNamedConfigs,
 	}
+}
+
+// nodesURL builds base URL for nodes in a lab
+func nodesURL(labID models.UUID) string {
+	return fmt.Sprintf("%s/%s/%s", labsAPI, labID, nodesAPI)
+}
+
+// nodeURL builds URL for a specific node
+func nodeURL(labID, nodeID models.UUID) string {
+	return fmt.Sprintf("%s/%s", nodesURL(labID), nodeID)
+}
+
+// nodeStateURL builds URL for node state operations
+func nodeStateURL(labID, nodeID models.UUID, action string) string {
+	return fmt.Sprintf("%s/state/%s", nodeURL(labID, nodeID), action)
+}
+
+// nodeWipeURL builds URL for disk wipe operations
+func nodeWipeURL(labID, nodeID models.UUID) string {
+	return fmt.Sprintf("%s/wipe_disks", nodeURL(labID, nodeID))
 }
 
 type (
@@ -108,7 +133,7 @@ func (node nodePatchPostAlias) MarshalJSON() ([]byte, error) {
 }
 
 func (s *NodeService) GetNodesForLab(ctx context.Context, lab *models.Lab) error {
-	api := fmt.Sprintf("labs/%s/nodes", lab.ID)
+	api := nodesURL(lab.ID)
 
 	queryParms := map[string]string{
 		"data": "true",
@@ -135,7 +160,7 @@ func (s *NodeService) GetNodesForLab(ctx context.Context, lab *models.Lab) error
 }
 
 func (s *NodeService) setConfigData(ctx context.Context, node *models.Node, data any) error {
-	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
+	api := nodeURL(node.LabID, node.ID)
 
 	// API returns the node ID of the updated node
 	var nodeID models.UUID = ""
@@ -171,7 +196,7 @@ func (s *NodeService) SetNamedConfigs(ctx context.Context, node *models.Node, co
 // Update updates the node specified by data in `node` (e.g. ID and LabID)
 // with the other data provided. It returns the updated node.
 func (s *NodeService) Update(ctx context.Context, node *models.Node) (*models.Node, error) {
-	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
+	api := nodeURL(node.LabID, node.ID)
 
 	postAlias := newNodeAlias(node, true)
 
@@ -186,7 +211,7 @@ func (s *NodeService) Update(ctx context.Context, node *models.Node) (*models.No
 
 // Start starts the given node.
 func (s *NodeService) Start(ctx context.Context, node *models.Node) error {
-	api := fmt.Sprintf("labs/%s/nodes/%s/state/start", node.LabID, node.ID)
+	api := nodeStateURL(node.LabID, node.ID, "start")
 	err := s.apiClient.PutJSON(ctx, api, 0)
 	if err != nil {
 		return err
@@ -196,7 +221,7 @@ func (s *NodeService) Start(ctx context.Context, node *models.Node) error {
 
 // Stop stops the given node.
 func (s *NodeService) Stop(ctx context.Context, node *models.Node) error {
-	api := fmt.Sprintf("labs/%s/nodes/%s/state/stop", node.LabID, node.ID)
+	api := nodeStateURL(node.LabID, node.ID, "stop")
 	err := s.apiClient.PutJSON(ctx, api, 0)
 	if err != nil {
 		return err
@@ -222,7 +247,7 @@ func (s *NodeService) Create(ctx context.Context, node *models.Node) (*models.No
 	queryParms := map[string]string{
 		"populate_interfaces": "true",
 	}
-	api := fmt.Sprintf("labs/%s/nodes", node.LabID)
+	api := nodesURL(node.LabID)
 	err := s.apiClient.PostJSON(ctx, api, queryParms, postAlias, &newNode)
 	if err != nil {
 		return nil, err
@@ -237,7 +262,7 @@ func (s *NodeService) Create(ctx context.Context, node *models.Node) (*models.No
 	// it's required to be set to empty from the struct
 	postAlias.NodeDefinition = ""
 
-	api = fmt.Sprintf("labs/%s/nodes/%s", node.LabID, newNode.ID)
+	api = nodeURL(node.LabID, newNode.ID)
 	// the return of the patch API is simply the node ID as a string!
 	// FIX: inconsistency of patch API
 	err = s.apiClient.PatchJSON(ctx, api, postAlias, nil)
@@ -266,7 +291,7 @@ func (s *NodeService) GetByID(ctx context.Context, labID, id models.UUID) (*mode
 
 	var err error
 	newNode := models.Node{}
-	api := fmt.Sprintf("labs/%s/nodes/%s", labID, id)
+	api := nodeURL(labID, id)
 	queryParms := map[string]string{}
 	if s.useNamedConfigs {
 		queryParms["operational"] = "true"
@@ -278,13 +303,13 @@ func (s *NodeService) GetByID(ctx context.Context, labID, id models.UUID) (*mode
 
 // Delete deletes the node from the controller.
 func (s *NodeService) Delete(ctx context.Context, node *models.Node) error {
-	api := fmt.Sprintf("labs/%s/nodes/%s", node.LabID, node.ID)
+	api := nodeURL(node.LabID, node.ID)
 	return s.apiClient.DeleteJSON(ctx, api, nil)
 }
 
 // Wipe removes all runtime data from a node on the controller/compute. E.g. it
 // will remove the actual VM and its associated disks.
 func (s *NodeService) Wipe(ctx context.Context, node *models.Node) error {
-	api := fmt.Sprintf("labs/%s/nodes/%s/wipe_disks", node.LabID, node.ID)
+	api := nodeWipeURL(node.LabID, node.ID)
 	return s.apiClient.PutJSON(ctx, api, nil)
 }

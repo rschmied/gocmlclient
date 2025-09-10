@@ -33,16 +33,16 @@ func NewGroupService(apiClient *api.Client) *GroupService {
 
 // Groups retrieves the list of all groups which exist on the controller.
 func (s *GroupService) Groups(ctx context.Context) (models.GroupList, error) {
-	associations := models.GroupList{}
-	err := s.apiClient.GetJSON(ctx, groupAPI, nil, &associations)
+	groups := models.GroupList{}
+	err := s.apiClient.GetJSON(ctx, groupAPI, nil, &groups)
 	if err != nil {
 		return nil, err
 	}
 	// sort the group list by their ID
-	sort.Slice(associations, func(i, j int) bool {
-		return associations[i].ID > associations[j].ID
+	sort.Slice(groups, func(i, j int) bool {
+		return groups[i].ID > groups[j].ID
 	})
-	return associations, nil
+	return groups, nil
 }
 
 // ByName tries to get the group with the provided `name`.
