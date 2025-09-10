@@ -119,7 +119,7 @@ func (s *SystemService) checkVersionConstraint(version, constraintStr string) (b
 // Version returns the CML controller version
 func (s *SystemService) Version() string {
 	// should check if version has ever been set?
-	if len(s.version) == 0 {
+	if s.version == "" {
 		_ = s.version
 	}
 	return s.version
@@ -128,7 +128,7 @@ func (s *SystemService) Version() string {
 // VersionCheck checks if the client version satisfies the provided semantic
 // version constraint.
 func (s *SystemService) VersionCheck(ctx context.Context, constraintStr string) (bool, error) {
-	if len(s.version) == 0 {
+	if s.version == "" {
 		slog.Error("version unknown")
 		return false, fmt.Errorf("version unknown")
 	}

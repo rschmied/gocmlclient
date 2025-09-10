@@ -6,6 +6,8 @@ cover:
 	# TEST_LIVE=1 go test -v -cover -coverprofile $(NAME).out -coverpkg=./internal/...,./pkg/... ./...
 	go test -v -cover -coverprofile $(NAME).out -coverpkg=./internal/...,./pkg/... ./...
 	go tool cover -html $(NAME).out -o $(NAME).html
+
+covero: cover
 	open $(NAME).html
 
 clean:

@@ -34,14 +34,11 @@ func NewUserService(apiClient *api.Client, group GroupServiceInterface) *UserSer
 }
 
 // GetByID returns the user with the given `id`.
-func (s *UserService) GetByID(ctx context.Context, id models.UUID) (*models.User, error) {
+func (s *UserService) GetByID(ctx context.Context, id models.UUID) (user *models.User, err error) {
 	api := fmt.Sprintf("%s/%s", userAPI, id)
-	user := &models.User{}
-	err := s.apiClient.GetJSON(ctx, api, nil, user)
-	if err != nil {
-		return nil, err
-	}
-	return user, nil
+	user = &models.User{}
+	err = s.apiClient.GetJSON(ctx, api, nil, user)
+	return user, err
 }
 
 // GetByName returns the user with the given username `name`.
@@ -70,13 +67,13 @@ func (s *UserService) Users(ctx context.Context) (models.UserList, error) {
 }
 
 // Delete removes the user identified by the `id` (a UUIDv4).
-func (s *UserService) Delete(ctx context.Context, id string) error {
+func (s *UserService) Delete(ctx context.Context, id models.UUID) error {
 	return s.apiClient.DeleteJSON(ctx, fmt.Sprintf("%s/%s", userAPI, id), nil)
 }
 
-// UserCreate creates a new user on the controller based on the data provided
-// in the passed user parameter.
-func (s *UserService) UserCreate(ctx context.Context, user *models.User) (*models.User, error) {
+// Create creates a new user on the controller based on the data provided in
+// the passed user parameter.
+func (s *UserService) Create(ctx context.Context, user models.UserCreateRequest) (*models.User, error) {
 	result := models.User{}
 	err := s.apiClient.PostJSON(ctx, userAPI, nil, user, &result)
 	if err != nil {
@@ -86,11 +83,9 @@ func (s *UserService) UserCreate(ctx context.Context, user *models.User) (*model
 }
 
 // Update updates the given user which must exist.
-func (s *UserService) Update(ctx context.Context, user models.User) (*models.User, error) {
+func (s *UserService) Update(ctx context.Context, id models.UUID, user models.UserUpdateRequest) (*models.User, error) {
 	result := models.User{}
-	userID := user.ID
-	user.ID = "" // ensure no ID
-	err := s.apiClient.PatchJSON(ctx, fmt.Sprintf("%s/%s", userAPI, userID), user, &result)
+	err := s.apiClient.PatchJSON(ctx, fmt.Sprintf("%s/%s", userAPI, id), user, &result)
 	if err != nil {
 		return nil, err
 	}

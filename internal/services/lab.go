@@ -19,10 +19,10 @@ const (
 // LabService provides lab-related operations
 type LabService struct {
 	apiClient *api.Client
-	Interface InterfaceServiceInterface
-	Link      LinkServiceInterface
-	Node      NodeServiceInterface
 	User      UserServiceInterface
+	Node      NodeServiceInterface
+	Link      LinkServiceInterface
+	Interface InterfaceServiceInterface
 }
 
 // NewLabService creates a new lab service

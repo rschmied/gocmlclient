@@ -342,7 +342,7 @@ func TestLogRequestBodyMiddleware(t *testing.T) {
 
 			// Verify logging
 			if tt.expectLog {
-				if !mockLog.hasEntry(slog.LevelDebug, "Request body") {
+				if !mockLog.hasEntry(slog.LevelInfo, "Request body") {
 					t.Error("expected request body to be logged")
 				}
 				if bodyLog := mockLog.findEntry(slog.LevelDebug, "Request body"); bodyLog != nil {
@@ -715,7 +715,7 @@ func TestMiddlewareIntegration(t *testing.T) {
 	if !mockLog.hasEntry(slog.LevelInfo, "HTTP response") {
 		t.Error("expected HTTP response to be logged")
 	}
-	if !mockLog.hasEntry(slog.LevelDebug, "Request body") {
+	if !mockLog.hasEntry(slog.LevelInfo, "Request body") {
 		t.Error("expected request body to be logged")
 	}
 }

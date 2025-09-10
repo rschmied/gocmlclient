@@ -57,7 +57,7 @@ func LogRequestBodyMiddleware(logger *slog.Logger) Middleware {
 				if err != nil {
 					logger.Error("Failed to read request body", "error", err)
 				} else {
-					logger.Debug("Request body",
+					logger.Info("Request body",
 						"method", req.Method,
 						"url", req.URL.String(),
 						"body", string(body),

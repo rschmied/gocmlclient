@@ -136,7 +136,7 @@ func newAPIClient(c *Config) (*api.Client, error) {
 		Middlewares: []api.Middleware{
 			api.UserAgentMiddleware("gocmlclient"),
 			// api.LoggingMiddleware(c.logger),
-			// api.LogRequestBodyMiddleware(c.logger),
+			api.LogRequestBodyMiddleware(c.logger),
 			api.RetryMiddleware(api.DefaultRetryPolicy()),
 		},
 	})

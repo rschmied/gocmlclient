@@ -38,7 +38,7 @@ func NewAPIClient(t *testing.T) (*api.Client, func()) {
 	slog.SetDefault(slog.New(
 		tint.NewHandler(os.Stderr, &tint.Options{
 			AddSource:  true,
-			Level:      slog.LevelDebug,
+			Level:      slog.LevelInfo,
 			TimeFormat: time.Kitchen,
 		}),
 	))
@@ -110,6 +110,12 @@ func newLiveClient(t *testing.T, config ClientConfig) (*api.Client, func()) {
 
 	apiClient := api.New(config.BaseURL, api.Options{
 		HTTPClient: httpClient,
+		Middlewares: []api.Middleware{
+			api.UserAgentMiddleware("gocmlclient"),
+			// api.LoggingMiddleware(c.logger),
+			api.LogRequestBodyMiddleware(slog.Default()),
+			// api.RetryMiddleware(api.DefaultRetryPolicy()),
+		},
 	})
 
 	return apiClient, func() {}
