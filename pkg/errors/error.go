@@ -21,6 +21,10 @@ func WrapTLSError(err error) error {
 
 // IsTLSCertificateError checks if an error is a TLS/certificate validation error
 func IsTLSCertificateError(err error) bool {
+	if err == nil {
+		return false
+	}
+
 	// Import needed: "crypto/x509"
 	var (
 		unknownAuthorityErr *x509.UnknownAuthorityError

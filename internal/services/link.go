@@ -10,6 +10,11 @@ import (
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
+const (
+	linksAPI     = "links"
+	conditionAPI = "condition"
+)
+
 // Ensure LinkService implements interface
 var _ LinkServiceInterface = (*LinkService)(nil)
 
@@ -29,11 +34,26 @@ type LinkService struct {
 	Node      NodeServiceInterface
 }
 
-// NewLinkService creates a new node service
+// NewLinkService creates a new link service
 func NewLinkService(apiClient *api.Client) *LinkService {
 	return &LinkService{
 		apiClient: apiClient,
 	}
+}
+
+// linksURL builds base URL for links in a lab
+func linksURL(labID models.UUID) string {
+	return fmt.Sprintf("%s/%s/%s", labsAPI, labID, linksAPI)
+}
+
+// linkURL builds URL for a specific link
+func linkURL(labID, linkID models.UUID) string {
+	return fmt.Sprintf("%s/%s", linksURL(labID), linkID)
+}
+
+// linkConditionURL builds URL for link condition operations
+func linkConditionURL(labID, linkID models.UUID) string {
+	return fmt.Sprintf("%s/%s", linkURL(labID, linkID), conditionAPI)
 }
 
 type linkList []*models.Link
@@ -49,7 +69,7 @@ func (llist linkList) MarshalJSON() ([]byte, error) {
 }
 
 func (s *LinkService) GetLinksForLab(ctx context.Context, lab *models.Lab) ([]*models.Link, error) {
-	api := fmt.Sprintf("labs/%s/links", lab.ID)
+	api := linksURL(lab.ID)
 
 	queryParm := map[string]string{
 		"data": "true",
@@ -65,7 +85,7 @@ func (s *LinkService) GetLinksForLab(ctx context.Context, lab *models.Lab) ([]*m
 
 // GetByID returns the link data for the given `labID` and `linkID`.
 func (s *LinkService) GetByID(ctx context.Context, labID, linkID models.UUID) (*models.Link, error) {
-	api := fmt.Sprintf("labs/%s/links/%s", labID, linkID)
+	api := linkURL(labID, linkID)
 	link := &models.Link{}
 	err := s.apiClient.GetJSON(ctx, api, nil, link)
 	if err != nil {
@@ -89,7 +109,7 @@ func (s *LinkService) GetByID(ctx context.Context, labID, linkID models.UUID) (*
 // Node: -1 for a slot means: use next free slot. Specific slots run from 0 to
 // the maximum slot number -1 per the node definition of the node type.
 func (s *LinkService) Create(ctx context.Context, link *models.Link) (*models.Link, error) {
-	api := fmt.Sprintf("labs/%s/links", link.LabID)
+	api := linksURL(link.LabID)
 
 	var err error
 
@@ -169,13 +189,13 @@ func (s *LinkService) Create(ctx context.Context, link *models.Link) (*models.Li
 // Delete removes a link from a lab identified by the Lab ID and Link ID
 // provided in the link arg.
 func (s *LinkService) Delete(ctx context.Context, link models.Link) error {
-	api := fmt.Sprintf("labs/%s/links/%s", link.LabID, link.ID)
+	api := linkURL(link.LabID, link.ID)
 	return s.apiClient.DeleteJSON(ctx, api, nil)
 }
 
 // GetCondition retrieves the current link conditioning configuration
 func (s *LinkService) GetCondition(ctx context.Context, labID, linkID models.UUID) (*models.ConditionResponse, error) {
-	api := fmt.Sprintf("labs/%s/links/%s/condition", labID, linkID)
+	api := linkConditionURL(labID, linkID)
 
 	queryParams := map[string]string{
 		"operational": "true",
@@ -192,7 +212,7 @@ func (s *LinkService) GetCondition(ctx context.Context, labID, linkID models.UUI
 
 // SetCondition applies link conditioning configuration
 func (s *LinkService) SetCondition(ctx context.Context, labID, linkID models.UUID, config *models.LinkConditionConfiguration) (*models.ConditionResponse, error) {
-	api := fmt.Sprintf("labs/%s/links/%s/condition", labID, linkID)
+	api := linkConditionURL(labID, linkID)
 
 	queryParams := map[string]string{
 		"operational": "true",
@@ -209,6 +229,6 @@ func (s *LinkService) SetCondition(ctx context.Context, labID, linkID models.UUI
 
 // DeleteCondition removes link conditioning configuration
 func (s *LinkService) DeleteCondition(ctx context.Context, labID, linkID models.UUID) error {
-	api := fmt.Sprintf("labs/%s/links/%s/condition", labID, linkID)
+	api := linkConditionURL(labID, linkID)
 	return s.apiClient.DeleteJSON(ctx, api, nil)
 }
