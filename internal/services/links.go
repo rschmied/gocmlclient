@@ -17,6 +17,9 @@ var _ LinkServiceInterface = (*LinkService)(nil)
 type LinkServiceInterface interface {
 	// GetLinksForLab(ctx context.Context, lab *models.Lab) error
 	GetLinksForLab(ctx context.Context, lab *models.Lab) ([]*models.Link, error)
+	GetCondition(ctx context.Context, labID, linkID models.UUID) (*models.ConditionResponse, error)
+	SetCondition(ctx context.Context, labID, linkID models.UUID, config *models.LinkConditionConfiguration) (*models.ConditionResponse, error)
+	DeleteCondition(ctx context.Context, labID, linkID models.UUID) error
 }
 
 // LinkService provides link-related operations
@@ -207,5 +210,45 @@ func (s *LinkService) Create(ctx context.Context, link *models.Link) (*models.Li
 // provided in the link arg.
 func (s *LinkService) Delete(ctx context.Context, link models.Link) error {
 	api := fmt.Sprintf("labs/%s/links/%s", link.LabID, link.ID)
+	return s.apiClient.DeleteJSON(ctx, api, nil)
+}
+
+// GetCondition retrieves the current link conditioning configuration
+func (s *LinkService) GetCondition(ctx context.Context, labID, linkID models.UUID) (*models.ConditionResponse, error) {
+	api := fmt.Sprintf("labs/%s/links/%s/condition", labID, linkID)
+
+	queryParams := map[string]string{
+		"operational": "true",
+	}
+
+	condition := &models.ConditionResponse{}
+	err := s.apiClient.GetJSON(ctx, api, queryParams, condition)
+	if err != nil {
+		return nil, err
+	}
+
+	return condition, nil
+}
+
+// SetCondition applies link conditioning configuration
+func (s *LinkService) SetCondition(ctx context.Context, labID, linkID models.UUID, config *models.LinkConditionConfiguration) (*models.ConditionResponse, error) {
+	api := fmt.Sprintf("labs/%s/links/%s/condition", labID, linkID)
+
+	queryParams := map[string]string{
+		"operational": "true",
+	}
+
+	condition := &models.ConditionResponse{}
+	err := s.apiClient.PatchJSON(ctx, api, queryParams, config, condition)
+	if err != nil {
+		return nil, err
+	}
+
+	return condition, nil
+}
+
+// DeleteCondition removes link conditioning configuration
+func (s *LinkService) DeleteCondition(ctx context.Context, labID, linkID models.UUID) error {
+	api := fmt.Sprintf("labs/%s/links/%s/condition", labID, linkID)
 	return s.apiClient.DeleteJSON(ctx, api, nil)
 }

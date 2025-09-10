@@ -82,6 +82,6 @@ func (s *GroupService) Update(ctx context.Context, group *models.Group) (result 
 	groupID := group.ID
 	group.ID = "" // ensure no ID
 	result = &models.Group{}
-	err = s.apiClient.PatchJSON(ctx, fmt.Sprintf("%s/%s", groupAPI, groupID), group, result)
+	err = s.apiClient.PatchJSON(ctx, fmt.Sprintf("%s/%s", groupAPI, groupID), nil, group, result)
 	return result, err
 }

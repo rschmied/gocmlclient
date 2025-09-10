@@ -168,7 +168,7 @@ func (s *NodeService) setConfigData(ctx context.Context, node *models.Node, data
 
 	// API returns the node ID of the updated node
 	var nodeID models.UUID = ""
-	err := s.apiClient.PatchJSON(ctx, api, data, &nodeID)
+	err := s.apiClient.PatchJSON(ctx, api, nil, data, &nodeID)
 	if err != nil {
 		return err
 	}
@@ -206,7 +206,7 @@ func (s *NodeService) Update(ctx context.Context, node *models.Node) (*models.No
 
 	// API returns "just" the node ID of the updated node
 	var nodeID models.UUID = ""
-	err := s.apiClient.PatchJSON(ctx, api, postAlias, &nodeID)
+	err := s.apiClient.PatchJSON(ctx, api, nil, postAlias, &nodeID)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +264,7 @@ func (s *NodeService) Create(ctx context.Context, node *models.Node) (*models.No
 	api = nodeURL(node.LabID, newNode.ID)
 	// the return of the patch API is simply the node ID as a string!
 	// FIX: inconsistency of patch API
-	err = s.apiClient.PatchJSON(ctx, api, postAlias, nil)
+	err = s.apiClient.PatchJSON(ctx, api, nil, postAlias, nil)
 	if err != nil {
 		// for consistency, remove the created node that can't be updated this
 		// assumes that the error was because of the provided data and not because

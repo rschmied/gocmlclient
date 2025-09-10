@@ -77,7 +77,7 @@ func (s *LabService) Update(ctx context.Context, lab models.Lab) (*models.Lab, e
 	labID := lab.ID
 	lab.ID = "" // ensure no ID
 	endpoint := fmt.Sprintf("%s/%s", labAPI, labID)
-	err := s.apiClient.PatchJSON(ctx, endpoint, updateData, result)
+	err := s.apiClient.PatchJSON(ctx, endpoint, nil, updateData, result)
 	if err != nil {
 		// return nil, fmt.Errorf("update lab %s: %w", labID, err)
 		return nil, err

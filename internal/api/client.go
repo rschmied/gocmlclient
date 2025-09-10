@@ -118,7 +118,7 @@ func (c *Client) PutJSON(ctx context.Context, endpoint string, in any) error {
 }
 
 // PatchJSON makes a PATCH request with JSON handling
-func (c *Client) PatchJSON(ctx context.Context, endpoint string, in, out any) error {
+func (c *Client) PatchJSON(ctx context.Context, endpoint string, query map[string]string, in, out any) error {
 	return c.doJSON(ctx, http.MethodPatch, endpoint, nil, in, out)
 }
 

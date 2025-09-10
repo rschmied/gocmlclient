@@ -282,7 +282,7 @@ func TestPatchJSON(t *testing.T) {
 	})
 
 	var result map[string]bool
-	err := client.PatchJSON(context.Background(), "/users/123", map[string]string{"name": "patched"}, &result)
+	err := client.PatchJSON(context.Background(), "/users/123", nil, map[string]string{"name": "patched"}, &result)
 	if err != nil {
 		t.Fatalf("PatchJSON failed: %v", err)
 	}

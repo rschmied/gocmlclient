@@ -84,7 +84,7 @@ func (s *UserService) Create(ctx context.Context, user models.UserCreateRequest)
 // Update updates the given user which must exist.
 func (s *UserService) Update(ctx context.Context, id models.UUID, user models.UserUpdateRequest) (*models.User, error) {
 	result := models.User{}
-	err := s.apiClient.PatchJSON(ctx, fmt.Sprintf("%s/%s", userAPI, id), user, &result)
+	err := s.apiClient.PatchJSON(ctx, fmt.Sprintf("%s/%s", userAPI, id), nil, user, &result)
 	if err != nil {
 		return nil, err
 	}
