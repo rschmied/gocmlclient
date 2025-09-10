@@ -112,8 +112,8 @@ func newLiveClient(t *testing.T, config ClientConfig) (*api.Client, func()) {
 		HTTPClient: httpClient,
 		Middlewares: []api.Middleware{
 			api.UserAgentMiddleware("gocmlclient"),
-			// api.LoggingMiddleware(c.logger),
-			api.LogRequestBodyMiddleware(slog.Default()),
+			// api.LoggingMiddleware(slog.Default()),
+			// api.LogRequestBodyMiddleware(slog.Default()),
 			// api.RetryMiddleware(api.DefaultRetryPolicy()),
 		},
 	})

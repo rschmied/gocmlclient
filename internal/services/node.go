@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/pkg/models"
@@ -118,8 +117,6 @@ func newNodeAlias(node *models.Node, update bool) nodePatchPostAlias {
 	if !update {
 		npp.NodeDefinition = node.NodeDefinition
 	}
-
-	slog.Warn("NODE", slog.Any("node", node), slog.Any("npp", npp))
 
 	return npp
 }
@@ -245,11 +242,6 @@ func (s *NodeService) Create(ctx context.Context, node *models.Node) (*models.No
 
 	newNode := models.Node{}
 
-	// return value of create is just
-	// {
-	// 	"id": "fe106ef1-cddc-49f7-9983-7ac461e96f47"
-	// }
-
 	// we want those "default" interfaces in the node
 	queryParms := map[string]string{
 		"populate_interfaces": "true",
@@ -274,10 +266,10 @@ func (s *NodeService) Create(ctx context.Context, node *models.Node) (*models.No
 	// FIX: inconsistency of patch API
 	err = s.apiClient.PatchJSON(ctx, api, postAlias, nil)
 	if err != nil {
-		// for consistency, remove the created node that can't be updated
-		// this assumes that the error was because of the provided data and
-		// not because of e.g. a connectivity issue between the initial create
-		// and the attempted removal.
+		// for consistency, remove the created node that can't be updated this
+		// assumes that the error was because of the provided data and not because
+		// of e.g. a connectivity issue between the initial create and the
+		// attempted removal.
 		node.ID = newNode.ID
 		s.Delete(ctx, node)
 		return nil, err
