@@ -47,9 +47,13 @@ func (s *GroupService) Groups(ctx context.Context) (models.GroupList, error) {
 
 // ByName tries to get the group with the provided `name`.
 func (s *GroupService) ByName(ctx context.Context, name string) (group *models.Group, err error) {
-	group = &models.Group{}
-	err = s.apiClient.GetJSON(ctx, fmt.Sprintf("%s/%s/id", groupAPI, name), nil, group)
-	return group, err
+	api := fmt.Sprintf("%s/%s/id", groupAPI, name)
+	var groupID models.UUID
+	err = s.apiClient.GetJSON(ctx, api, nil, &groupID)
+	if err != nil {
+		return nil, err
+	}
+	return s.GetByID(ctx, groupID)
 }
 
 // GetByID retrieves the group with the provided `id` (a UUIDv4).

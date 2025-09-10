@@ -3,12 +3,15 @@
 package models
 
 type Group struct {
-	ID          UUID   `json:"id,omitempty"`
-	Description string `json:"description"`
-	// Members is a list of users represented by their IDs
-	Members      []UUID          `json:"members"`
-	Name         string          `json:"name"`
-	Asocciations AssociationList `json:"asocciations"`
+	ID              UUID          `json:"id,omitempty"`
+	Description     string        `json:"description,omitempty"`
+	Members         []UUID        `json:"members,omitempty"`
+	Name            string        `json:"name"`
+	Associations    []Association `json:"associations,omitempty"`
+	Created         string        `json:"created,omitempty"`
+	Modified        string        `json:"modified,omitempty"`
+	DirectoryDN     string        `json:"directory_dn,omitempty"`
+	DirectoryExists *bool         `json:"directory_exists,omitempty"`
 }
 
 type GroupList []*Group
