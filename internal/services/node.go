@@ -64,17 +64,17 @@ type (
 		Label           string              `json:"label,omitempty"`
 		X               int                 `json:"x"`
 		Y               int                 `json:"y"`
-		HideLinks       bool                `json:"hide_links"`
+		HideLinks       *bool               `json:"hide_links,omitempty"`
 		NodeDefinition  string              `json:"node_definition,omitempty"`
-		ImageDefinition string              `json:"image_definition,omitempty"`
+		ImageDefinition *string             `json:"image_definition,omitempty"`
 		Configuration   *string             `json:"configuration,omitempty"`
 		Configurations  []models.NodeConfig `json:"-"`
 		CPUs            int                 `json:"cpus,omitempty"`
-		CPUlimit        int                 `json:"cpu_limit,omitempty"`
-		RAM             int                 `json:"ram,omitempty"`
-		DataVolume      int                 `json:"data_volume,omitempty"`
-		BootDiskSize    int                 `json:"boot_disk_size,omitempty"`
-		Tags            []string            `json:"tags"`
+		CPUlimit        *int                `json:"cpu_limit,omitempty"`
+		RAM             *int                `json:"ram,omitempty"`
+		DataVolume      *int                `json:"data_volume,omitempty"`
+		BootDiskSize    *int                `json:"boot_disk_size,omitempty"`
+		Tags            []string            `json:"tags,omitempty"`
 	}
 )
 
@@ -84,8 +84,10 @@ func newNodeAlias(node *models.Node, update bool) nodePatchPostAlias {
 	npp.Label = node.Label
 	npp.X = node.X
 	npp.Y = node.Y
-	npp.HideLinks = node.HideLinks
 	npp.Tags = node.Tags
+
+	// Handle pointer types
+	npp.HideLinks = node.HideLinks
 
 	// node tags can't be null, either the tag has to be omitted or it has to
 	// be an empty list. But since we can't use "omitempty" we need to ensure
@@ -96,10 +98,15 @@ func newNodeAlias(node *models.Node, update bool) nodePatchPostAlias {
 
 	// these can be changed but only when the node VM doesn't exist
 	if node.State == models.NodeStateDefined {
-		npp.Configuration = node.Configuration
+		// Handle configuration which can be string, NodeConfig, or []NodeConfig
+		if configStr, ok := node.Configuration.(string); ok {
+			npp.Configuration = &configStr
+		}
 		npp.Configurations = make([]models.NodeConfig, len(node.Configurations))
 		copy(npp.Configurations, node.Configurations)
 		npp.CPUs = node.CPUs
+
+		// Handle pointer types
 		npp.CPUlimit = node.CPUlimit
 		npp.RAM = node.RAM
 		npp.DataVolume = node.DataVolume
