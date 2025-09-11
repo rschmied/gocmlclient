@@ -394,6 +394,34 @@ func BenchmarkFetchToken(b *testing.B) {
 	}
 }
 
+func TestFetchTokenNetworkTimeout(t *testing.T) {
+	// Create a test server that delays response
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond) // Delay longer than client timeout
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"token":"delayed-token"}`))
+	}))
+	defer server.Close()
+
+	config := AuthConfig{
+		BaseURL:  server.URL,
+		Username: "testuser",
+		Password: "testpass",
+		Client:   &http.Client{Timeout: 100 * time.Millisecond}, // Short timeout
+	}
+
+	provider := NewAuthProvider(config)
+
+	_, _, err := provider.FetchToken(context.Background())
+	if err == nil {
+		t.Fatal("expected timeout error")
+	}
+
+	if !strings.Contains(err.Error(), "auth request failed") {
+		t.Errorf("expected auth request error, got %q", err.Error())
+	}
+}
+
 func BenchmarkFetchTokenWithPreset(b *testing.B) {
 	config := AuthConfig{
 		BaseURL:     "https://api.example.com",

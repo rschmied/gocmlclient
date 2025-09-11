@@ -2,8 +2,10 @@ package auth
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -72,13 +74,7 @@ func TestNewTransport(t *testing.T) {
 	}
 
 	for _, expected := range expectedSkips {
-		found := false
-		for _, skip := range transport.skipAuthEndpoints {
-			if skip == expected {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(transport.skipAuthEndpoints, expected)
 		if !found {
 			t.Errorf("expected skip endpoint %s not found", expected)
 		}
@@ -230,7 +226,7 @@ func TestShouldSkipAuth(t *testing.T) {
 		{"/api/v0/auth", true},
 		{"/api/v0/auth_extended", true},
 		{"/api/v0/authok", true},
-		{"/api/v0/auth_extended/extra", false}, // suffix match doesn't work as expected
+		{"/api/v0/auth_extended/extra", false},
 		{"/api/v0/users", false},
 		{"/api/v0/data", false},
 		{"/health", false},
@@ -294,11 +290,11 @@ func TestTransportRoundTripConcurrent(t *testing.T) {
 	var wg sync.WaitGroup
 	errChan := make(chan error, numGoroutines*numRequests)
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < numRequests; j++ {
+			for range numRequests {
 				req, _ := http.NewRequest("GET", server.URL+"/api/data", nil)
 				resp, err := transport.RoundTrip(req)
 				if err != nil {
@@ -358,7 +354,7 @@ func TestTransportConcurrent401Race(t *testing.T) {
 	var wg sync.WaitGroup
 	errChan := make(chan error, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -408,8 +404,7 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 	manager := createMockManager("bench-token", time.Now().Add(time.Hour), nil)
 	transport := NewTransport(http.DefaultTransport, manager, nil)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		req, _ := http.NewRequest("GET", server.URL+"/api/data", nil)
 		resp, err := transport.RoundTrip(req)
 		if err != nil {
@@ -417,6 +412,201 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 		}
 		resp.Body.Close()
 	}
+}
+
+func TestTransportRoundTripWithLargeBody(t *testing.T) {
+	// Create a test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify the request has the correct large body
+		body := make([]byte, 100*1024) // 100KB buffer
+		n, _ := r.Body.Read(body)
+		body = body[:n]
+
+		if len(body) == 0 {
+			t.Error("expected non-empty request body")
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"result":"ok"}`))
+	}))
+	defer server.Close()
+
+	manager := createMockManager("test-token", time.Now().Add(time.Hour), nil)
+	transport := NewTransport(http.DefaultTransport, manager, nil)
+
+	// Create a large request body (50KB)
+	largeBody := strings.Repeat("test data ", 5000) // ~50KB
+	req, _ := http.NewRequest("POST", server.URL+"/api/data", strings.NewReader(largeBody))
+	resp, err := transport.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("request with large body failed: %v", err)
+	}
+	resp.Body.Close()
+}
+
+func TestTransportRoundTripWithStreamingBody(t *testing.T) {
+	// Create a test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Read the entire streaming body
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("failed to read request body: %v", err)
+		}
+
+		expectedBody := "streaming test data"
+		if string(body) != expectedBody {
+			t.Errorf("expected body %q, got %q", expectedBody, string(body))
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"result":"ok"}`))
+	}))
+	defer server.Close()
+
+	manager := createMockManager("test-token", time.Now().Add(time.Hour), nil)
+	transport := NewTransport(http.DefaultTransport, manager, nil)
+
+	// Create a request with a ReadCloser body (simulating streaming)
+	body := io.NopCloser(strings.NewReader("streaming test data"))
+	req, _ := http.NewRequest("POST", server.URL+"/api/stream", body)
+	resp, err := transport.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("request with streaming body failed: %v", err)
+	}
+	resp.Body.Close()
+}
+
+func TestTransportRoundTripCustomSkipPatterns(t *testing.T) {
+	// Create a test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check if auth header is present
+		auth := r.Header.Get("Authorization")
+		if r.URL.Path == "/api/public" && auth != "" {
+			t.Errorf("unexpected auth header on public endpoint: %s", auth)
+		}
+		if r.URL.Path == "/api/private" && auth == "" {
+			t.Error("missing auth header on private endpoint")
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"result":"ok"}`))
+	}))
+	defer server.Close()
+
+	manager := createMockManager("test-token", time.Now().Add(time.Hour), nil)
+
+	// Custom skip patterns
+	customSkips := []string{
+		"/api/public",
+		"/health",
+		"/metrics",
+	}
+
+	transport := NewTransport(http.DefaultTransport, manager, customSkips)
+
+	// Test public endpoint (should skip auth)
+	req, _ := http.NewRequest("GET", server.URL+"/api/public", nil)
+	resp, err := transport.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("public request failed: %v", err)
+	}
+	resp.Body.Close()
+
+	// Test private endpoint (should add auth)
+	req, _ = http.NewRequest("GET", server.URL+"/api/private", nil)
+	resp, err = transport.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("private request failed: %v", err)
+	}
+	resp.Body.Close()
+}
+
+func TestTransportRoundTripContextCancellation(t *testing.T) {
+	// Create a slow server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(2 * time.Second) // Slow response
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"result":"ok"}`))
+	}))
+	defer server.Close()
+
+	manager := createMockManager("test-token", time.Now().Add(time.Hour), nil)
+	transport := NewTransport(http.DefaultTransport, manager, nil)
+
+	// Create context that will be cancelled quickly
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	req, _ := http.NewRequestWithContext(ctx, "GET", server.URL+"/api/data", nil)
+	_, err := transport.RoundTrip(req)
+	if err == nil {
+		t.Fatal("expected context cancellation error")
+	}
+
+	// Should be a context cancellation error
+	if !strings.Contains(err.Error(), "context") {
+		t.Errorf("expected context error, got %q", err.Error())
+	}
+}
+
+func TestTransportRoundTripNilBody(t *testing.T) {
+	// Create a test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify no body was sent
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("failed to read request body: %v", err)
+		}
+
+		if len(body) != 0 {
+			t.Errorf("expected empty body, got %d bytes", len(body))
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"result":"ok"}`))
+	}))
+	defer server.Close()
+
+	manager := createMockManager("test-token", time.Now().Add(time.Hour), nil)
+	transport := NewTransport(http.DefaultTransport, manager, nil)
+
+	// Create request with nil body
+	req, _ := http.NewRequest("GET", server.URL+"/api/data", nil)
+	resp, err := transport.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("request with nil body failed: %v", err)
+	}
+	resp.Body.Close()
+}
+
+func TestTransportRoundTripEmptyBody(t *testing.T) {
+	// Create a test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify empty body was sent
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("failed to read request body: %v", err)
+		}
+
+		if len(body) != 0 {
+			t.Errorf("expected empty body, got %d bytes", len(body))
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"result":"ok"}`))
+	}))
+	defer server.Close()
+
+	manager := createMockManager("test-token", time.Now().Add(time.Hour), nil)
+	transport := NewTransport(http.DefaultTransport, manager, nil)
+
+	// Create request with empty body
+	req, _ := http.NewRequest("POST", server.URL+"/api/data", strings.NewReader(""))
+	resp, err := transport.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("request with empty body failed: %v", err)
+	}
+	resp.Body.Close()
 }
 
 func BenchmarkTransportRoundTripSkipAuth(b *testing.B) {
@@ -430,8 +620,7 @@ func BenchmarkTransportRoundTripSkipAuth(b *testing.B) {
 	manager := createMockManager("bench-token", time.Now().Add(time.Hour), nil)
 	transport := NewTransport(http.DefaultTransport, manager, nil)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		req, _ := http.NewRequest("POST", server.URL+"/api/v0/auth_extended", nil)
 		resp, err := transport.RoundTrip(req)
 		if err != nil {

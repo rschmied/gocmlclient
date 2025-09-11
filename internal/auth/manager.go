@@ -38,7 +38,7 @@ func DefaultConfig() Config {
 
 // NewManager creates a new authentication manager
 func NewManager(provider TokenProvider, config Config) *Manager {
-	if config.RefreshBuffer == 0 {
+	if config.RefreshBuffer <= 0 {
 		config.RefreshBuffer = DefaultConfig().RefreshBuffer
 	}
 

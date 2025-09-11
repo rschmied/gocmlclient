@@ -5,7 +5,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strings"
 )
 
 // Transport wraps an HTTP RoundTripper to automatically add authentication
@@ -120,8 +119,8 @@ func (t *Transport) shouldSkipAuth(req *http.Request) bool {
 	path := req.URL.Path
 
 	for _, skipPath := range t.skipAuthEndpoints {
-		// exact match and suffix match for flexibility
-		if path == skipPath || strings.HasSuffix(path, skipPath) {
+		// exact match
+		if path == skipPath {
 			slog.Debug("shouldSkipAuth MATCH", "path", path, "skipPath", skipPath)
 			return true
 		}
