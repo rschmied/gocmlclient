@@ -2,6 +2,7 @@
 package client
 
 import (
+	"context"
 	"crypto/tls"
 	"log/slog"
 	"net/http"
@@ -64,8 +65,12 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 		System:    services.NewSystemService(apiClient),
 	}
 
-	// check version
-	// c.System.Ready(context.Background())
+	// Perform system readiness check unless explicitly skipped
+	if !cfg.skipReadyCheck {
+		if err := c.System.Ready(context.Background()); err != nil {
+			return nil, err
+		}
+	}
 
 	return c, nil
 }

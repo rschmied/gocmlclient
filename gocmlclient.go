@@ -16,3 +16,11 @@ type (
 	Lab  = models.Lab
 	Node = models.Node
 )
+
+// Re-export common options for convenience
+var (
+	SkipReadyCheck       = client.SkipReadyCheck
+	WithUsernamePassword = client.WithUsernamePassword
+	WithToken            = client.WithToken
+	WithInsecureTLS      = client.WithInsecureTLS
+)

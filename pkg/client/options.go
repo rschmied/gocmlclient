@@ -20,6 +20,7 @@ type Config struct {
 	namedConfigs       bool
 	httpClient         *http.Client
 	logger             *slog.Logger
+	skipReadyCheck     bool
 }
 
 // Conditional applies an option only if the condition is true.
@@ -86,5 +87,16 @@ func WithLogger(l *slog.Logger) Option {
 func WithoutNamedConfigs() Option {
 	return func(c *Config) {
 		c.namedConfigs = false
+	}
+}
+
+// SkipReadyCheck disables the automatic system readiness check during client
+// initialization. By default, the client will call Ready() to verify the CML
+// server is compatible and ready before returning. This check can be skipped
+// for performance reasons or when working with servers that don't support
+// the system_information endpoint.
+func SkipReadyCheck() Option {
+	return func(c *Config) {
+		c.skipReadyCheck = true
 	}
 }
