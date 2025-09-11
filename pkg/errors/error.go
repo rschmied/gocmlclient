@@ -8,10 +8,14 @@ import (
 )
 
 var (
-	ErrSystemNotReady       = errors.New("system not ready")
-	ErrElementNotFound      = errors.New("element not found")
+	// ErrSystemNotReady is returned when the CML system is not ready.
+	ErrSystemNotReady = errors.New("system not ready")
+	// ErrElementNotFound is returned when a requested element is not found.
+	ErrElementNotFound = errors.New("element not found")
+	// ErrNoNamedConfigSupport is returned when the backend does not support named configs.
 	ErrNoNamedConfigSupport = errors.New("backend does not support named configs")
-	ErrTLSCertificate       = errors.New("TLS certificate validation failed")
+	// ErrTLSCertificate is returned when TLS certificate validation fails.
+	ErrTLSCertificate = errors.New("TLS certificate validation failed")
 )
 
 // WrapTLSError wraps a TLS error with a clear sentinel value

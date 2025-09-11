@@ -1,3 +1,5 @@
+// Package models provides the models for Cisco Modeling Labs
+// here: link conditioning related types
 package models
 
 // LinkConditionConfiguration defines the configurable parameters for link conditioning

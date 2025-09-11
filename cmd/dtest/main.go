@@ -86,7 +86,7 @@ func main() {
 		client.WithHTTPClient(http.DefaultClient),
 		client.WithLogger(slog.Default()),
 		client.Conditional(*insecureTLS, client.WithInsecureTLS()),
-		client.Conditional(!*noNamedConfigs, client.WithNamedConfigs()),
+		client.Conditional(*noNamedConfigs, client.WithoutNamedConfigs()),
 		client.Conditional(*tokenFile != "", client.WithTokenStorageFile(*tokenFile)),
 	}
 

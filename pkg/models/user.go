@@ -2,6 +2,7 @@
 // here: user related types
 package models
 
+// UserBase contains common user fields.
 type UserBase struct {
 	Username     string          `json:"username"`
 	Fullname     string          `json:"fullname"`
@@ -16,11 +17,13 @@ type UserBase struct {
 	PubkeyInfo   string          `json:"pubkey_info,omitempty"`
 }
 
+// UserCreateRequest represents the data required to create a new user.
 type UserCreateRequest struct {
 	UserBase
 	Password string `json:"password"`
 }
 
+// NewUserCreateRequest creates a new UserCreateRequest with the given username and password.
 func NewUserCreateRequest(username, password string) UserCreateRequest {
 	return UserCreateRequest{
 		UserBase: UserBase{
@@ -30,16 +33,19 @@ func NewUserCreateRequest(username, password string) UserCreateRequest {
 	}
 }
 
+// UpdatePassword represents a password update request.
 type UpdatePassword struct {
 	Old string `json:"old_password"`
 	New string `json:"new_password"`
 }
 
+// UserUpdateRequest represents the data for updating a user.
 type UserUpdateRequest struct {
 	UserBase
 	Password *UpdatePassword `json:"password,omitempty"`
 }
 
+// User represents a CML user with additional metadata.
 type User struct {
 	UserBase
 	ID          UUID   `json:"id,omitempty"`
@@ -49,4 +55,5 @@ type User struct {
 	Labs        []UUID `json:"labs,omitempty"`
 }
 
+// UserList is a slice of User.
 type UserList []User

@@ -29,19 +29,26 @@ import (
 // 	]
 // }
 
+// LabState represents the operational state of a CML lab.
 type LabState string
 
 const (
+	// LabStateDefined indicates the lab is defined on core.
 	LabStateDefined LabState = "DEFINED_ON_CORE"
+	// LabStateStopped indicates the lab is stopped.
 	LabStateStopped LabState = "STOPPED"
+	// LabStateStarted indicates the lab is started.
 	LabStateStarted LabState = "STARTED"
 )
 
 type (
-	NodeMap  map[UUID]*Node
+	// NodeMap is a map of node UUIDs to Node pointers.
+	NodeMap map[UUID]*Node
+	// LinkList is a slice of Link pointers.
 	LinkList []*Link
 )
 
+// LabImport represents the result of importing a lab, including any warnings.
 type LabImport struct {
 	ID       string   `json:"id"`
 	Warnings []string `json:"warnings"`
@@ -58,6 +65,7 @@ type LabCreateRequest struct {
 	Associations AssociationUsersGroups `json:"associations,omitzero"`
 }
 
+// Lab represents a CML lab with its nodes, links, and metadata.
 type Lab struct {
 	ID                   UUID        `json:"id"`
 	State                LabState    `json:"state,omitempty"`

@@ -2,20 +2,28 @@
 // here: interface related types
 package models
 
+// IfaceState represents the state of an interface.
+// IfaceType represents the type of an interface.
 type (
 	IfaceState string
 	IfaceType  string
 )
 
 const (
+	// IfaceStateDefined indicates the interface is defined on core.
 	IfaceStateDefined IfaceState = "DEFINED_ON_CORE"
+	// IfaceStateStopped indicates the interface is stopped.
 	IfaceStateStopped IfaceState = "STOPPED"
+	// IfaceStateStarted indicates the interface is started.
 	IfaceStateStarted IfaceState = "STARTED"
 
+	// IfaceTypePhysical indicates a physical interface.
 	IfaceTypePhysical IfaceType = "physical"
+	// IfaceTypeLoopback indicates a loopback interface.
 	IfaceTypeLoopback IfaceType = "loopback"
 )
 
+// Operational contains operational data for an interface.
 type Operational struct {
 	DeviceName *string `json:"device_name,omitempty"`
 	MACaddress *string `json:"mac_address,omitempty"`
@@ -45,6 +53,7 @@ type Operational struct {
 ]
 */
 
+// Interface represents a CML interface.
 type (
 	Interface struct {
 		ID          UUID         `json:"id"`
@@ -65,17 +74,21 @@ type (
 		IP4 []string `json:"ip4,omitempty"`
 		IP6 []string `json:"ip6,omitempty"`
 	}
+	// InterfaceList is a slice of Interface.
 	InterfaceList []*Interface
 )
 
+// Exists returns true if the interface exists (not defined on core).
 func (i Interface) Exists() bool {
 	return i.State != IfaceStateDefined
 }
 
+// Runs returns true if the interface is running (started).
 func (i Interface) Runs() bool {
 	return i.State == IfaceStateStarted
 }
 
+// IsPhysical returns true if the interface is physical.
 func (i Interface) IsPhysical() bool {
 	return i.Type == IfaceTypePhysical
 }

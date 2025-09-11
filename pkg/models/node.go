@@ -8,41 +8,56 @@ import (
 	"sort"
 )
 
+// NodeState represents the operational state of a CML node.
 type NodeState string
 
 const (
-	NodeStateDefined      NodeState = "DEFINED_ON_CORE"
-	NodeStateStopped      NodeState = "STOPPED"
-	NodeStateStarted      NodeState = "STARTED"
-	NodeStateQueued       NodeState = "QUEUED"
-	NodeStateBooted       NodeState = "BOOTED"
+	// NodeStateDefined indicates the node is defined on core.
+	NodeStateDefined NodeState = "DEFINED_ON_CORE"
+	// NodeStateStopped indicates the node is stopped.
+	NodeStateStopped NodeState = "STOPPED"
+	// NodeStateStarted indicates the node is started.
+	NodeStateStarted NodeState = "STARTED"
+	// NodeStateQueued indicates the node is queued for execution.
+	NodeStateQueued NodeState = "QUEUED"
+	// NodeStateBooted indicates the node is booted.
+	NodeStateBooted NodeState = "BOOTED"
+	// NodeStateDisconnected indicates the node is disconnected.
 	NodeStateDisconnected NodeState = "DISCONNECTED"
 )
 
+// NodeConfig represents a named configuration for a node.
 type NodeConfig struct {
 	Name    string `json:"name"`
 	Content string `json:"content"`
 }
 
+// BootProgress represents the boot progress state of a node.
 type BootProgress string
 
 const (
+	// BootProgressNotRunning indicates the node is not running.
 	BootProgressNotRunning BootProgress = "Not running"
-	BootProgressBooting    BootProgress = "Booting"
-	BootProgressBooted     BootProgress = "Booted"
+	// BootProgressBooting indicates the node is booting.
+	BootProgressBooting BootProgress = "Booting"
+	// BootProgressBooted indicates the node is booted.
+	BootProgressBooted BootProgress = "Booted"
 )
 
+// SerialDevice represents a serial device for a node.
 type SerialDevice struct {
 	ConsoleKey   UUID `json:"console_key"`
 	DeviceNumber int  `json:"device_number"`
 }
 
+// SerialConsole represents a serial console for a node.
 type SerialConsole struct {
 	ConsoleKey   UUID   `json:"console_key"`
 	DeviceNumber int    `json:"device_number"`
 	Label        string `json:"label,omitempty"`
 }
 
+// NodeOperational contains operational data for a node.
 type NodeOperational struct {
 	BootDiskSize    *int            `json:"boot_disk_size"`
 	CPUlimit        *int            `json:"cpu_limit"`
@@ -57,6 +72,7 @@ type NodeOperational struct {
 	SerialConsoles  []SerialConsole `json:"serial_consoles,omitempty"`
 }
 
+// Node represents a CML node with its configuration and state.
 type Node struct {
 	ID             UUID   `json:"id"`
 	LabID          UUID   `json:"lab_id"`
@@ -96,6 +112,7 @@ type Node struct {
 	Parameters any `json:"parameters,omitempty"`
 }
 
+// MarshalJSON implements json.Marshaler for NodeMap, sorting nodes by UUID for stable output.
 func (nmap NodeMap) MarshalJSON() ([]byte, error) {
 	nodeList := []*Node{}
 	for _, node := range nmap {
@@ -109,6 +126,7 @@ func (nmap NodeMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nodeList)
 }
 
+// UnmarshalJSON implements json.Unmarshaler for Node, handling flexible configuration field types.
 func (n *Node) UnmarshalJSON(data []byte) error {
 	if string(data) == "null" || string(data) == `""` {
 		return nil
@@ -150,6 +168,7 @@ func (n *Node) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON implements json.Marshaler for Node, handling named configurations.
 func (n *Node) MarshalJSON() ([]byte, error) {
 	type alias Node
 	if len(n.Configurations) > 0 {
@@ -165,6 +184,7 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 	return json.Marshal((*alias)(n))
 }
 
+// SameConfig compares the configuration of two nodes for equality.
 func (n *Node) SameConfig(other *Node) bool {
 	// Handle string configuration comparison
 	if nStr, ok := n.Configuration.(string); ok {

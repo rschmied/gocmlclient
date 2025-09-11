@@ -12,6 +12,7 @@ import (
 	"github.com/rschmied/gocmlclient/internal/services"
 )
 
+// Client is the main CML API client that provides access to all services.
 type Client struct {
 	config    *Config
 	apiClient *api.Client
@@ -26,11 +27,13 @@ type Client struct {
 	User      *services.UserService
 }
 
+// New creates a new CML client with the given options.
 func New(baseURL string, opts ...Option) (*Client, error) {
 	// start with defaults
 	cfg := &Config{
-		logger:  slog.Default(),
-		baseURL: baseURL,
+		logger:       slog.Default(),
+		baseURL:      baseURL,
+		namedConfigs: true, // make this the default!
 	}
 
 	// apply all options

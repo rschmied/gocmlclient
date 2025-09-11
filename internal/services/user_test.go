@@ -73,7 +73,7 @@ func TestUserCRUD(t *testing.T) {
 	ctx := context.Background()
 
 	// create new user
-	request := models.NewUserCreateRequest("bla", "suepersuecret")
+	request := models.NewUserCreateRequest("bla", "süpersücret")
 	user, err := service.Create(ctx, request)
 	if err != nil {
 		testutil.PrettyPrintError(err)
@@ -95,8 +95,8 @@ func TestUserCRUD(t *testing.T) {
 	updateRequest := models.UserUpdateRequest{
 		UserBase: user.UserBase,
 		Password: &models.UpdatePassword{
-			Old: "suepersuecret",
-			New: "extremlysuecret",
+			Old: "süpersücret",
+			New: "extremelysücret",
 		},
 	}
 	updatedUser, err := service.Update(ctx, user.ID, updateRequest)

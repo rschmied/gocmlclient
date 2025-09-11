@@ -4,4 +4,24 @@
 
 A CML2 Client in Golang
 
+## Installation
+
+```bash
+go get github.com/rschmied/gocmlclient
+```
+
+## Usage
+
+```go
+import "github.com/rschmied/gocmlclient"
+
+client, err := gocmlclient.New("https://cml-controller.example.com")
+if err != nil {
+    log.Fatal(err)
+}
+
+// Use the client
+lab, err := client.Lab.GetByID(ctx, "lab-id", false)
+```
+
 (c) Ralph Schmieder  2022, 2023

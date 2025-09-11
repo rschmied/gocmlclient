@@ -1,3 +1,4 @@
+// Package client provides configuration options for the CML client.
 package client
 
 import (
@@ -5,8 +6,10 @@ import (
 	"net/http"
 )
 
+// Option is a functional option for configuring the client.
 type Option func(*Config)
 
+// Config holds the configuration for the CML client.
 type Config struct {
 	baseURL            string
 	username           string
@@ -19,6 +22,7 @@ type Config struct {
 	logger             *slog.Logger
 }
 
+// Conditional applies an option only if the condition is true.
 func Conditional(condition bool, option Option) Option {
 	if condition {
 		return option
@@ -28,6 +32,7 @@ func Conditional(condition bool, option Option) Option {
 	}
 }
 
+// WithUsernamePassword sets the username and password for authentication.
 func WithUsernamePassword(username, password string) Option {
 	return func(c *Config) {
 		c.username = username
@@ -35,38 +40,51 @@ func WithUsernamePassword(username, password string) Option {
 	}
 }
 
+// WithInsecureTLS skips TLS certificate verification.
 func WithInsecureTLS() Option {
 	return func(c *Config) {
 		c.insecureSkipVerify = true
 	}
 }
 
+// WithToken sets the authentication token.
 func WithToken(token string) Option {
 	return func(c *Config) {
 		c.token = token
 	}
 }
 
+// WithTokenStorageFile sets the file to store the authentication token. If no
+// stoken storage file is provided, memory storage is being used. There's a
+// tradeoff with memory storage as it requires more authentication API calls
+// which is costly especially when a lot of clients are instantiated during
+// e.g. Terraform runs. The file storage saves the token in the file system but
+// this has a security implication as the token might be retrieved. It's up to
+// the user to remove the configured file with a potentially still valid token!
 func WithTokenStorageFile(filename string) Option {
 	return func(c *Config) {
 		c.tokenStorageFile = filename
 	}
 }
 
+// WithHTTPClient sets a custom HTTP client.
 func WithHTTPClient(hc *http.Client) Option {
 	return func(c *Config) {
 		c.httpClient = hc
 	}
 }
 
+// WithLogger sets the logger for the client.
 func WithLogger(l *slog.Logger) Option {
 	return func(c *Config) {
 		c.logger = l
 	}
 }
 
-func WithNamedConfigs() Option {
+// WithoutNamedConfigs enables support for named configurations. Named
+// configurations were introduced with CML 2.7 and should be enabled.
+func WithoutNamedConfigs() Option {
 	return func(c *Config) {
-		c.namedConfigs = true
+		c.namedConfigs = false
 	}
 }

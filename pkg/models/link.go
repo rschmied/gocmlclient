@@ -3,8 +3,11 @@
 package models
 
 const (
+	// LinkStateDefined indicates the link is defined on core.
 	LinkStateDefined = "DEFINED_ON_CORE"
+	// LinkStateStopped indicates the link is stopped.
 	LinkStateStopped = "STOPPED"
+	// LinkStateStarted indicates the link is started.
 	LinkStateStarted = "STARTED"
 )
 

@@ -82,14 +82,14 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name:    "with named configs",
+			name:    "without named configs",
 			baseURL: "https://api.example.com",
 			opts: []Option{
-				WithNamedConfigs(),
+				WithoutNamedConfigs(),
 			},
 			wantErr: false,
 			validate: func(t *testing.T, client *Client) {
-				assert.True(t, client.config.namedConfigs)
+				assert.False(t, client.config.namedConfigs)
 			},
 		},
 	}

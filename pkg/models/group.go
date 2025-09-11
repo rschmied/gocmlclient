@@ -2,6 +2,7 @@
 // here: group related types
 package models
 
+// Group represents a user group in CML with associated permissions and members.
 type Group struct {
 	ID              UUID          `json:"id,omitempty"`
 	Description     string        `json:"description,omitempty"`
@@ -14,4 +15,5 @@ type Group struct {
 	DirectoryExists *bool         `json:"directory_exists,omitempty"`
 }
 
+// GroupList is a slice of Group pointers.
 type GroupList []*Group
