@@ -429,6 +429,117 @@ func TestWrapConnectionErrorSpecific(t *testing.T) {
 	}
 }
 
+// TestRequestError tests the Request function error path
+func TestRequestError(t *testing.T) {
+	client := New("https://api.example.com", Options{
+		HTTPClient: &http.Client{Timeout: 10 * time.Second},
+	})
+
+	// Test with invalid body that should cause httputil.BuildRequest to fail
+	// We'll use a channel as body which should cause an error
+	ctx := context.Background()
+	_, err := client.Request(ctx, "POST", "/test", nil, make(chan int))
+	if err == nil {
+		t.Error("expected error when using invalid body type, got nil")
+	}
+}
+
+// TestDoJSONNetworkError tests doJSON with network errors
+func TestDoJSONNetworkError(t *testing.T) {
+	// Create a client with an invalid URL that will cause network errors
+	client := New("https://invalid-url-that-does-not-exist-12345.com", Options{
+		HTTPClient: &http.Client{Timeout: 1 * time.Millisecond}, // Very short timeout
+	})
+
+	ctx := context.Background()
+	var result any
+	err := client.doJSON(ctx, "GET", "/test", nil, nil, &result)
+	if err == nil {
+		t.Error("expected network error, got nil")
+	}
+}
+
+// TestDoJSONMalformedResponse tests doJSON with malformed JSON response
+func TestDoJSONMalformedResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		// Send malformed JSON that will fail to decode
+		w.Write([]byte(`{"invalid": json}`))
+	}))
+	defer server.Close()
+
+	client := New(server.URL, Options{
+		HTTPClient: &http.Client{Timeout: 10 * time.Second},
+	})
+
+	ctx := context.Background()
+	var result map[string]string
+	err := client.doJSON(ctx, "GET", "/test", nil, nil, &result)
+	if err == nil {
+		t.Error("expected JSON decode error, got nil")
+	}
+	if !strings.Contains(err.Error(), "decode response") {
+		t.Errorf("expected decode error message, got: %v", err)
+	}
+}
+
+// TestAPIErrorEmptyFields tests APIError.Error() with empty Message and RawBody
+func TestAPIErrorEmptyFields(t *testing.T) {
+	apiErr := &APIError{
+		StatusCode: 500,
+		Message:    "", // Empty message
+		RawBody:    "", // Empty raw body
+	}
+
+	expected := "HTTP 500"
+	if apiErr.Error() != expected {
+		t.Errorf("expected %q, got %q", expected, apiErr.Error())
+	}
+}
+
+// TestAPIErrorWithRawBody tests APIError.Error() with RawBody but no Message
+func TestAPIErrorWithRawBody(t *testing.T) {
+	apiErr := &APIError{
+		StatusCode: 404,
+		Message:    "",                   // Empty message
+		RawBody:    "Resource not found", // Has raw body
+	}
+
+	expected := "HTTP 404: Resource not found"
+	if apiErr.Error() != expected {
+		t.Errorf("expected %q, got %q", expected, apiErr.Error())
+	}
+}
+
+// TestHandleHTTPErrorBodyReadError tests handleHTTPError with body read error
+func TestHandleHTTPErrorBodyReadError(t *testing.T) {
+	// Create a mock response with a body reader that returns an error
+	resp := &http.Response{
+		StatusCode: 500,
+		Header:     make(http.Header),
+		Body:       &errorReader{}, // This will return an error when Read is called
+	}
+
+	client := &Client{}
+	err := client.handleHTTPError(resp)
+
+	if err == nil {
+		t.Error("expected error when reading response body fails, got nil")
+	}
+
+	// Check that it's an APIError with the expected message
+	if apiErr, ok := err.(*APIError); ok {
+		if apiErr.StatusCode != 500 {
+			t.Errorf("expected status code 500, got %d", apiErr.StatusCode)
+		}
+		if !strings.Contains(apiErr.Message, "failed to read error response") {
+			t.Errorf("expected error message about reading response, got %q", apiErr.Message)
+		}
+	} else {
+		t.Errorf("expected *APIError, got %T", err)
+	}
+}
+
 func BenchmarkRequest(b *testing.B) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

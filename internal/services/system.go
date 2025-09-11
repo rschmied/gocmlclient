@@ -16,10 +16,9 @@ const systeminfoAPI string = "system_information"
 
 // SystemService provides system-related operations
 type SystemService struct {
-	apiClient        *api.Client
-	compatibilityErr error
-	version          string
-	useNamedConfigs  bool
+	apiClient       *api.Client
+	version         string
+	useNamedConfigs bool
 }
 
 // NewSystemService creates a new lab service
@@ -44,6 +43,7 @@ type systemVersion struct {
 const (
 	versionConstraint      = ">=2.4.0,<3.0.0"
 	namedConfigsConstraint = ">=2.7.0"
+	versionRegexPattern    = `^(\d\.\d\.\d)((-dev0)?\+build.*)?$`
 )
 
 func versionError(got string) error {
@@ -54,7 +54,6 @@ func versionError(got string) error {
 }
 
 func (s *SystemService) versionCheck(ctx context.Context) error {
-	s.compatibilityErr = nil
 	sv := systemVersion{}
 	if err := s.apiClient.GetJSON(ctx, systeminfoAPI, nil, &sv); err != nil {
 		return fmt.Errorf("system info error %w", err)
@@ -96,13 +95,13 @@ func (s *SystemService) checkVersionConstraint(version, constraintStr string) (b
 		return false, err
 	}
 
-	re := regexp.MustCompile(`^(\d\.\d\.\d)((-dev0)?\+build.*)?$`)
+	re := regexp.MustCompile(versionRegexPattern)
 	m := re.FindStringSubmatch(version)
 	if m == nil {
 		return false, fmt.Errorf("version doesn't match expected format")
 	}
 
-	slog.Info("checkVersion", "version", version, "contraint", constraintStr)
+	slog.Info("checkVersion", "version", version, "constraint", constraintStr)
 	if len(m[3]) > 0 {
 		slog.Warn("this is a DEV version", "version", version)
 	}
@@ -118,16 +117,16 @@ func (s *SystemService) checkVersionConstraint(version, constraintStr string) (b
 
 // Version returns the CML controller version
 func (s *SystemService) Version() string {
-	// should check if version has ever been set?
-	if s.version == "" {
-		_ = s.version
-	}
 	return s.version
 }
 
 // VersionCheck checks if the client version satisfies the provided semantic
 // version constraint.
 func (s *SystemService) VersionCheck(ctx context.Context, constraintStr string) (bool, error) {
+	if constraintStr == "" {
+		return false, fmt.Errorf("constraint string cannot be empty")
+	}
+
 	if s.version == "" {
 		slog.Error("version unknown")
 		return false, fmt.Errorf("version unknown")

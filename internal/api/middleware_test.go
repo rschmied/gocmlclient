@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"io"
 	"log/slog"
@@ -359,11 +360,15 @@ func TestLogRequestBodyMiddleware(t *testing.T) {
 	}
 }
 
-// errorReader is an io.Reader that always returns an error
+// errorReader is an io.ReadCloser that always returns an error
 type errorReader struct{}
 
 func (r *errorReader) Read(p []byte) (n int, err error) {
 	return 0, errors.New("mock read error")
+}
+
+func (r *errorReader) Close() error {
+	return nil
 }
 
 // TestRetryMiddleware tests the RetryMiddleware
@@ -422,6 +427,18 @@ func TestRetryMiddleware(t *testing.T) {
 			},
 			returnError:   errors.New("network error"),
 			expectedCalls: 3, // initial + 2 retries
+			expectError:   true,
+		},
+		{
+			name: "non-retryable TLS error",
+			policy: RetryPolicy{
+				MaxRetries:    3,
+				InitialDelay:  1 * time.Millisecond,
+				MaxDelay:      100 * time.Millisecond,
+				BackoffFactor: 2.0,
+			},
+			returnError:   x509.UnknownAuthorityError{}, // TLS error is non-retryable
+			expectedCalls: 1,                            // Should not retry
 			expectError:   true,
 		},
 	}
@@ -620,6 +637,12 @@ func TestIsRetryableError(t *testing.T) {
 		{"retryable HTTP error", &HTTPError{StatusCode: 500}, true},
 		{"non-retryable HTTP error", &HTTPError{StatusCode: 400}, false},
 		{"generic error", errors.New("network timeout"), true},
+		{"TLS unknown authority error", &x509.UnknownAuthorityError{}, false},
+		{"TLS hostname error", &x509.HostnameError{Host: "example.com", Certificate: &x509.Certificate{}}, false},
+		{"TLS certificate invalid error", &x509.CertificateInvalidError{Reason: x509.Expired}, false},
+		{"TLS string error x509", errors.New("x509: certificate signed by unknown authority"), false},
+		{"TLS string error certificate", errors.New("certificate verification failed"), false},
+		{"TLS string error handshake", errors.New("TLS handshake failed"), false},
 	}
 
 	for _, tt := range tests {
