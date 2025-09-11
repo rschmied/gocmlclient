@@ -16,7 +16,7 @@ func initNodeTest(t *testing.T) (*api.Client, func()) {
 	client, cleanup := testutil.NewAPIClient(t)
 	if !testutil.IsLiveTesting() {
 		// Mock responses will be registered in individual tests
-		addLabResponders()
+		addLabCreateResponders()
 	}
 	return client, cleanup
 }

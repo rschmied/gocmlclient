@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	labsAPI  = "labs"
 	nodesAPI = "nodes"
 )
 

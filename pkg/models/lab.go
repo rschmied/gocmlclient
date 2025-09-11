@@ -41,12 +41,8 @@ const (
 	LabStateStarted LabState = "STARTED"
 )
 
-type (
-	// NodeMap is a map of node UUIDs to Node pointers.
-	NodeMap map[UUID]*Node
-	// LinkList is a slice of Link pointers.
-	LinkList []*Link
-)
+// LabList is a list of lab IDs
+type LabList []UUID
 
 // LabImport represents the result of importing a lab, including any warnings.
 type LabImport struct {
@@ -64,6 +60,11 @@ type LabCreateRequest struct {
 	Owner        UUID                   `json:"owner,omitempty"`
 	Associations AssociationUsersGroups `json:"associations,omitzero"`
 }
+
+// LabUpdateRequest is identical to LabCreateRequest and, in fact,
+// LabCreateRequest is also used in the OpenAPI spec. Using a new type makes it
+// clearer.
+type LabUpdateRequest LabCreateRequest
 
 // Lab represents a CML lab with its nodes, links, and metadata.
 type Lab struct {

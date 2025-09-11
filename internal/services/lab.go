@@ -12,8 +12,14 @@ import (
 )
 
 const (
-	labAPI    = "labs"
-	importAPI = "import"
+	labsAPI      = "labs"
+	importAPI    = "import"
+	convergedAPI = "check_if_converged"
+
+	layer3Action = "layer3_addresses"
+	wipeAction   = "wipe"
+	startAction  = "start"
+	stopAction   = "stop"
 )
 
 // LabService provides lab-related operations
@@ -32,24 +38,43 @@ func NewLabService(apiClient *api.Client, iface InterfaceServiceInterface, link 
 	}
 }
 
+// labURL builds URL for a specific lab
+func labURL(id models.UUID) string {
+	return fmt.Sprintf("%s/%s", labsAPI, id)
+}
+
+// labActionURL builds URL for lab state operations
+func labActionURL(labID models.UUID, action string) string {
+	return fmt.Sprintf("%s/state/%s", labURL(labID), action)
+}
+
+func (s *LabService) Labs(ctx context.Context, showAll bool) (labs models.LabList, err error) {
+	labs = models.LabList{}
+	queryParms := map[string]string{}
+	if showAll {
+		queryParms["data"] = "true"
+	}
+	err = s.apiClient.GetJSON(ctx, labsAPI, queryParms, &labs)
+	return labs, err
+}
+
 // Create creates a new lab on the controller. Only certain fields from the
 // full Lab model are accepted during creation. Use GetByID() to retrieve the
 // complete lab object after successful creation.
 func (s *LabService) Create(ctx context.Context, lab models.LabCreateRequest) (*models.Lab, error) {
 	result := &models.Lab{}
-	err := s.apiClient.PostJSON(ctx, "labs", nil, lab, result)
+	err := s.apiClient.PostJSON(ctx, labsAPI, nil, lab, result)
 	if err != nil {
 		return nil, fmt.Errorf("create lab: %w", err)
 	}
 	// Update with full data (handles groups, owner, etc.)
-	return s.Update(ctx, *result)
+	return s.Update(ctx, result.ID, models.LabUpdateRequest{})
 }
 
 // GetByID retrieves a lab by ID
 func (s *LabService) GetByID(ctx context.Context, id models.UUID, deep bool) (*models.Lab, error) {
-	api := fmt.Sprintf("%s/%s", labAPI, id)
 	result := &models.Lab{}
-	err := s.apiClient.GetJSON(ctx, api, nil, result)
+	err := s.apiClient.GetJSON(ctx, labURL(id), nil, result)
 	if err != nil {
 		return nil, err
 	}
@@ -63,34 +88,15 @@ func (s *LabService) GetByID(ctx context.Context, id models.UUID, deep bool) (*m
 }
 
 // Update updates a lab's metadata
-func (s *LabService) Update(ctx context.Context, lab models.Lab) (*models.Lab, error) {
-	updateData := models.LabCreateRequest{
-		Title:       lab.Title,
-		Description: lab.Description,
-		Notes:       lab.Notes,
-		Owner:       lab.Owner,
-		// Associations: lab.EffectivePermissions,
-	}
-
-	// var result labResponse
-	result := &models.Lab{}
-	labID := lab.ID
-	lab.ID = "" // ensure no ID
-	endpoint := fmt.Sprintf("%s/%s", labAPI, labID)
-	err := s.apiClient.PatchJSON(ctx, endpoint, nil, updateData, result)
-	if err != nil {
-		// return nil, fmt.Errorf("update lab %s: %w", labID, err)
-		return nil, err
-	}
-
-	return result, nil
-	// return response.toLab(), nil
+func (s *LabService) Update(ctx context.Context, id models.UUID, data models.LabUpdateRequest) (lab *models.Lab, err error) {
+	lab = &models.Lab{}
+	err = s.apiClient.PatchJSON(ctx, labURL(id), nil, data, lab)
+	return lab, err
 }
 
 // Start starts all nodes in a lab
-func (s *LabService) Start(ctx context.Context, id string) error {
-	endpoint := fmt.Sprintf("%s/%s/start", labAPI, id)
-	err := s.apiClient.PutJSON(ctx, endpoint, nil)
+func (s *LabService) Start(ctx context.Context, id models.UUID) error {
+	err := s.apiClient.PutJSON(ctx, labActionURL(id, startAction), nil)
 	if err != nil {
 		return fmt.Errorf("start lab %s: %w", id, err)
 	}
@@ -98,13 +104,22 @@ func (s *LabService) Start(ctx context.Context, id string) error {
 }
 
 // Stop stops all nodes in a lab
-func (s *LabService) Stop(ctx context.Context, id string) error {
-	endpoint := fmt.Sprintf("%s/%s/stop", labAPI, id)
-	err := s.apiClient.PutJSON(ctx, endpoint, nil)
+func (s *LabService) Stop(ctx context.Context, id models.UUID) error {
+	err := s.apiClient.PutJSON(ctx, labActionURL(id, stopAction), nil)
 	if err != nil {
 		return fmt.Errorf("stop lab %s: %w", id, err)
 	}
 	return nil
+}
+
+// Delete deletes the lab identified by the `id` (a UUIDv4).
+func (s *LabService) Delete(ctx context.Context, id models.UUID) error {
+	return s.apiClient.DeleteJSON(ctx, labURL(id), nil)
+}
+
+// Wipe wipes the lab identified by the `id` (a UUIDv4).
+func (s *LabService) Wipe(ctx context.Context, id models.UUID) error {
+	return s.apiClient.PutJSON(ctx, labActionURL(id, wipeAction), nil)
 }
 
 // Import imports a lab from YAML topology
@@ -129,27 +144,10 @@ func (s *LabService) Import(ctx context.Context, topology string) (*models.Lab, 
 	return s.GetByID(ctx, importResponse.ID, true)
 }
 
-// Wipe wipes the lab identified by the `id` (a UUIDv4).
-func (s *LabService) Wipe(ctx context.Context, id models.UUID) error {
-	return s.apiClient.PutJSON(ctx, fmt.Sprintf("labs/%s/wipe", id), nil)
-}
-
-// Delete deletes the lab identified by the `id` (a UUIDv4).
-func (s *LabService) Delete(ctx context.Context, id models.UUID) error {
-	return s.apiClient.DeleteJSON(ctx, fmt.Sprintf("labs/%s", id), nil)
-}
-
 // HasConverged checks if all nodes in the lab have converged (are in BOOTED state)
-func (s *LabService) HasConverged(ctx context.Context, id models.UUID) (bool, error) {
-	endpoint := fmt.Sprintf("%s/%s/check_if_converged", labAPI, id)
-
-	var converged bool
-	err := s.apiClient.GetJSON(ctx, endpoint, nil, &converged)
-	if err != nil {
-		return false, fmt.Errorf("check lab convergence %s: %w", id, err)
-	}
-
-	return converged, nil
+func (s *LabService) HasConverged(ctx context.Context, id models.UUID) (converged bool, err error) {
+	err = s.apiClient.GetJSON(ctx, labActionURL(id, convergedAPI), nil, &converged)
+	return converged, err
 }
 
 // fillLabData fetches additional lab data for deep queries
@@ -268,12 +266,8 @@ type l3interface struct {
 	IP6   []string `json:"ip6"`
 }
 
-func (s *LabService) getL3Info(ctx context.Context, id string) (*l3nodes, error) {
-	api := fmt.Sprintf("labs/%s/layer3_addresses", id)
-	l3n := &l3nodes{}
-	err := s.apiClient.GetJSON(ctx, api, nil, l3n)
-	if err != nil {
-		return nil, err
-	}
-	return l3n, nil
+func (s *LabService) getL3Info(ctx context.Context, id models.UUID) (nodes *l3nodes, err error) {
+	nodes = &l3nodes{}
+	err = s.apiClient.GetJSON(ctx, labActionURL(id, layer3Action), nil, nodes)
+	return nodes, err
 }

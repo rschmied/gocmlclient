@@ -112,6 +112,9 @@ type Node struct {
 	Parameters any `json:"parameters,omitempty"`
 }
 
+// NodeMap is a map of node UUIDs to Node pointers.
+type NodeMap map[UUID]*Node
+
 // MarshalJSON implements json.Marshaler for NodeMap, sorting nodes by UUID for stable output.
 func (nmap NodeMap) MarshalJSON() ([]byte, error) {
 	nodeList := []*Node{}
