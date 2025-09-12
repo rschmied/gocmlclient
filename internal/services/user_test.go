@@ -12,6 +12,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// mockGroupService implements GroupServiceInterface for testing
+type mockGroupService struct {
+	client *api.Client
+}
+
+func (m *mockGroupService) GetByID(ctx context.Context, id models.UUID) (models.Group, error) {
+	group := models.Group{}
+	api := fmt.Sprintf("groups/%s", id)
+	err := m.client.GetJSON(ctx, api, nil, &group)
+	return group, err
+}
+
 func initTest(t *testing.T) (*api.Client, func()) {
 	client, cleanup := testutil.NewAPIClient(t)
 	if !testutil.IsLiveTesting() {
@@ -61,6 +73,34 @@ func initTest(t *testing.T) (*api.Client, func()) {
 		httpmock.RegisterResponder("DELETE", "https://mock/api/v0/users/user_id",
 			httpmock.NewJsonResponderOrPanic(204, nil))
 		httpmock.RegisterResponder("PATCH", "https://mock/api/v0/users/user_id", userResponse)
+
+		// Group mocks for Groups method
+		group1 := `{
+			"id": "group1_id",
+			"created": "2025-09-10T07:21:49+00:00",
+			"modified": "2025-09-10T07:21:49+00:00",
+			"name": "test_group_1",
+			"description": "Test group 1",
+			"members": ["user_id"],
+			"directory_dn": "",
+			"directory_exists": false
+		}`
+		group2 := `{
+			"id": "group2_id",
+			"created": "2025-09-10T07:21:49+00:00",
+			"modified": "2025-09-10T07:21:49+00:00",
+			"name": "test_group_2",
+			"description": "Test group 2",
+			"members": ["user_id"],
+			"directory_dn": "",
+			"directory_exists": false
+		}`
+		groupsList := httpmock.NewStringResponder(200, `["group1_id", "group2_id"]`)
+		group1Response := httpmock.NewStringResponder(200, group1)
+		group2Response := httpmock.NewStringResponder(200, group2)
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/users/user_id/groups", groupsList)
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/groups/group1_id", group1Response)
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/groups/group2_id", group2Response)
 	}
 	return client, cleanup
 }
@@ -299,4 +339,115 @@ func TestUserConnectionError(t *testing.T) {
 	// This test requires special setup to simulate connection errors
 	// Typically handled by the API client's connection error wrapping
 	t.Skip("Connection error testing requires special network setup")
+}
+
+func TestUserGroups(t *testing.T) {
+	client, cleanup := initTest(t)
+	defer cleanup()
+
+	service := NewUserService(client, &mockGroupService{client: client})
+	ctx := context.Background()
+
+	groups, err := service.Groups(ctx, "user_id")
+	assert.NoError(t, err)
+	assert.Len(t, groups, 2)
+	// Sorted by ID descending: group2_id > group1_id
+	assert.Equal(t, "test_group_2", groups[0].Name)
+	assert.Equal(t, "test_group_1", groups[1].Name)
+}
+
+func TestUserGroups_GroupNotFound(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - can't mock group not found")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Mock groups list with a non-existent group ID
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/users/user_id/groups",
+		httpmock.NewStringResponder(200, `["group1_id", "nonexistent_group"]`))
+	// Mock existing group
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/groups/group1_id",
+		httpmock.NewStringResponder(200, `{
+			"id": "group1_id",
+			"created": "2025-09-10T07:21:49+00:00",
+			"modified": "2025-09-10T07:21:49+00:00",
+			"name": "test_group_1",
+			"description": "Test group 1",
+			"members": ["user_id"],
+			"directory_dn": "",
+			"directory_exists": false
+		}`))
+	// Mock 404 for non-existent group
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/groups/nonexistent_group",
+		httpmock.NewStringResponder(404, `{"message": "Group not found"}`))
+
+	service := NewUserService(client, &mockGroupService{client: client})
+	ctx := context.Background()
+
+	_, err := service.Groups(ctx, "user_id")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "404")
+	assert.Contains(t, err.Error(), "Group not found")
+}
+
+func TestUserGroups_Empty(t *testing.T) {
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Mock empty groups list
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/users/user_id/groups",
+		httpmock.NewStringResponder(200, `[]`))
+
+	service := NewUserService(client, &mockGroupService{client: client})
+	ctx := context.Background()
+
+	groups, err := service.Groups(ctx, "user_id")
+	assert.NoError(t, err)
+	assert.Len(t, groups, 0)
+}
+
+func TestUserGroups_FetchError(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - can't force groups list error")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Mock 500 error for groups list
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/users/user_id/groups",
+		httpmock.NewStringResponder(500, `{"message": "Internal server error"}`))
+
+	service := NewUserService(client, &mockGroupService{client: client})
+	ctx := context.Background()
+
+	_, err := service.Groups(ctx, "user_id")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "500")
+	assert.Contains(t, err.Error(), "Internal server error")
+}
+
+func TestUserGetByID_Success(t *testing.T) {
+	client, cleanup := initTest(t)
+	defer cleanup()
+
+	service := NewUserService(client, nil)
+	ctx := context.Background()
+
+	user, err := service.GetByID(ctx, "user_id")
+	assert.NoError(t, err)
+	assert.Equal(t, "bla", user.Username)
+	assert.Equal(t, models.UUID("user_id"), user.ID)
+}
+
+func TestNewUserService(t *testing.T) {
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	service := NewUserService(client, nil)
+	assert.NotNil(t, service)
+	assert.Equal(t, client, service.apiClient)
+	assert.Nil(t, service.Group)
 }
