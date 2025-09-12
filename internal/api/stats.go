@@ -4,25 +4,26 @@ import (
 	"maps"
 	"sync"
 	"time"
+
+	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
 // Stats holds basic API call statistics
 type Stats struct {
-	mu              sync.RWMutex
-	TotalCalls      int
-	CallsByMethod   map[string]int
-	CallsByEndpoint map[string]int
-	StatusCounts    map[int]int
-	ResponseTimes   []time.Duration // For histogram calculation
+	models.Stats
+	mu sync.RWMutex
 }
 
 // NewStats creates a new stats instance
 func NewStats() *Stats {
 	return &Stats{
-		CallsByMethod:   make(map[string]int),
-		CallsByEndpoint: make(map[string]int),
-		StatusCounts:    make(map[int]int),
-		ResponseTimes:   make([]time.Duration, 0),
+		models.Stats{
+			CallsByMethod:   make(map[string]int),
+			CallsByEndpoint: make(map[string]int),
+			StatusCounts:    make(map[int]int),
+			ResponseTimes:   make([]time.Duration, 0),
+		},
+		sync.RWMutex{},
 	}
 }
 
@@ -39,7 +40,7 @@ func (s *Stats) RecordCall(method, endpoint string, status int, duration time.Du
 }
 
 // GetSnapshot returns a thread-safe copy of current stats
-func (s *Stats) GetSnapshot() Stats {
+func (s *Stats) GetSnapshot() models.Stats {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -56,7 +57,7 @@ func (s *Stats) GetSnapshot() Stats {
 	responseTimes := make([]time.Duration, len(s.ResponseTimes))
 	copy(responseTimes, s.ResponseTimes)
 
-	return Stats{
+	return models.Stats{
 		TotalCalls:      s.TotalCalls,
 		CallsByMethod:   callsByMethod,
 		CallsByEndpoint: callsByEndpoint,

@@ -236,3 +236,28 @@ func TestNewAPIClient(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_Stats(t *testing.T) {
+	// Create a test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	// Create client with stats enabled
+	client, err := New(server.URL, SkipReadyCheck())
+	assert.NoError(t, err)
+	assert.NotNil(t, client)
+
+	// Get stats - should return public Stats type
+	stats := client.Stats()
+	
+	// Verify it's the correct type (public Stats from pkg/client)
+	assert.IsType(t, Stats{}, stats)
+	
+	// Verify fields are accessible (this would fail if it was internal api.Stats)
+	assert.NotNil(t, stats.CallsByMethod)
+	assert.NotNil(t, stats.CallsByEndpoint)
+	assert.NotNil(t, stats.StatusCounts)
+	assert.NotNil(t, stats.ResponseTimes)
+}

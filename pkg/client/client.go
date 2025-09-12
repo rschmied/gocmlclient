@@ -163,6 +163,13 @@ func newAPIClient(c *Config) (*api.Client, error) {
 	return apiClient, nil
 }
 
-func (c *Client) Stats() api.Stats {
-	return c.apiClient.Stats()
+func (c *Client) Stats() Stats {
+	internalStats := c.apiClient.Stats()
+	return Stats{
+		TotalCalls:      internalStats.TotalCalls,
+		CallsByMethod:   internalStats.CallsByMethod,
+		CallsByEndpoint: internalStats.CallsByEndpoint,
+		StatusCounts:    internalStats.StatusCounts,
+		ResponseTimes:   internalStats.ResponseTimes,
+	}
 }
