@@ -44,6 +44,41 @@ const (
 // LabList is a list of lab IDs
 type LabList []UUID
 
+// OldPermission represents the old permission system for lab groups
+type OldPermission string
+
+const (
+	// OldPermissionReadOnly allows read-only access
+	OldPermissionReadOnly OldPermission = "read_only"
+	// OldPermissionReadWrite allows read-write access
+	OldPermissionReadWrite OldPermission = "read_write"
+)
+
+// LabGroup represents a group with permissions for a lab
+type LabGroup struct {
+	ID         UUID          `json:"id"`
+	Permission OldPermission `json:"permission"`
+	Name       string        `json:"name,omitempty"`
+}
+
+// LabResponse represents the response from /labs/{lab_id} endpoint
+type LabResponse struct {
+	ID                   UUID        `json:"id"`
+	Created              string      `json:"created,omitempty"`
+	Modified             string      `json:"modified,omitempty"`
+	Title                string      `json:"lab_title"`
+	Description          string      `json:"lab_description,omitempty"`
+	Notes                string      `json:"lab_notes,omitempty"`
+	OwnerID              UUID        `json:"owner"`
+	OwnerUsername        string      `json:"owner_username"`
+	OwnerFullname        string      `json:"owner_fullname"`
+	State                LabState    `json:"state"`
+	NodeCount            int         `json:"node_count"`
+	LinkCount            int         `json:"link_count"`
+	Groups               []LabGroup  `json:"groups,omitempty"`
+	EffectivePermissions Permissions `json:"effective_permissions"`
+}
+
 // LabImport represents the result of importing a lab, including any warnings.
 type LabImport struct {
 	ID       UUID     `json:"id"`

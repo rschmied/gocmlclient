@@ -17,17 +17,10 @@ const (
 	labsAPI      = "labs"
 	importAPI    = "import"
 	convergedAPI = "check_if_converged"
-
-	layer3Action = "layer3_addresses"
 	wipeAction   = "wipe"
 	startAction  = "start"
 	stopAction   = "stop"
 )
-
-type labAlias struct {
-	Lab     models.Lab
-	OwnerID models.UUID `json:"owner"`
-}
 
 // LabService provides lab-related operations
 type LabService struct {
@@ -67,6 +60,44 @@ func (s *LabService) Labs(ctx context.Context, showAll bool) (labs models.LabLis
 	}
 	err = s.apiClient.GetJSON(ctx, labsAPI, queryParms, &labs)
 	return labs, err
+}
+
+// LabsWithData retrieves labs with optional full data
+func (s *LabService) LabsWithData(ctx context.Context, showAll bool, includeData bool) ([]models.LabResponse, error) {
+	queryParams := map[string]string{}
+	if showAll {
+		queryParams["data"] = "true"
+	}
+
+	// First get the lab IDs
+	var labIDs models.LabList
+	err := s.apiClient.GetJSON(ctx, labsAPI, queryParams, &labIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	if !includeData {
+		// Return just UUIDs wrapped in LabResponse
+		labs := make([]models.LabResponse, len(labIDs))
+		for i, id := range labIDs {
+			labs[i] = models.LabResponse{ID: id}
+		}
+		return labs, nil
+	}
+
+	// When includeData=true, fetch full data for each lab
+	labs := make([]models.LabResponse, 0, len(labIDs))
+	for _, id := range labIDs {
+		var labResponse models.LabResponse
+		err := s.apiClient.GetJSON(ctx, labURL(id), nil, &labResponse)
+		if err != nil {
+			// Log error but continue with other labs
+			continue
+		}
+		labs = append(labs, labResponse)
+	}
+
+	return labs, nil
 }
 
 // Create creates a new lab on the controller. Only certain fields from the
@@ -247,44 +278,20 @@ func (s *LabService) fillLabData(ctx context.Context, lab *models.Lab) error {
 	return nil
 }
 
-type l3nodes map[string]*l3node
-
-type l3node struct {
-	Name       string                 `json:"name"`
-	Interfaces map[string]l3interface `json:"interfaces"`
-}
-
-type l3interface struct {
-	ID    string   `json:"id"`
-	Label string   `json:"label"`
-	IP4   []string `json:"ip4"`
-	IP6   []string `json:"ip6"`
-}
-
-func (s *LabService) getL3Info(ctx context.Context, id models.UUID) (nodes *l3nodes, err error) {
-	nodes = &l3nodes{}
-	err = s.apiClient.GetJSON(ctx, fmt.Sprintf("%s/%s", labURL(id), layer3Action), nil, nodes)
-	return nodes, err
-}
-
 // GetByTitle returns the lab identified by its `title`.
 func (s *LabService) GetByTitle(ctx context.Context, title string, deep bool) (models.Lab, error) {
-	var data map[string]map[string]*labAlias
-
-	err := s.apiClient.GetJSON(ctx, "populate_lab_tiles", nil, &data)
+	// Get all labs with basic data (including titles)
+	labs, err := s.LabsWithData(ctx, true, true) // showAll=true, includeData=true
 	if err != nil {
-		fmt.Println("labs:", err)
-		return models.Lab{}, err
+		return models.Lab{}, fmt.Errorf("failed to get labs with data: %w", err)
 	}
-	fmt.Println("labs:", data)
 
-	labs := data["lab_tiles"]
+	// Find the lab with matching title
 	for _, lab := range labs {
-		fmt.Println("##", lab.Lab.Title)
-		if lab.Lab.Title == title {
-			return s.GetByID(ctx, lab.Lab.ID, deep)
+		if lab.Title == title {
+			// Found it, now get full data
+			return s.GetByID(ctx, lab.ID, deep)
 		}
 	}
-
 	return models.Lab{}, fmt.Errorf("lab with title %q not found", title)
 }
