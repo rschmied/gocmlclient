@@ -1,6 +1,8 @@
 // Package httputil provides shared HTTP request building utilities
 package httputil
 
+import "maps"
+
 // QueryBuilder helps build query parameter maps with common patterns
 type QueryBuilder struct {
 	params map[string]string
@@ -52,8 +54,6 @@ func (qb *QueryBuilder) Set(key, value string) *QueryBuilder {
 func (qb *QueryBuilder) Build() map[string]string {
 	// Return a copy to prevent external modification
 	result := make(map[string]string, len(qb.params))
-	for k, v := range qb.params {
-		result[k] = v
-	}
+	maps.Copy(result, qb.params)
 	return result
 }

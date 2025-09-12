@@ -61,7 +61,7 @@ func (s *LabService) Labs(ctx context.Context, showAll bool) (labs models.LabLis
 }
 
 // LabsWithData retrieves labs with optional full data
-func (s *LabService) LabsWithData(ctx context.Context, showAll bool, includeData bool) ([]models.LabResponse, error) {
+func (s *LabService) LabsWithData(ctx context.Context, showAll, includeData bool) ([]models.LabResponse, error) {
 	queryParams := httputil.NewQueryBuilder().WithData(showAll).Build()
 
 	// First get the lab IDs

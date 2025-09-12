@@ -347,11 +347,11 @@ func TestFileStorageConcurrentAccess(t *testing.T) {
 	errChan := make(chan error, numGoroutines*numOperations)
 
 	// Start multiple goroutines performing concurrent operations
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < numOperations; j++ {
+			for j := range numOperations {
 				token := fmt.Sprintf("token-%d-%d", id, j)
 				expiry := time.Now().Add(time.Duration(j) * time.Minute)
 

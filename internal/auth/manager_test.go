@@ -464,7 +464,7 @@ func TestConcurrentRefreshRace(t *testing.T) {
 	results := make(chan string, numGoroutines)
 	errors := make(chan error, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -523,7 +523,7 @@ func TestConcurrent401RefreshRace(t *testing.T) {
 	results := make(chan string, numGoroutines)
 	errors := make(chan error, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -987,7 +987,7 @@ func TestGetTokenRapidRequests(t *testing.T) {
 	const numRequests = 100
 	tokens := make([]string, numRequests)
 
-	for i := 0; i < numRequests; i++ {
+	for i := range numRequests {
 		token, err := manager.GetToken(context.Background())
 		if err != nil {
 			t.Fatalf("GetToken %d failed: %v", i, err)
@@ -1111,11 +1111,11 @@ func TestConcurrentInvalidateAndGet(t *testing.T) {
 	errChan := make(chan error, numGoroutines*2)
 
 	// Start goroutines that alternate between GetToken and InvalidateToken
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < 10; j++ {
+			for j := range 10 {
 				// Alternate between operations
 				if j%2 == 0 {
 					_, err := manager.GetToken(context.Background())
@@ -1403,11 +1403,11 @@ func TestStressConcurrentOperations(t *testing.T) {
 	errChan := make(chan error, numGoroutines*numOperations)
 
 	// Start multiple goroutines performing various operations
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < numOperations; j++ {
+			for j := range numOperations {
 				// Mix of different operations
 				switch j % 4 {
 				case 0:
@@ -1466,7 +1466,7 @@ func TestStressMemoryUsage(t *testing.T) {
 	manager := NewManager(provider, DefaultConfig())
 
 	// Perform many operations to check for memory issues
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		_, err := manager.GetToken(context.Background())
 		if err != nil {
 			t.Fatalf("GetToken failed at iteration %d: %v", i, err)
