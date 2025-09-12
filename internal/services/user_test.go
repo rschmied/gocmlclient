@@ -342,6 +342,10 @@ func TestUserConnectionError(t *testing.T) {
 }
 
 func TestUserGroups(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires valid UUID user ID")
+	}
+
 	client, cleanup := initTest(t)
 	defer cleanup()
 
@@ -393,6 +397,10 @@ func TestUserGroups_GroupNotFound(t *testing.T) {
 }
 
 func TestUserGroups_Empty(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires valid UUID user ID")
+	}
+
 	client, cleanup := testutil.NewAPIClient(t)
 	defer cleanup()
 
@@ -430,6 +438,10 @@ func TestUserGroups_FetchError(t *testing.T) {
 }
 
 func TestUserGetByID_Success(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires valid UUID user ID")
+	}
+
 	client, cleanup := initTest(t)
 	defer cleanup()
 
