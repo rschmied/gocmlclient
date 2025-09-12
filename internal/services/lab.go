@@ -10,6 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/rschmied/gocmlclient/internal/api"
+	"github.com/rschmied/gocmlclient/internal/httputil"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
@@ -54,20 +55,14 @@ func labActionURL(labID models.UUID, action string) string {
 
 func (s *LabService) Labs(ctx context.Context, showAll bool) (labs models.LabList, err error) {
 	labs = models.LabList{}
-	queryParms := map[string]string{}
-	if showAll {
-		queryParms["data"] = "true"
-	}
-	err = s.apiClient.GetJSON(ctx, labsAPI, queryParms, &labs)
+	queryParams := httputil.NewQueryBuilder().WithData(showAll).Build()
+	err = s.apiClient.GetJSON(ctx, labsAPI, queryParams, &labs)
 	return labs, err
 }
 
 // LabsWithData retrieves labs with optional full data
 func (s *LabService) LabsWithData(ctx context.Context, showAll bool, includeData bool) ([]models.LabResponse, error) {
-	queryParams := map[string]string{}
-	if showAll {
-		queryParams["data"] = "true"
-	}
+	queryParams := httputil.NewQueryBuilder().WithData(showAll).Build()
 
 	// First get the lab IDs
 	var labIDs models.LabList

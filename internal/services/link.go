@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/rschmied/gocmlclient/internal/api"
+	"github.com/rschmied/gocmlclient/internal/httputil"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
@@ -71,12 +72,10 @@ func (llist linkList) MarshalJSON() ([]byte, error) {
 func (s *LinkService) GetLinksForLab(ctx context.Context, labID models.UUID) ([]models.Link, error) {
 	api := linksURL(labID)
 
-	queryParm := map[string]string{
-		"data": "true",
-	}
+	queryParams := httputil.NewQueryBuilder().WithData(true).Build()
 
 	var linkList []models.Link
-	err := s.apiClient.GetJSON(ctx, api, queryParm, &linkList)
+	err := s.apiClient.GetJSON(ctx, api, queryParams, &linkList)
 	if err != nil {
 		return nil, err
 	}
@@ -192,9 +191,9 @@ func (s *LinkService) Delete(ctx context.Context, labID, linkID models.UUID) err
 func (s *LinkService) GetCondition(ctx context.Context, labID, linkID models.UUID) (models.ConditionResponse, error) {
 	api := linkConditionURL(labID, linkID)
 
-	queryParams := map[string]string{
-		"operational": "true",
-	}
+	queryParams := httputil.NewQueryBuilder().
+		WithOperational().
+		Build()
 
 	var condition models.ConditionResponse
 	err := s.apiClient.GetJSON(ctx, api, queryParams, &condition)
@@ -209,9 +208,9 @@ func (s *LinkService) GetCondition(ctx context.Context, labID, linkID models.UUI
 func (s *LinkService) SetCondition(ctx context.Context, labID, linkID models.UUID, config *models.LinkConditionConfiguration) (models.ConditionResponse, error) {
 	api := linkConditionURL(labID, linkID)
 
-	queryParams := map[string]string{
-		"operational": "true",
-	}
+	queryParams := httputil.NewQueryBuilder().
+		WithOperational().
+		Build()
 
 	var condition models.ConditionResponse
 	err := s.apiClient.PatchJSON(ctx, api, queryParams, config, &condition)

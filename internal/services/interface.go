@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/rschmied/gocmlclient/internal/api"
+	"github.com/rschmied/gocmlclient/internal/httputil"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
@@ -35,12 +36,10 @@ func (s *InterfaceService) GetInterfacesForNode(ctx context.Context, labID, id m
 	// with the data=true option, we get not only the list of IDs but the
 	// interfaces themselves as well!
 	api := fmt.Sprintf("labs/%s/nodes/%s/interfaces", labID, id)
-	queryParm := map[string]string{
-		"data": "true",
-	}
+	queryParams := httputil.NewQueryBuilder().WithData(true).Build()
 
 	interfaceList := models.InterfaceList{}
-	err := s.apiClient.GetJSON(ctx, api, queryParm, &interfaceList)
+	err := s.apiClient.GetJSON(ctx, api, queryParams, &interfaceList)
 	if err != nil {
 		return nil, err
 	}
@@ -70,10 +69,10 @@ func sortInterfacesBySlot(i, j int, interfaceList models.InterfaceList) bool {
 func (s *InterfaceService) GetByID(ctx context.Context, labID, id models.UUID) (models.Interface, error) {
 	api := fmt.Sprintf("labs/%s/interfaces/%s", labID, id)
 	var iface models.Interface
-	queryParms := map[string]string{
-		"operational": "true",
-	}
-	err := s.apiClient.GetJSON(ctx, api, queryParms, &iface)
+	queryParams := httputil.NewQueryBuilder().
+		WithOperational().
+		Build()
+	err := s.apiClient.GetJSON(ctx, api, queryParams, &iface)
 	return iface, err
 }
 

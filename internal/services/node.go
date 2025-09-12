@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/rschmied/gocmlclient/internal/api"
+	"github.com/rschmied/gocmlclient/internal/httputil"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
@@ -137,18 +138,14 @@ func (node nodePatchPostAlias) MarshalJSON() ([]byte, error) {
 func (s *NodeService) GetNodesForLab(ctx context.Context, labID models.UUID) (models.NodeMap, error) {
 	api := nodesURL(labID)
 
-	queryParms := map[string]string{
-		"data": "true",
-	}
-
-	if s.useNamedConfigs {
-		queryParms["operational"] = "true"
-		queryParms["exclude_configurations"] = "false"
-	}
+	queryParams := httputil.NewQueryBuilder().
+		WithData(true).
+		WithNamedConfigs(s.useNamedConfigs).
+		Build()
 
 	// First unmarshal into a slice of nodes
 	var nodes []models.Node
-	err := s.apiClient.GetJSON(ctx, api, queryParms, &nodes)
+	err := s.apiClient.GetJSON(ctx, api, queryParams, &nodes)
 	if err != nil {
 		return nil, err
 	}
@@ -234,11 +231,11 @@ func (s *NodeService) Create(ctx context.Context, node models.Node) (models.Node
 	var newNode models.Node
 
 	// we want those "default" interfaces in the node
-	queryParms := map[string]string{
-		"populate_interfaces": "true",
-	}
+	queryParams := httputil.NewQueryBuilder().
+		WithPopulateInterfaces().
+		Build()
 	api := nodesURL(node.LabID)
-	err := s.apiClient.PostJSON(ctx, api, queryParms, postAlias, &newNode)
+	err := s.apiClient.PostJSON(ctx, api, queryParams, postAlias, &newNode)
 	if err != nil {
 		return models.Node{}, err
 	}
@@ -283,12 +280,10 @@ func (s *NodeService) GetByID(ctx context.Context, labID, id models.UUID) (model
 	var err error
 	var newNode models.Node
 	api := nodeURL(labID, id)
-	queryParms := map[string]string{}
-	if s.useNamedConfigs {
-		queryParms["operational"] = "true"
-		queryParms["exclude_configurations"] = "false"
-	}
-	err = s.apiClient.GetJSON(ctx, api, queryParms, &newNode)
+	queryParams := httputil.NewQueryBuilder().
+		WithNamedConfigs(s.useNamedConfigs).
+		Build()
+	err = s.apiClient.GetJSON(ctx, api, queryParams, &newNode)
 	return newNode, err
 }
 
