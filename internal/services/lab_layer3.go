@@ -26,5 +26,8 @@ type l3interface struct {
 func (s *LabService) getL3Info(ctx context.Context, id models.UUID) (nodes *l3nodes, err error) {
 	nodes = &l3nodes{}
 	err = s.apiClient.GetJSON(ctx, fmt.Sprintf("%s/%s", labURL(id), layer3Action), nil, nodes)
-	return nodes, err
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
 }
