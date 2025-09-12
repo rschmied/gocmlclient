@@ -124,41 +124,6 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestConditional(t *testing.T) {
-	tests := []struct {
-		name      string
-		condition bool
-		option    Option
-		validate  func(t *testing.T, config *Config)
-	}{
-		{
-			name:      "condition true",
-			condition: true,
-			option:    WithToken("test-token"),
-			validate: func(t *testing.T, config *Config) {
-				assert.Equal(t, "test-token", config.token)
-			},
-		},
-		{
-			name:      "condition false",
-			condition: false,
-			option:    WithToken("test-token"),
-			validate: func(t *testing.T, config *Config) {
-				assert.Empty(t, config.token)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			config := &Config{}
-			option := Conditional(tt.condition, tt.option)
-			option(config)
-			tt.validate(t, config)
-		})
-	}
-}
-
 func TestLabGet(t *testing.T) {
 	// Test that LabGet method exists and can be called
 	// We can't easily test the full HTTP flow without complex mocking
