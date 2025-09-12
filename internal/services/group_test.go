@@ -59,7 +59,7 @@ func TestGroupCRUD(t *testing.T) {
 	ctx := context.Background()
 
 	// create new group
-	group := &models.Group{
+	group := models.Group{
 		Name:        "user-group",
 		Description: "Regular users group",
 	}
@@ -87,7 +87,7 @@ func TestGroupCRUD(t *testing.T) {
 	assert.Greater(t, groupCount, 1)
 
 	// update the group - for live tests, just change the description
-	updateGroup := &models.Group{
+	updateGroup := models.Group{
 		ID:          createdGroup.ID,
 		Name:        "user-group",
 		Description: "Updated regular users group",
@@ -158,7 +158,7 @@ func TestGroupCreate_ValidationError(t *testing.T) {
 	ctx := context.Background()
 
 	// Create group with missing required fields
-	invalidGroup := &models.Group{}
+	invalidGroup := models.Group{}
 	_, err := service.Create(ctx, invalidGroup)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "400")
@@ -180,7 +180,7 @@ func TestGroupUpdate_NotFound(t *testing.T) {
 	service := NewGroupService(client)
 	ctx := context.Background()
 
-	updateGroup := &models.Group{
+	updateGroup := models.Group{
 		ID:   "nonexistent",
 		Name: "test-group",
 	}

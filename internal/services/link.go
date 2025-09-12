@@ -20,10 +20,10 @@ var _ LinkServiceInterface = (*LinkService)(nil)
 
 // LinkServiceInterface defines methods needed by other services
 type LinkServiceInterface interface {
-	GetLinksForLab(ctx context.Context, labID models.UUID) ([]*models.Link, error)
+	GetLinksForLab(ctx context.Context, labID models.UUID) ([]models.Link, error)
 	Delete(ctx context.Context, labID, linkID models.UUID) error
-	GetCondition(ctx context.Context, labID, linkID models.UUID) (*models.ConditionResponse, error)
-	SetCondition(ctx context.Context, labID, linkID models.UUID, config *models.LinkConditionConfiguration) (*models.ConditionResponse, error)
+	GetCondition(ctx context.Context, labID, linkID models.UUID) (models.ConditionResponse, error)
+	SetCondition(ctx context.Context, labID, linkID models.UUID, config *models.LinkConditionConfiguration) (models.ConditionResponse, error)
 	DeleteCondition(ctx context.Context, labID, linkID models.UUID) error
 }
 
@@ -68,14 +68,14 @@ func (llist linkList) MarshalJSON() ([]byte, error) {
 	return json.Marshal(newlist)
 }
 
-func (s *LinkService) GetLinksForLab(ctx context.Context, labID models.UUID) ([]*models.Link, error) {
+func (s *LinkService) GetLinksForLab(ctx context.Context, labID models.UUID) ([]models.Link, error) {
 	api := linksURL(labID)
 
 	queryParm := map[string]string{
 		"data": "true",
 	}
 
-	linkList := []*models.Link{}
+	var linkList []models.Link
 	err := s.apiClient.GetJSON(ctx, api, queryParm, &linkList)
 	if err != nil {
 		return nil, err
@@ -84,15 +84,15 @@ func (s *LinkService) GetLinksForLab(ctx context.Context, labID models.UUID) ([]
 }
 
 // GetByID returns the link data for the given `labID` and `linkID`.
-func (s *LinkService) GetByID(ctx context.Context, labID, linkID models.UUID) (*models.Link, error) {
+func (s *LinkService) GetByID(ctx context.Context, labID, linkID models.UUID) (models.Link, error) {
 	api := linkURL(labID, linkID)
-	link := &models.Link{}
-	err := s.apiClient.GetJSON(ctx, api, nil, link)
+	var link models.Link
+	err := s.apiClient.GetJSON(ctx, api, nil, &link)
 	if err != nil {
-		return nil, err
+		return models.Link{}, err
 	}
 	if link.LabID != labID {
-		return nil, fmt.Errorf("link lab ID mismatch: expected %s, got %s", labID, link.LabID)
+		return models.Link{}, fmt.Errorf("link lab ID mismatch: expected %s, got %s", labID, link.LabID)
 	}
 	return link, nil
 }
@@ -108,21 +108,18 @@ func (s *LinkService) GetByID(ctx context.Context, labID, linkID models.UUID) (*
 // variable has the updated link data.
 // Node: -1 for a slot means: use next free slot. Specific slots run from 0 to
 // the maximum slot number -1 per the node definition of the node type.
-func (s *LinkService) Create(ctx context.Context, link *models.Link) (*models.Link, error) {
+func (s *LinkService) Create(ctx context.Context, link models.Link) (models.Link, error) {
 	api := linksURL(link.LabID)
 
-	var err error
-
 	if len(link.SrcNode) > 0 && len(link.DstNode) > 0 {
-
 		ifaceListA, err := s.Interface.GetInterfacesForNode(ctx, link.LabID, link.SrcNode)
 		if err != nil {
-			return nil, err
+			return models.Link{}, err
 		}
 
 		ifaceListB, err := s.Interface.GetInterfacesForNode(ctx, link.LabID, link.DstNode)
 		if err != nil {
-			return nil, err
+			return models.Link{}, err
 		}
 
 		matches := func(slot int, iface *models.Interface) bool {
@@ -148,7 +145,7 @@ func (s *LinkService) Create(ctx context.Context, link *models.Link) (*models.Li
 		if len(link.SrcID) == 0 {
 			iface, err := s.Interface.Create(ctx, link.LabID, link.SrcNode, link.SrcSlot)
 			if err != nil {
-				return nil, err
+				return models.Link{}, err
 			}
 			link.SrcID = iface.ID
 		}
@@ -156,9 +153,8 @@ func (s *LinkService) Create(ctx context.Context, link *models.Link) (*models.Li
 		if len(link.DstID) == 0 {
 			iface, err := s.Interface.Create(ctx, link.LabID, link.DstNode, link.DstSlot)
 			if err != nil {
-				return nil, err
+				return models.Link{}, err
 			}
-			iface.IsConnected = true
 			link.DstID = iface.ID
 		}
 	}
@@ -174,16 +170,16 @@ func (s *LinkService) Create(ctx context.Context, link *models.Link) (*models.Li
 	newLinkResult := struct {
 		ID models.UUID `json:"id"`
 	}{}
-	err = s.apiClient.PostJSON(ctx, api, nil, newLink, &newLinkResult)
+	err := s.apiClient.PostJSON(ctx, api, nil, newLink, &newLinkResult)
 	if err != nil {
-		return nil, err
+		return models.Link{}, err
 	}
 
-	link, err = s.GetByID(ctx, link.LabID, newLinkResult.ID)
+	resultLink, err := s.GetByID(ctx, link.LabID, newLinkResult.ID)
 	if err != nil {
-		return nil, err
+		return models.Link{}, err
 	}
-	return link, nil
+	return resultLink, nil
 }
 
 // Delete removes a link from a lab identified by the Lab ID and Link ID.
@@ -193,34 +189,34 @@ func (s *LinkService) Delete(ctx context.Context, labID, linkID models.UUID) err
 }
 
 // GetCondition retrieves the current link conditioning configuration
-func (s *LinkService) GetCondition(ctx context.Context, labID, linkID models.UUID) (*models.ConditionResponse, error) {
+func (s *LinkService) GetCondition(ctx context.Context, labID, linkID models.UUID) (models.ConditionResponse, error) {
 	api := linkConditionURL(labID, linkID)
 
 	queryParams := map[string]string{
 		"operational": "true",
 	}
 
-	condition := &models.ConditionResponse{}
-	err := s.apiClient.GetJSON(ctx, api, queryParams, condition)
+	var condition models.ConditionResponse
+	err := s.apiClient.GetJSON(ctx, api, queryParams, &condition)
 	if err != nil {
-		return nil, err
+		return models.ConditionResponse{}, err
 	}
 
 	return condition, nil
 }
 
 // SetCondition applies link conditioning configuration
-func (s *LinkService) SetCondition(ctx context.Context, labID, linkID models.UUID, config *models.LinkConditionConfiguration) (*models.ConditionResponse, error) {
+func (s *LinkService) SetCondition(ctx context.Context, labID, linkID models.UUID, config *models.LinkConditionConfiguration) (models.ConditionResponse, error) {
 	api := linkConditionURL(labID, linkID)
 
 	queryParams := map[string]string{
 		"operational": "true",
 	}
 
-	condition := &models.ConditionResponse{}
-	err := s.apiClient.PatchJSON(ctx, api, queryParams, config, condition)
+	var condition models.ConditionResponse
+	err := s.apiClient.PatchJSON(ctx, api, queryParams, config, &condition)
 	if err != nil {
-		return nil, err
+		return models.ConditionResponse{}, err
 	}
 
 	return condition, nil

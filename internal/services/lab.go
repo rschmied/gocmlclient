@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/rschmied/gocmlclient/internal/api"
-	"github.com/rschmied/gocmlclient/pkg/errors"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
@@ -66,22 +65,22 @@ func (s *LabService) Labs(ctx context.Context, showAll bool) (labs models.LabLis
 // Create creates a new lab on the controller. Only certain fields from the
 // full Lab model are accepted during creation. Use GetByID() to retrieve the
 // complete lab object after successful creation.
-func (s *LabService) Create(ctx context.Context, lab models.LabCreateRequest) (*models.Lab, error) {
-	result := &models.Lab{}
-	err := s.apiClient.PostJSON(ctx, labsAPI, nil, lab, result)
+func (s *LabService) Create(ctx context.Context, lab models.LabCreateRequest) (models.Lab, error) {
+	var result models.Lab
+	err := s.apiClient.PostJSON(ctx, labsAPI, nil, lab, &result)
 	if err != nil {
-		return nil, fmt.Errorf("create lab: %w", err)
+		return models.Lab{}, fmt.Errorf("create lab: %w", err)
 	}
 	// Update with full data (handles groups, owner, etc.)
 	return s.Update(ctx, result.ID, models.LabUpdateRequest{})
 }
 
 // GetByID retrieves a lab by ID
-func (s *LabService) GetByID(ctx context.Context, id models.UUID, deep bool) (*models.Lab, error) {
-	result := &models.Lab{}
-	err := s.apiClient.GetJSON(ctx, labURL(id), nil, result)
+func (s *LabService) GetByID(ctx context.Context, id models.UUID, deep bool) (models.Lab, error) {
+	var result models.Lab
+	err := s.apiClient.GetJSON(ctx, labURL(id), nil, &result)
 	if err != nil {
-		return nil, err
+		return models.Lab{}, err
 	}
 	_ = deep
 	// if !deep {
@@ -93,9 +92,8 @@ func (s *LabService) GetByID(ctx context.Context, id models.UUID, deep bool) (*m
 }
 
 // Update updates a lab's metadata
-func (s *LabService) Update(ctx context.Context, id models.UUID, data models.LabUpdateRequest) (lab *models.Lab, err error) {
-	lab = &models.Lab{}
-	err = s.apiClient.PatchJSON(ctx, labURL(id), nil, data, lab)
+func (s *LabService) Update(ctx context.Context, id models.UUID, data models.LabUpdateRequest) (lab models.Lab, err error) {
+	err = s.apiClient.PatchJSON(ctx, labURL(id), nil, data, &lab)
 	return lab, err
 }
 
@@ -128,7 +126,7 @@ func (s *LabService) Wipe(ctx context.Context, id models.UUID) error {
 }
 
 // Import imports a lab from YAML topology
-func (s *LabService) Import(ctx context.Context, topology string) (*models.Lab, error) {
+func (s *LabService) Import(ctx context.Context, topology string) (models.Lab, error) {
 	topoReader := strings.NewReader(topology)
 
 	var importResponse struct {
@@ -138,7 +136,7 @@ func (s *LabService) Import(ctx context.Context, topology string) (*models.Lab, 
 
 	err := s.apiClient.PostJSON(ctx, importAPI, nil, topoReader, &importResponse)
 	if err != nil {
-		return nil, fmt.Errorf("import lab: %w", err)
+		return models.Lab{}, fmt.Errorf("import lab: %w", err)
 	}
 
 	if len(importResponse.Warnings) > 0 {
@@ -278,21 +276,21 @@ func (s *LabService) getL3Info(ctx context.Context, id models.UUID) (nodes *l3no
 }
 
 // GetByTitle returns the lab identified by its `title`.
-func (s *LabService) GetByTitle(ctx context.Context, title string) (*models.Lab, error) {
+func (s *LabService) GetByTitle(ctx context.Context, title string) (models.Lab, error) {
 	var data map[string]map[string]*labAlias
 
 	err := s.apiClient.GetJSON(ctx, "populate_lab_tiles", nil, &data)
 	if err != nil {
-		return nil, err
+		return models.Lab{}, err
 	}
 
 	labs := data["lab_tiles"]
 	for _, lab := range labs {
 		if lab.Lab.Title == title {
 			lab.Lab.Owner = lab.OwnerID
-			return &lab.Lab, nil
+			return lab.Lab, nil
 		}
 	}
 
-	return nil, errors.ErrElementNotFound
+	return models.Lab{}, fmt.Errorf("lab with title %q not found", title)
 }

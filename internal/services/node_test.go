@@ -120,7 +120,7 @@ func TestNodeCRUD(t *testing.T) {
 
 	assert.NoError(t, err)
 	// Create test
-	node := &models.Node{
+	node := models.Node{
 		LabID:          labID,
 		Label:          "ubuntu-0",
 		NodeDefinition: "ubuntu",
@@ -141,7 +141,7 @@ func TestNodeCRUD(t *testing.T) {
 	fetched.Label = "updated-node"
 	updated, err := nodeService.Update(ctx, fetched)
 	assert.NoError(t, err)
-	assert.Equal(t, "updated-node", fetched.Label)
+	assert.Equal(t, "updated-node", updated.Label)
 
 	// Delete test
 	err = nodeService.Delete(ctx, labID, updated.ID)
@@ -209,7 +209,7 @@ func TestNodeCreate_ValidationError(t *testing.T) {
 	service := NewNodeService(client, false)
 	ctx := context.Background()
 
-	invalidNode := &models.Node{
+	invalidNode := models.Node{
 		LabID: "lab-123",
 		// Missing required fields: Label, NodeDefinition
 	}
@@ -233,7 +233,7 @@ func TestNodeUpdate_NotFound(t *testing.T) {
 	service := NewNodeService(client, false)
 	ctx := context.Background()
 
-	node := &models.Node{
+	node := models.Node{
 		ID:    "nonexistent",
 		LabID: "lab-123",
 		Label: "test",

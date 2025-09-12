@@ -22,12 +22,12 @@ func NewExtConnService(apiClient *api.Client) *ExtConnService {
 }
 
 // Get returns the external connector specified by the ID given
-func (s *ExtConnService) Get(ctx context.Context, extConnID models.UUID) (*models.ExtConn, error) {
+func (s *ExtConnService) Get(ctx context.Context, extConnID models.UUID) (models.ExtConn, error) {
 	api := fmt.Sprintf("system/external_connectors/%s", extConnID)
-	extconn := &models.ExtConn{}
-	err := s.apiClient.GetJSON(ctx, api, nil, extconn)
+	var extconn models.ExtConn
+	err := s.apiClient.GetJSON(ctx, api, nil, &extconn)
 	if err != nil {
-		return nil, err
+		return models.ExtConn{}, err
 	}
 	return extconn, err
 }

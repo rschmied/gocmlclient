@@ -19,7 +19,7 @@ var _ NodeServiceInterface = (*NodeService)(nil)
 // NodeServiceInterface defines methods needed by other services
 type NodeServiceInterface interface {
 	GetNodesForLab(ctx context.Context, labID models.UUID) error
-	GetByID(ctx context.Context, labID, id models.UUID) (*models.Node, error)
+	GetByID(ctx context.Context, labID, id models.UUID) (models.Node, error)
 }
 
 // NodeService provides node-related operations
@@ -195,16 +195,16 @@ func (s *NodeService) SetNamedConfigs(ctx context.Context, node *models.Node, co
 
 // Update updates the node specified by data in `node` (e.g. ID and LabID)
 // with the other data provided. It returns the updated node.
-func (s *NodeService) Update(ctx context.Context, node *models.Node) (*models.Node, error) {
+func (s *NodeService) Update(ctx context.Context, node models.Node) (models.Node, error) {
 	api := nodeURL(node.LabID, node.ID)
 
-	postAlias := newNodeAlias(node, true)
+	postAlias := newNodeAlias(&node, true)
 
 	// API returns "just" the node ID of the updated node
 	var nodeID models.UUID = ""
 	err := s.apiClient.PatchJSON(ctx, api, nil, postAlias, &nodeID)
 	if err != nil {
-		return nil, err
+		return models.Node{}, err
 	}
 	return s.GetByID(ctx, node.LabID, nodeID)
 }
@@ -231,12 +231,12 @@ func (s *NodeService) Stop(ctx context.Context, labID, nodeID models.UUID) error
 
 // Create creates a new node on the controller based on the data provided
 // in `node`. Label, node definition and image definition must be provided.
-func (s *NodeService) Create(ctx context.Context, node *models.Node) (*models.Node, error) {
+func (s *NodeService) Create(ctx context.Context, node models.Node) (models.Node, error) {
 	// TODO: inconsistent attributes lab_title vs title, ..
 	node.State = models.NodeStateDefined
-	postAlias := newNodeAlias(node, false)
+	postAlias := newNodeAlias(&node, false)
 
-	newNode := models.Node{}
+	var newNode models.Node
 
 	// we want those "default" interfaces in the node
 	queryParms := map[string]string{
@@ -245,7 +245,7 @@ func (s *NodeService) Create(ctx context.Context, node *models.Node) (*models.No
 	api := nodesURL(node.LabID)
 	err := s.apiClient.PostJSON(ctx, api, queryParms, postAlias, &newNode)
 	if err != nil {
-		return nil, err
+		return models.Node{}, err
 	}
 
 	// FIX: Since the create does not use all possible values, we need to follow
@@ -258,6 +258,7 @@ func (s *NodeService) Create(ctx context.Context, node *models.Node) (*models.No
 	postAlias.NodeDefinition = ""
 
 	api = nodeURL(node.LabID, newNode.ID)
+
 	// the return of the patch API is simply the node ID as a string!
 	// FIX: inconsistency of patch API
 	err = s.apiClient.PatchJSON(ctx, api, nil, postAlias, nil)
@@ -268,7 +269,7 @@ func (s *NodeService) Create(ctx context.Context, node *models.Node) (*models.No
 		// attempted removal.
 		node.ID = newNode.ID
 		s.Delete(ctx, node.LabID, node.ID)
-		return nil, err
+		return models.Node{}, err
 	}
 
 	node.ID = newNode.ID
@@ -279,13 +280,13 @@ func (s *NodeService) Create(ctx context.Context, node *models.Node) (*models.No
 }
 
 // GetByID returns the node identified by its `ID` and `LabID` in the provided node.
-func (s *NodeService) GetByID(ctx context.Context, labID, id models.UUID) (*models.Node, error) {
+func (s *NodeService) GetByID(ctx context.Context, labID, id models.UUID) (models.Node, error) {
 	// SIMPLE-5052 -- results are different for simplified=true vs false for
 	// the inherited values. In the simplified case, all values are always
 	// null.
 
 	var err error
-	newNode := models.Node{}
+	var newNode models.Node
 	api := nodeURL(labID, id)
 	queryParms := map[string]string{}
 	if s.useNamedConfigs {
@@ -293,7 +294,7 @@ func (s *NodeService) GetByID(ctx context.Context, labID, id models.UUID) (*mode
 		queryParms["exclude_configurations"] = "false"
 	}
 	err = s.apiClient.GetJSON(ctx, api, queryParms, &newNode)
-	return &newNode, err
+	return newNode, err
 }
 
 // Delete deletes the node from the controller.

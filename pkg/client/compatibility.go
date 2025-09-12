@@ -9,7 +9,11 @@ import (
 
 // LabGet retrieves a lab by ID with optional deep loading.
 func (c *Client) LabGet(ctx context.Context, id string, deep bool) (*models.Lab, error) {
-	return c.Lab.GetByID(ctx, models.UUID(id), deep)
+	lab, err := c.Lab.GetByID(ctx, models.UUID(id), deep)
+	if err != nil {
+		return nil, err
+	}
+	return &lab, nil
 }
 
 // LabStart starts a lab (exists in GitHub version)
@@ -34,7 +38,11 @@ func (c *Client) LabDestroy(ctx context.Context, id string) error {
 
 // LabImport imports a lab from YAML (exists in GitHub version)
 func (c *Client) LabImport(ctx context.Context, topology string) (*models.Lab, error) {
-	return c.Lab.Import(ctx, topology)
+	lab, err := c.Lab.Import(ctx, topology)
+	if err != nil {
+		return nil, err
+	}
+	return &lab, nil
 }
 
 // LabHasConverged checks if lab has converged (exists in GitHub version)
@@ -44,7 +52,11 @@ func (c *Client) LabHasConverged(ctx context.Context, id string) (bool, error) {
 
 // NodeGet retrieves a node (exists in GitHub version)
 func (c *Client) NodeGet(ctx context.Context, labID, nodeID string) (*models.Node, error) {
-	return c.Node.GetByID(ctx, models.UUID(labID), models.UUID(nodeID))
+	node, err := c.Node.GetByID(ctx, models.UUID(labID), models.UUID(nodeID))
+	if err != nil {
+		return nil, err
+	}
+	return &node, nil
 }
 
 // NodeStart starts a node (exists in GitHub version)
@@ -84,12 +96,20 @@ func (c *Client) Ready(ctx context.Context) error {
 
 // UserGet retrieves a user by ID (exists in GitHub version)
 func (c *Client) UserGet(ctx context.Context, id string) (*models.User, error) {
-	return c.User.GetByID(ctx, models.UUID(id))
+	user, err := c.User.GetByID(ctx, models.UUID(id))
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 // UserByName retrieves a user by username (exists in GitHub version)
 func (c *Client) UserByName(ctx context.Context, username string) (*models.User, error) {
-	return c.User.GetByName(ctx, username)
+	user, err := c.User.GetByName(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 // Users retrieves all users (exists in GitHub version)
@@ -113,17 +133,33 @@ func (c *Client) UserDestroy(ctx context.Context, id string) error {
 
 // GroupGet retrieves a group by ID (exists in GitHub version)
 func (c *Client) GroupGet(ctx context.Context, id string) (*models.Group, error) {
-	return c.Group.GetByID(ctx, models.UUID(id))
+	group, err := c.Group.GetByID(ctx, models.UUID(id))
+	if err != nil {
+		return nil, err
+	}
+	return &group, nil
 }
 
 // Groups retrieves all groups (exists in GitHub version)
 func (c *Client) Groups(ctx context.Context) ([]*models.Group, error) {
-	return c.Group.Groups(ctx)
+	groups, err := c.Group.Groups(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*models.Group, len(groups))
+	for i := range groups {
+		result[i] = &groups[i]
+	}
+	return result, nil
 }
 
 // GroupByName retrieves a group by name (exists in GitHub version)
 func (c *Client) GroupByName(ctx context.Context, name string) (*models.Group, error) {
-	return c.Group.ByName(ctx, name)
+	group, err := c.Group.ByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return &group, nil
 }
 
 // GroupDestroy deletes a group (exists in GitHub version)
@@ -133,7 +169,11 @@ func (c *Client) GroupDestroy(ctx context.Context, id string) error {
 
 // LinkGet retrieves a link (exists in GitHub version)
 func (c *Client) LinkGet(ctx context.Context, labID, linkID string) (*models.Link, error) {
-	return c.Link.GetByID(ctx, models.UUID(labID), models.UUID(linkID))
+	link, err := c.Link.GetByID(ctx, models.UUID(labID), models.UUID(linkID))
+	if err != nil {
+		return nil, err
+	}
+	return &link, nil
 }
 
 // LinkDestroy deletes a link (exists in GitHub version)
@@ -143,5 +183,9 @@ func (c *Client) LinkDestroy(ctx context.Context, labID, linkID string) error {
 
 // InterfaceGet retrieves an interface (exists in GitHub version)
 func (c *Client) InterfaceGet(ctx context.Context, labID, interfaceID string) (*models.Interface, error) {
-	return c.Interface.GetByID(ctx, models.UUID(labID), models.UUID(interfaceID))
+	iface, err := c.Interface.GetByID(ctx, models.UUID(labID), models.UUID(interfaceID))
+	if err != nil {
+		return nil, err
+	}
+	return &iface, nil
 }

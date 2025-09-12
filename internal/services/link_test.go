@@ -131,7 +131,7 @@ func TestLinkCRUD(t *testing.T) {
 	labID := newLab.ID
 
 	// Create nodes
-	nodeA := &models.Node{
+	nodeA := models.Node{
 		LabID:          labID,
 		Label:          "node-a",
 		NodeDefinition: "ubuntu",
@@ -141,7 +141,7 @@ func TestLinkCRUD(t *testing.T) {
 	createdNodeA, err := nodeService.Create(ctx, nodeA)
 	assert.NoError(t, err)
 
-	nodeB := &models.Node{
+	nodeB := models.Node{
 		LabID:          labID,
 		Label:          "node-b",
 		NodeDefinition: "ubuntu",
@@ -152,7 +152,7 @@ func TestLinkCRUD(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Create link using node names and slots
-	link := &models.Link{
+	link := models.Link{
 		LabID:   labID,
 		SrcNode: "node-a",
 		DstNode: "node-b",
@@ -268,7 +268,7 @@ func TestLinkCreate_ValidationError(t *testing.T) {
 	service := NewLinkService(client)
 	ctx := context.Background()
 
-	invalidLink := &models.Link{
+	invalidLink := models.Link{
 		LabID: "lab-123",
 		// Missing required fields
 	}

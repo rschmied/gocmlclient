@@ -16,7 +16,7 @@ var _ GroupServiceInterface = (*GroupService)(nil)
 
 // GroupServiceInterface defines methods needed by other services.
 type GroupServiceInterface interface {
-	GetByID(ctx context.Context, id models.UUID) (*models.Group, error)
+	GetByID(ctx context.Context, id models.UUID) (models.Group, error)
 }
 
 // GroupService provides group-related operations.
@@ -46,20 +46,19 @@ func (s *GroupService) Groups(ctx context.Context) (models.GroupList, error) {
 }
 
 // ByName tries to get the group with the provided `name`.
-func (s *GroupService) ByName(ctx context.Context, name string) (group *models.Group, err error) {
+func (s *GroupService) ByName(ctx context.Context, name string) (models.Group, error) {
 	api := fmt.Sprintf("%s/%s/id", groupAPI, name)
 	var groupID models.UUID
-	err = s.apiClient.GetJSON(ctx, api, nil, &groupID)
+	err := s.apiClient.GetJSON(ctx, api, nil, &groupID)
 	if err != nil {
-		return nil, err
+		return models.Group{}, err
 	}
 	return s.GetByID(ctx, groupID)
 }
 
 // GetByID retrieves the group with the provided `id` (a UUIDv4).
-func (s *GroupService) GetByID(ctx context.Context, id models.UUID) (group *models.Group, err error) {
-	group = &models.Group{}
-	err = s.apiClient.GetJSON(ctx, fmt.Sprintf("%s/%s", groupAPI, id), nil, group)
+func (s *GroupService) GetByID(ctx context.Context, id models.UUID) (group models.Group, err error) {
+	err = s.apiClient.GetJSON(ctx, fmt.Sprintf("%s/%s", groupAPI, id), nil, &group)
 	return group, err
 }
 
@@ -70,18 +69,16 @@ func (s *GroupService) Delete(ctx context.Context, id string) error {
 
 // Create creates a new group on the controller based on the data provided
 // in the passed group parameter.
-func (s *GroupService) Create(ctx context.Context, group *models.Group) (result *models.Group, err error) {
+func (s *GroupService) Create(ctx context.Context, group models.Group) (result models.Group, err error) {
 	group.ID = "" // ensure no ID
-	result = &models.Group{}
-	err = s.apiClient.PostJSON(ctx, groupAPI, nil, group, result)
+	err = s.apiClient.PostJSON(ctx, groupAPI, nil, &group, &result)
 	return result, err
 }
 
 // Update updates the given group which must exist.
-func (s *GroupService) Update(ctx context.Context, group *models.Group) (result *models.Group, err error) {
+func (s *GroupService) Update(ctx context.Context, group models.Group) (result models.Group, err error) {
 	groupID := group.ID
 	group.ID = "" // ensure no ID
-	result = &models.Group{}
-	err = s.apiClient.PatchJSON(ctx, fmt.Sprintf("%s/%s", groupAPI, groupID), nil, group, result)
+	err = s.apiClient.PatchJSON(ctx, fmt.Sprintf("%s/%s", groupAPI, groupID), nil, &group, &result)
 	return result, err
 }

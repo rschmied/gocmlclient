@@ -14,8 +14,8 @@ var _ InterfaceServiceInterface = (*InterfaceService)(nil)
 
 // InterfaceServiceInterface defines methods needed by other services
 type InterfaceServiceInterface interface {
-	Create(ctx context.Context, labID, nodeID models.UUID, slot int) (*models.Interface, error)
-	GetByID(ctx context.Context, labID, id models.UUID) (*models.Interface, error)
+	Create(ctx context.Context, labID, nodeID models.UUID, slot int) (models.Interface, error)
+	GetByID(ctx context.Context, labID, id models.UUID) (models.Interface, error)
 	GetInterfacesForNode(ctx context.Context, labID, id models.UUID) (models.InterfaceList, error)
 }
 
@@ -67,20 +67,20 @@ func sortInterfacesBySlot(i, j int, interfaceList models.InterfaceList) bool {
 }
 
 // GetByID returns the interface identified by its `ID` (iface.ID).
-func (s *InterfaceService) GetByID(ctx context.Context, labID, id models.UUID) (*models.Interface, error) {
+func (s *InterfaceService) GetByID(ctx context.Context, labID, id models.UUID) (models.Interface, error) {
 	api := fmt.Sprintf("labs/%s/interfaces/%s", labID, id)
-	iface := &models.Interface{}
+	var iface models.Interface
 	queryParms := map[string]string{
 		"operational": "true",
 	}
-	err := s.apiClient.GetJSON(ctx, api, queryParms, iface)
+	err := s.apiClient.GetJSON(ctx, api, queryParms, &iface)
 	return iface, err
 }
 
 // Create creates an interface in the given lab and node.  If the slot is >= 0,
 // the request creates all unallocated slots up to and including that slot.
 // Conversely, if the slot is < 0 (e.g. -1), the next free slot is used.
-func (s *InterfaceService) Create(ctx context.Context, labID, nodeID models.UUID, slot int) (*models.Interface, error) {
+func (s *InterfaceService) Create(ctx context.Context, labID, nodeID models.UUID, slot int) (models.Interface, error) {
 	var slotPtr *int
 
 	if slot >= 0 {
@@ -105,12 +105,12 @@ func (s *InterfaceService) Create(ctx context.Context, labID, nodeID models.UUID
 
 	api := fmt.Sprintf("labs/%s/interfaces", labID)
 	if slotPtr == nil {
-		result := models.Interface{}
+		var result models.Interface
 		err := s.apiClient.PostJSON(ctx, api, nil, newIface, &result)
 		if err != nil {
-			return nil, err
+			return models.Interface{}, err
 		}
-		return &result, err
+		return result, err
 	}
 
 	// this is when a slot has been provided; the API provides now a list of
@@ -118,9 +118,9 @@ func (s *InterfaceService) Create(ctx context.Context, labID, nodeID models.UUID
 	result := []models.Interface{}
 	err := s.apiClient.PostJSON(ctx, api, nil, newIface, &result)
 	if err != nil {
-		return nil, err
+		return models.Interface{}, err
 	}
 
-	lastIface := &result[len(result)-1]
+	lastIface := result[len(result)-1]
 	return lastIface, nil
 }

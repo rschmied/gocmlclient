@@ -17,7 +17,7 @@ var _ UserServiceInterface = (*UserService)(nil)
 
 // UserServiceInterface defines methods needed by other services
 type UserServiceInterface interface {
-	GetByID(ctx context.Context, id models.UUID) (*models.User, error)
+	GetByID(ctx context.Context, id models.UUID) (models.User, error)
 }
 
 // UserService provides user-related operations
@@ -35,20 +35,19 @@ func NewUserService(apiClient *api.Client, group GroupServiceInterface) *UserSer
 }
 
 // GetByID returns the user with the given `id`.
-func (s *UserService) GetByID(ctx context.Context, id models.UUID) (user *models.User, err error) {
+func (s *UserService) GetByID(ctx context.Context, id models.UUID) (user models.User, err error) {
 	api := fmt.Sprintf("%s/%s", userAPI, id)
-	user = &models.User{}
-	err = s.apiClient.GetJSON(ctx, api, nil, user)
+	err = s.apiClient.GetJSON(ctx, api, nil, &user)
 	return user, err
 }
 
 // GetByName returns the user with the given username `name`.
-func (s *UserService) GetByName(ctx context.Context, name string) (*models.User, error) {
+func (s *UserService) GetByName(ctx context.Context, name string) (models.User, error) {
 	api := fmt.Sprintf("%s/%s/id", userAPI, name)
 	var userID models.UUID
 	err := s.apiClient.GetJSON(ctx, api, nil, &userID)
 	if err != nil {
-		return nil, err
+		return models.User{}, err
 	}
 	return s.GetByID(ctx, userID)
 }
@@ -74,21 +73,21 @@ func (s *UserService) Delete(ctx context.Context, id models.UUID) error {
 
 // Create creates a new user on the controller based on the data provided in
 // the passed user parameter.
-func (s *UserService) Create(ctx context.Context, user models.UserCreateRequest) (*models.User, error) {
+func (s *UserService) Create(ctx context.Context, user models.UserCreateRequest) (models.User, error) {
 	result := models.User{}
 	err := s.apiClient.PostJSON(ctx, userAPI, nil, user, &result)
 	if err != nil {
-		return nil, err
+		return models.User{}, err
 	}
 	return s.GetByID(ctx, result.ID)
 }
 
 // Update updates the given user which must exist.
-func (s *UserService) Update(ctx context.Context, id models.UUID, user models.UserUpdateRequest) (*models.User, error) {
+func (s *UserService) Update(ctx context.Context, id models.UUID, user models.UserUpdateRequest) (models.User, error) {
 	result := models.User{}
 	err := s.apiClient.PatchJSON(ctx, fmt.Sprintf("%s/%s", userAPI, id), nil, user, &result)
 	if err != nil {
-		return nil, err
+		return models.User{}, err
 	}
 	return s.GetByID(ctx, result.ID)
 }

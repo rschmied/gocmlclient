@@ -15,5 +15,5 @@ type Group struct {
 	DirectoryExists *bool         `json:"directory_exists,omitempty"`
 }
 
-// GroupList is a slice of Group pointers.
-type GroupList []*Group
+// GroupList is a slice of Group values.
+type GroupList []Group
