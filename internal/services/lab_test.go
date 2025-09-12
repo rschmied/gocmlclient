@@ -342,3 +342,224 @@ func TestGetByIDDeepErrorHandling(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "failed to get nodes") ||
 		strings.Contains(err.Error(), "failed to get links"))
 }
+
+func TestLabUpdate(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Register mock responder for lab update
+	httpmock.RegisterResponder("PATCH", "https://mock/api/v0/labs/lab-123",
+		httpmock.NewStringResponder(200, `{
+			"id": "lab-123",
+			"lab_title": "Updated Lab Title",
+			"lab_description": "Updated description",
+			"lab_notes": "Updated notes",
+			"state": "DEFINED_ON_CORE",
+			"owner": "owner-uuid",
+			"owner_username": "admin",
+			"effective_permissions": ["lab_admin"],
+			"nodes": {},
+			"links": []
+		}`))
+
+	service := NewLabService(client, nil, nil, nil, nil)
+	ctx := context.Background()
+
+	updateData := models.LabUpdateRequest{
+		Title:       "Updated Lab Title",
+		Description: "Updated description",
+		Notes:       "Updated notes",
+	}
+
+	updatedLab, err := service.Update(ctx, "lab-123", updateData)
+
+	assert.NoError(t, err)
+	assert.Equal(t, models.UUID("lab-123"), updatedLab.ID)
+	assert.Equal(t, "Updated Lab Title", updatedLab.Title)
+	assert.Equal(t, "Updated description", updatedLab.Description)
+	assert.Equal(t, "Updated notes", updatedLab.Notes)
+}
+
+func TestLabUpdate_Error(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Register mock responder for error
+	httpmock.RegisterResponder("PATCH", "https://mock/api/v0/labs/nonexistent",
+		httpmock.NewStringResponder(404, `{"error": "Lab not found"}`))
+
+	service := NewLabService(client, nil, nil, nil, nil)
+	ctx := context.Background()
+
+	updateData := models.LabUpdateRequest{
+		Title: "Updated Title",
+	}
+
+	_, err := service.Update(ctx, "nonexistent", updateData)
+	assert.Error(t, err)
+}
+
+func TestLabImport(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Mock the import response
+	httpmock.RegisterResponder("POST", "https://mock/api/v0/import",
+		httpmock.NewStringResponder(200, `{
+			"id": "imported-lab-123",
+			"warnings": ["Warning: interface eth0 not found"]
+		}`))
+
+	// Mock the user endpoint for fillLabData
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/users/owner-uuid",
+		httpmock.NewStringResponder(200, `{
+			"id": "owner-uuid",
+			"username": "admin",
+			"fullname": "Administrator",
+			"admin": true
+		}`))
+
+	// Mock nodes endpoint for fillLabData
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/imported-lab-123/nodes?data=true",
+		httpmock.NewStringResponder(200, `[]`))
+
+	// Mock links endpoint for fillLabData
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/imported-lab-123/links?data=true",
+		httpmock.NewStringResponder(200, `[]`))
+
+	// Mock L3 info endpoint for fillLabData
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/imported-lab-123/layer3_addresses",
+		httpmock.NewStringResponder(200, `{}`))
+
+	// Mock the GetByID response for the imported lab
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/imported-lab-123",
+		httpmock.NewStringResponder(200, `{
+			"id": "imported-lab-123",
+			"lab_title": "Imported Lab",
+			"state": "DEFINED_ON_CORE",
+			"owner": "owner-uuid",
+			"owner_username": "admin",
+			"effective_permissions": ["lab_admin"],
+			"nodes": {},
+			"links": []
+		}`))
+
+	// Create service dependencies to avoid nil pointer dereference
+	groupService := NewGroupService(client)
+	userService := NewUserService(client, groupService)
+	nodeService := NewNodeService(client, false)
+	interfaceService := NewInterfaceService(client)
+	linkService := NewLinkService(client)
+
+	service := NewLabService(client, interfaceService, linkService, userService, nodeService)
+	ctx := context.Background()
+
+	yamlTopology := `
+lab:
+  title: Imported Lab
+  description: A test lab
+nodes:
+  - id: n0
+    node_definition: iosv
+    image_definition: iosv-159
+`
+
+	importedLab, err := service.Import(ctx, yamlTopology)
+
+	assert.NoError(t, err)
+	assert.Equal(t, models.UUID("imported-lab-123"), importedLab.ID)
+	assert.Equal(t, "Imported Lab", importedLab.Title)
+}
+
+func TestLabImport_Error(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Register mock responder for import error
+	httpmock.RegisterResponder("POST", "https://mock/api/v0/import",
+		httpmock.NewStringResponder(400, `{"error": "Invalid YAML format"}`))
+
+	service := NewLabService(client, nil, nil, nil, nil)
+	ctx := context.Background()
+
+	_, err := service.Import(ctx, "invalid yaml content")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "import lab")
+}
+
+func TestLabHasConverged(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Register mock responder for converged state
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/state/check_if_converged",
+		httpmock.NewStringResponder(200, `true`))
+
+	service := NewLabService(client, nil, nil, nil, nil)
+	ctx := context.Background()
+
+	converged, err := service.HasConverged(ctx, "lab-123")
+
+	assert.NoError(t, err)
+	assert.True(t, converged)
+}
+
+func TestLabHasConverged_False(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Register mock responder for not converged state
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-456/state/check_if_converged",
+		httpmock.NewStringResponder(200, `false`))
+
+	service := NewLabService(client, nil, nil, nil, nil)
+	ctx := context.Background()
+
+	converged, err := service.HasConverged(ctx, "lab-456")
+
+	assert.NoError(t, err)
+	assert.False(t, converged)
+}
+
+func TestLabHasConverged_Error(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Register mock responder for error
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/error-lab/state/check_if_converged",
+		httpmock.NewStringResponder(500, `{"error": "Internal server error"}`))
+
+	service := NewLabService(client, nil, nil, nil, nil)
+	ctx := context.Background()
+
+	_, err := service.HasConverged(ctx, "error-lab")
+	assert.Error(t, err)
+}

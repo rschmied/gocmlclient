@@ -168,8 +168,13 @@ func (s *NodeService) setConfigData(ctx context.Context, node *models.Node, data
 	if err != nil {
 		return err
 	}
-	_, err = s.GetByID(ctx, node.LabID, nodeID)
-	return err
+	updatedNode, err := s.GetByID(ctx, node.LabID, nodeID)
+	if err != nil {
+		return err
+	}
+	// Update the original node with the new data
+	*node = updatedNode
+	return nil
 }
 
 // SetConfig sets a configuration for the specified node. At least the `ID`

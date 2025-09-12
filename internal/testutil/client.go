@@ -133,6 +133,9 @@ func newMockClient(t *testing.T, config ClientConfig) (*api.Client, func()) {
 
 	apiClient := api.New("https://mock", api.Options{
 		HTTPClient: client,
+		Middlewares: []api.Middleware{
+			api.UserAgentMiddleware("gocmlclient"),
+		},
 	})
 
 	return apiClient, func() {

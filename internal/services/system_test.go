@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/jarcoal/httpmock"
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -252,4 +253,133 @@ func TestSystemServiceIntegration(t *testing.T) {
 	// Test UseNamedConfigs
 	service.UseNamedConfigs()
 	assert.True(t, service.useNamedConfigs)
+}
+
+// Test version constraint logic through public interface
+func TestSystemService_VersionConstraints(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test focuses on version constraint logic")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	service := NewSystemService(client)
+
+	// Set version manually for testing
+	service.version = "2.5.0"
+
+	// Test valid version constraints
+	compatible, err := service.VersionCheck(context.Background(), ">=2.4.0")
+	assert.NoError(t, err)
+	assert.True(t, compatible)
+
+	compatible, err = service.VersionCheck(context.Background(), ">=2.6.0")
+	assert.NoError(t, err)
+	assert.False(t, compatible)
+
+	compatible, err = service.VersionCheck(context.Background(), ">=2.4.0,<3.0.0")
+	assert.NoError(t, err)
+	assert.True(t, compatible)
+
+	// Test invalid constraint
+	_, err = service.VersionCheck(context.Background(), "invalid")
+	assert.Error(t, err)
+
+	// Test empty constraint
+	_, err = service.VersionCheck(context.Background(), "")
+	assert.Error(t, err)
+}
+
+func TestSystemService_Ready_Success(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Mock successful system info response
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/system_information",
+		httpmock.NewStringResponder(200, `{
+			"version": "2.5.0",
+			"ready": true
+		}`))
+
+	service := NewSystemService(client)
+	ctx := context.Background()
+
+	err := service.Ready(ctx)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "2.5.0", service.Version())
+}
+
+func TestSystemService_Ready_SystemNotReady(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Mock system not ready response
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/system_information",
+		httpmock.NewStringResponder(200, `{
+			"version": "2.5.0",
+			"ready": false
+		}`))
+
+	service := NewSystemService(client)
+	ctx := context.Background()
+
+	err := service.Ready(ctx)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not ready")
+}
+
+func TestSystemService_Ready_IncompatibleVersion(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Mock incompatible version response
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/system_information",
+		httpmock.NewStringResponder(200, `{
+			"version": "1.5.0",
+			"ready": true
+		}`))
+
+	service := NewSystemService(client)
+	ctx := context.Background()
+
+	err := service.Ready(ctx)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not compatible")
+}
+
+func TestSystemService_Ready_APIError(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Mock API error response
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/system_information",
+		httpmock.NewStringResponder(500, `{"error": "Internal server error"}`))
+
+	service := NewSystemService(client)
+	ctx := context.Background()
+
+	err := service.Ready(ctx)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "system info error")
 }
