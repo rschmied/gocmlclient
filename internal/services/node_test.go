@@ -108,7 +108,7 @@ func TestNodeCRUD(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	labService := NewLabService(client, nil, nil, nil, nil)
+	labService := NewLabService(client, nil, nil, nil)
 	nodeService := NewNodeService(client, false)
 
 	lab := models.LabCreateRequest{Title: "this"}
@@ -144,7 +144,7 @@ func TestNodeCRUD(t *testing.T) {
 	assert.Equal(t, "updated-node", fetched.Label)
 
 	// Delete test
-	err = nodeService.Delete(ctx, updated)
+	err = nodeService.Delete(ctx, labID, updated.ID)
 	assert.NoError(t, err)
 
 	// use named configs, create one more node
@@ -168,7 +168,7 @@ func TestNodeCRUD(t *testing.T) {
 	assert.Contains(t, node.Configurations[0].Content, "#cloud-config")
 	assert.Contains(t, node.Configurations[1].Content, "#network-config")
 
-	err = nodeService.Delete(ctx, created)
+	err = nodeService.Delete(ctx, labID, created.ID)
 	assert.NoError(t, err)
 
 	err = labService.Delete(ctx, labID)
@@ -258,11 +258,7 @@ func TestNodeDelete_NotFound(t *testing.T) {
 	service := NewNodeService(client, false)
 	ctx := context.Background()
 
-	node := &models.Node{
-		ID:    "nonexistent",
-		LabID: "lab-123",
-	}
-	err := service.Delete(ctx, node)
+	err := service.Delete(ctx, "lab-123", "nonexistent")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "404")
 	assert.Contains(t, err.Error(), "Node not found")
@@ -367,20 +363,15 @@ func TestNodeStateOperations(t *testing.T) {
 	service := NewNodeService(client, false)
 	ctx := context.Background()
 
-	node := &models.Node{
-		ID:    "node-123",
-		LabID: "lab-123",
-	}
-
 	// Start test
-	err := service.Start(ctx, node)
+	err := service.Start(ctx, "lab-123", "node-123")
 	assert.NoError(t, err)
 
 	// Stop test
-	err = service.Stop(ctx, node)
+	err = service.Stop(ctx, "lab-123", "node-123")
 	assert.NoError(t, err)
 
 	// Wipe test
-	err = service.Wipe(ctx, node)
+	err = service.Wipe(ctx, "lab-123", "node-123")
 	assert.NoError(t, err)
 }

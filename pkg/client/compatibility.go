@@ -49,38 +49,22 @@ func (c *Client) NodeGet(ctx context.Context, labID, nodeID string) (*models.Nod
 
 // NodeStart starts a node (exists in GitHub version)
 func (c *Client) NodeStart(ctx context.Context, labID, nodeID string) error {
-	node, err := c.Node.GetByID(ctx, models.UUID(labID), models.UUID(nodeID))
-	if err != nil {
-		return err
-	}
-	return c.Node.Start(ctx, node)
+	return c.Node.Start(ctx, models.UUID(labID), models.UUID(nodeID))
 }
 
 // NodeStop stops a node (exists in GitHub version)
 func (c *Client) NodeStop(ctx context.Context, labID, nodeID string) error {
-	node, err := c.Node.GetByID(ctx, models.UUID(labID), models.UUID(nodeID))
-	if err != nil {
-		return err
-	}
-	return c.Node.Stop(ctx, node)
+	return c.Node.Stop(ctx, models.UUID(labID), models.UUID(nodeID))
 }
 
 // NodeWipe wipes a node (exists in GitHub version)
 func (c *Client) NodeWipe(ctx context.Context, labID, nodeID string) error {
-	node, err := c.Node.GetByID(ctx, models.UUID(labID), models.UUID(nodeID))
-	if err != nil {
-		return err
-	}
-	return c.Node.Wipe(ctx, node)
+	return c.Node.Wipe(ctx, models.UUID(labID), models.UUID(nodeID))
 }
 
 // NodeDestroy deletes a node (exists in GitHub version)
 func (c *Client) NodeDestroy(ctx context.Context, labID, nodeID string) error {
-	node, err := c.Node.GetByID(ctx, models.UUID(labID), models.UUID(nodeID))
-	if err != nil {
-		return err
-	}
-	return c.Node.Delete(ctx, node)
+	return c.Node.Delete(ctx, models.UUID(labID), models.UUID(nodeID))
 }
 
 // Version returns the CML controller version (exists in GitHub version)

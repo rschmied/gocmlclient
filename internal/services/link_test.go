@@ -117,7 +117,7 @@ func TestLinkCRUD(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	labService := NewLabService(client, nil, nil, nil, nil)
+	labService := NewLabService(client, nil, nil, nil)
 	nodeService := NewNodeService(client, false)
 	interfaceService := NewInterfaceService(client)
 	linkService := NewLinkService(client)
@@ -180,9 +180,9 @@ func TestLinkCRUD(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Cleanup
-	err = nodeService.Delete(ctx, createdNodeA)
+	err = nodeService.Delete(ctx, labID, createdNodeA.ID)
 	assert.NoError(t, err)
-	err = nodeService.Delete(ctx, createdNodeB)
+	err = nodeService.Delete(ctx, labID, createdNodeB.ID)
 	assert.NoError(t, err)
 	err = labService.Delete(ctx, labID)
 	assert.NoError(t, err)

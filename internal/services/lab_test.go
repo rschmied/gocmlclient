@@ -45,7 +45,7 @@ func TestLabs(t *testing.T) {
 	client, cleanup := initLabTest(t, addLabsGetResponders)
 	defer cleanup()
 
-	service := NewLabService(client, nil, nil, nil, nil)
+	service := NewLabService(client, nil, nil, nil)
 	ctx := context.Background()
 
 	labs, err := service.Labs(ctx, true)
@@ -60,7 +60,7 @@ func TestLabCreate(t *testing.T) {
 	client, cleanup := initLabTest(t, addLabCreateResponders)
 	defer cleanup()
 
-	service := NewLabService(client, nil, nil, nil, nil)
+	service := NewLabService(client, nil, nil, nil)
 	ctx := context.Background()
 
 	lab := models.LabCreateRequest{Title: "this"}

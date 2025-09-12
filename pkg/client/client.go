@@ -63,7 +63,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	c := &Client{
 		config:          cfg,
 		apiClient:       apiClient,
-		Lab:             services.NewLabService(apiClient, interfaceService, linkService, userService, nodeService),
+		Lab:             services.NewLabService(apiClient, interfaceService, linkService, userService),
 		Interface:       interfaceService,
 		Link:            linkService,
 		Node:            nodeService,

@@ -32,13 +32,12 @@ type labAlias struct {
 type LabService struct {
 	apiClient *api.Client
 	User      UserServiceInterface
-	Node      NodeServiceInterface
 	Link      LinkServiceInterface
 	Interface InterfaceServiceInterface
 }
 
 // NewLabService creates a new lab service
-func NewLabService(apiClient *api.Client, iface InterfaceServiceInterface, link LinkServiceInterface, user UserServiceInterface, node NodeServiceInterface) *LabService {
+func NewLabService(apiClient *api.Client, iface InterfaceServiceInterface, link LinkServiceInterface, user UserServiceInterface) *LabService {
 	return &LabService{
 		apiClient: apiClient,
 	}
@@ -194,7 +193,7 @@ func (s *LabService) HasConverged(ctx context.Context, id models.UUID) (converge
 // 			ch <- struct{}{}
 // 		}()
 // 		slog.Warn("get nodes")
-// 		err := s.Node.GetNodesForLab(ctx, lab)
+// 		err := s.Node.GetNodesForLab(ctx, lab.ID)
 // 		if err != nil {
 // 			slog.Error("get nodes", "err", err)
 // 			return err

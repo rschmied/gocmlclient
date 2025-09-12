@@ -18,7 +18,7 @@ var _ NodeServiceInterface = (*NodeService)(nil)
 
 // NodeServiceInterface defines methods needed by other services
 type NodeServiceInterface interface {
-	GetNodesForLab(ctx context.Context, lab *models.Lab) error
+	GetNodesForLab(ctx context.Context, labID models.UUID) error
 	GetByID(ctx context.Context, labID, id models.UUID) (*models.Node, error)
 }
 
@@ -135,8 +135,8 @@ func (node nodePatchPostAlias) MarshalJSON() ([]byte, error) {
 	return json.Marshal((alias)(node))
 }
 
-func (s *NodeService) GetNodesForLab(ctx context.Context, lab *models.Lab) error {
-	api := nodesURL(lab.ID)
+func (s *NodeService) GetNodesForLab(ctx context.Context, labID models.UUID) error {
+	api := nodesURL(labID)
 
 	queryParms := map[string]string{
 		"data": "true",
@@ -153,11 +153,8 @@ func (s *NodeService) GetNodesForLab(ctx context.Context, lab *models.Lab) error
 		return err
 	}
 
-	nodeMap := make(models.NodeMap)
-	for _, node := range *nodes {
-		nodeMap[node.ID] = node
-	}
-	lab.Nodes = nodeMap
+	// Note: This method now only fetches nodes but doesn't populate lab.Nodes
+	// The caller should handle populating the lab structure if needed
 
 	return nil
 }
@@ -213,8 +210,8 @@ func (s *NodeService) Update(ctx context.Context, node *models.Node) (*models.No
 }
 
 // Start starts the given node.
-func (s *NodeService) Start(ctx context.Context, node *models.Node) error {
-	api := nodeStateURL(node.LabID, node.ID, "start")
+func (s *NodeService) Start(ctx context.Context, labID, nodeID models.UUID) error {
+	api := nodeStateURL(labID, nodeID, "start")
 	err := s.apiClient.PutJSON(ctx, api, 0)
 	if err != nil {
 		return err
@@ -223,8 +220,8 @@ func (s *NodeService) Start(ctx context.Context, node *models.Node) error {
 }
 
 // Stop stops the given node.
-func (s *NodeService) Stop(ctx context.Context, node *models.Node) error {
-	api := nodeStateURL(node.LabID, node.ID, "stop")
+func (s *NodeService) Stop(ctx context.Context, labID, nodeID models.UUID) error {
+	api := nodeStateURL(labID, nodeID, "stop")
 	err := s.apiClient.PutJSON(ctx, api, 0)
 	if err != nil {
 		return err
@@ -270,7 +267,7 @@ func (s *NodeService) Create(ctx context.Context, node *models.Node) (*models.No
 		// of e.g. a connectivity issue between the initial create and the
 		// attempted removal.
 		node.ID = newNode.ID
-		s.Delete(ctx, node)
+		s.Delete(ctx, node.LabID, node.ID)
 		return nil, err
 	}
 
@@ -300,14 +297,14 @@ func (s *NodeService) GetByID(ctx context.Context, labID, id models.UUID) (*mode
 }
 
 // Delete deletes the node from the controller.
-func (s *NodeService) Delete(ctx context.Context, node *models.Node) error {
-	api := nodeURL(node.LabID, node.ID)
+func (s *NodeService) Delete(ctx context.Context, labID, nodeID models.UUID) error {
+	api := nodeURL(labID, nodeID)
 	return s.apiClient.DeleteJSON(ctx, api, nil)
 }
 
 // Wipe removes all runtime data from a node on the controller/compute. E.g. it
 // will remove the actual VM and its associated disks.
-func (s *NodeService) Wipe(ctx context.Context, node *models.Node) error {
-	api := nodeWipeURL(node.LabID, node.ID)
+func (s *NodeService) Wipe(ctx context.Context, labID, nodeID models.UUID) error {
+	api := nodeWipeURL(labID, nodeID)
 	return s.apiClient.PutJSON(ctx, api, nil)
 }
