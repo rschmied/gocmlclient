@@ -29,33 +29,77 @@ type Middleware func(DoFunc) DoFunc
 type Client struct {
 	baseURL string
 	do      DoFunc
+	stats   *Stats
 }
+
+// Option is a functional option for configuring the API client
+type Option func(*Options)
 
 // Options configures the API client
 type Options struct {
 	HTTPClient  *http.Client
 	Middlewares []Middleware
+	EnableStats bool
 }
 
-// New creates a new low-level API client
-func New(baseURL string, opts Options) *Client {
-	// panic early if called without a client set
-	_ = opts.HTTPClient
+// WithStats enables statistics collection
+func WithStats() Option {
+	return func(opts *Options) {
+		opts.EnableStats = true
+	}
+}
 
-	// get the inner do func (e.g. the one that connects to the the API)
+// WithHTTPClient sets the HTTP client
+func WithHTTPClient(client *http.Client) Option {
+	return func(opts *Options) {
+		opts.HTTPClient = client
+	}
+}
+
+// WithMiddlewares sets the middleware chain
+func WithMiddlewares(middlewares ...Middleware) Option {
+	return func(opts *Options) {
+		opts.Middlewares = middlewares
+	}
+}
+
+// New creates a new low-level API client using functional options
+func New(baseURL string, opts ...Option) *Client {
+	options := &Options{
+		HTTPClient: &http.Client{}, // Default HTTP client
+	}
+
+	// Apply all options
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	// panic early if called without a client set
+	_ = options.HTTPClient
+
+	// get the inner do func (e.g. the one that connects to the API)
 	do := func(req *http.Request) (*http.Response, error) {
-		return opts.HTTPClient.Do(req)
+		return options.HTTPClient.Do(req)
 	}
 
 	// apply middlewares in reverse order (last middleware wraps first)
-	for i := len(opts.Middlewares) - 1; i >= 0; i-- {
-		do = opts.Middlewares[i](do)
+	for i := len(options.Middlewares) - 1; i >= 0; i-- {
+		do = options.Middlewares[i](do)
 	}
 
-	return &Client{
+	client := &Client{
 		baseURL: baseURL,
 		do:      do,
 	}
+
+	// Initialize stats if enabled
+	if options.EnableStats {
+		client.stats = NewStats()
+		// Add stats middleware
+		client.do = StatsMiddleware(client.stats)(client.do)
+	}
+
+	return client
 }
 
 // Request makes a raw HTTP request to the API
@@ -74,6 +118,14 @@ func (c *Client) Request(ctx context.Context, method, endpoint string, query map
 	}
 
 	return res, nil
+}
+
+// Stats returns current statistics snapshot
+func (c *Client) Stats() Stats {
+	if c.stats == nil {
+		return Stats{} // Return empty if stats disabled
+	}
+	return c.stats.GetSnapshot()
 }
 
 // doJSON makes a request and handles JSON marshaling/unmarshaling

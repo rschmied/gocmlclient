@@ -202,9 +202,7 @@ func TestSystemReadyErrors(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client := api.New(server.URL, api.Options{
-				HTTPClient: &http.Client{},
-			})
+			client := api.New(server.URL, api.WithHTTPClient(&http.Client{}))
 			service := NewSystemService(client)
 			ctx := context.Background()
 
@@ -232,9 +230,7 @@ func TestSystemServiceIntegration(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := api.New(server.URL, api.Options{
-		HTTPClient: &http.Client{},
-	})
+	client := api.New(server.URL, api.WithHTTPClient(&http.Client{}))
 	service := NewSystemService(client)
 	ctx := context.Background()
 

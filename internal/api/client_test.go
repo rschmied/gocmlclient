@@ -17,14 +17,11 @@ import (
 
 func TestNew(t *testing.T) {
 	client := &http.Client{Timeout: 30 * time.Second}
-	opts := Options{
-		HTTPClient: client,
-		Middlewares: []Middleware{
-			UserAgentMiddleware("test-agent"),
-		},
-	}
 
-	apiClient := New("https://api.example.com", opts)
+	apiClient := New("https://api.example.com",
+		WithHTTPClient(client),
+		WithMiddlewares(UserAgentMiddleware("test-agent")),
+	)
 
 	if apiClient.baseURL != "https://api.example.com" {
 		t.Errorf("expected baseURL 'https://api.example.com', got %s", apiClient.baseURL)
@@ -68,9 +65,7 @@ func TestRequest(t *testing.T) {
 	defer server.Close()
 
 	// Create API client
-	client := New(server.URL, Options{
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-	})
+	client := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
 
 	// Make request
 	ctx := context.Background()
@@ -150,9 +145,7 @@ func TestDoJSON(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client := New(server.URL, Options{
-				HTTPClient: &http.Client{Timeout: 10 * time.Second},
-			})
+			client := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
 
 			ctx := context.Background()
 			var result any
@@ -191,9 +184,7 @@ func TestGetJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, Options{
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-	})
+	client := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
 
 	var result map[string]string
 	err := client.GetJSON(context.Background(), "/test", nil, &result)
@@ -232,9 +223,7 @@ func TestPostJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, Options{
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-	})
+	client := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
 
 	requestData := map[string]string{"name": "test"}
 	var result map[string]any
@@ -257,9 +246,7 @@ func TestPutJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, Options{
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-	})
+	client := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
 
 	err := client.PutJSON(context.Background(), "/users/123", map[string]string{"name": "updated"})
 	if err != nil {
@@ -277,9 +264,7 @@ func TestPatchJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, Options{
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-	})
+	client := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
 
 	var result map[string]bool
 	err := client.PatchJSON(context.Background(), "/users/123", nil, map[string]string{"name": "patched"}, &result)
@@ -301,9 +286,7 @@ func TestDeleteJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, Options{
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-	})
+	client := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
 
 	err := client.DeleteJSON(context.Background(), "/users/123", nil)
 	if err != nil {
@@ -348,9 +331,7 @@ func TestHandleHTTPError(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client := New(server.URL, Options{
-				HTTPClient: &http.Client{Timeout: 10 * time.Second},
-			})
+			client := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
 
 			var result any
 			err := client.GetJSON(context.Background(), "/error", nil, &result)
@@ -373,9 +354,7 @@ func TestHandleHTTPError(t *testing.T) {
 }
 
 func TestWrapConnectionError(t *testing.T) {
-	client := New("https://invalid-url", Options{
-		HTTPClient: &http.Client{Timeout: 1 * time.Nanosecond}, // Very short timeout
-	})
+	client := New("https://invalid-url", WithHTTPClient(&http.Client{Timeout: 10 * time.Nanosecond}))
 
 	_, err := client.Request(context.Background(), "GET", "/test", nil, nil)
 	if err == nil {
@@ -431,9 +410,7 @@ func TestWrapConnectionErrorSpecific(t *testing.T) {
 
 // TestRequestError tests the Request function error path
 func TestRequestError(t *testing.T) {
-	client := New("https://api.example.com", Options{
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-	})
+	client := New("https://api.example.com", WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
 
 	// Test with invalid body that should cause httputil.BuildRequest to fail
 	// We'll use a channel as body which should cause an error
@@ -447,9 +424,9 @@ func TestRequestError(t *testing.T) {
 // TestDoJSONNetworkError tests doJSON with network errors
 func TestDoJSONNetworkError(t *testing.T) {
 	// Create a client with an invalid URL that will cause network errors
-	client := New("https://invalid-url-that-does-not-exist-12345.com", Options{
-		HTTPClient: &http.Client{Timeout: 1 * time.Millisecond}, // Very short timeout
-	})
+	client := New("https://invalid-url-that-does-not-exist-12345.com",
+		WithHTTPClient(&http.Client{Timeout: 1 * time.Millisecond}), // Very short timeout
+	)
 
 	ctx := context.Background()
 	var result any
@@ -468,9 +445,7 @@ func TestDoJSONMalformedResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, Options{
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-	})
+	client := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
 
 	ctx := context.Background()
 	var result map[string]string
@@ -547,9 +522,7 @@ func BenchmarkRequest(b *testing.B) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, Options{
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-	})
+	client := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
 
 	ctx := context.Background()
 
@@ -569,9 +542,7 @@ func BenchmarkGetJSON(b *testing.B) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, Options{
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-	})
+	client := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
 
 	ctx := context.Background()
 	var result map[string]string
@@ -581,5 +552,118 @@ func BenchmarkGetJSON(b *testing.B) {
 		if err != nil {
 			b.Fatalf("GetJSON failed: %v", err)
 		}
+	}
+}
+
+func TestStats(t *testing.T) {
+	// Test server that returns different status codes
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		switch r.URL.Path {
+		case "/api/v0/ok":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"status":"ok"}`))
+		case "/api/v0/notfound":
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error":"not found"}`))
+		case "/api/v0/error":
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"server error"}`))
+		default:
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"status":"default"}`))
+		}
+	}))
+	defer server.Close()
+
+	// Create client with stats enabled
+	client := New(server.URL,
+		WithHTTPClient(&http.Client{Timeout: 10 * time.Second}),
+		WithStats(),
+	)
+
+	ctx := context.Background()
+
+	// Make some requests
+	client.GetJSON(ctx, "/ok", nil, nil)
+	client.GetJSON(ctx, "/notfound", nil, nil)
+	client.GetJSON(ctx, "/ok", nil, nil)
+	client.GetJSON(ctx, "/error", nil, nil)
+
+	// Get stats
+	stats := client.Stats()
+
+	// Verify stats
+	if stats.TotalCalls != 4 {
+		t.Errorf("expected 4 total calls, got %d", stats.TotalCalls)
+	}
+
+	if stats.CallsByMethod["GET"] != 4 {
+		t.Errorf("expected 4 GET calls, got %d", stats.CallsByMethod["GET"])
+	}
+
+	if stats.StatusCounts[200] != 2 {
+		t.Errorf("expected 2 status 200 calls, got %d", stats.StatusCounts[200])
+	}
+
+	if stats.StatusCounts[404] != 1 {
+		t.Errorf("expected 1 status 404 call, got %d", stats.StatusCounts[404])
+	}
+
+	if stats.StatusCounts[500] != 1 {
+		t.Errorf("expected 1 status 500 call, got %d", stats.StatusCounts[500])
+	}
+
+	if len(stats.ResponseTimes) != 4 {
+		t.Errorf("expected 4 response times, got %d", len(stats.ResponseTimes))
+	}
+
+	// Test with stats disabled
+	clientNoStats := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
+	clientNoStats.GetJSON(ctx, "/ok", nil, nil)
+	statsEmpty := clientNoStats.Stats()
+
+	if statsEmpty.TotalCalls != 0 {
+		t.Errorf("expected 0 calls when stats disabled, got %d", statsEmpty.TotalCalls)
+	}
+}
+
+func TestNewWithOptions(t *testing.T) {
+	// Test functional options
+	client := New("https://api.example.com",
+		WithHTTPClient(&http.Client{Timeout: 30 * time.Second}),
+		WithStats(),
+		WithMiddlewares(UserAgentMiddleware("test-agent")),
+	)
+
+	if client.baseURL != "https://api.example.com" {
+		t.Errorf("expected baseURL 'https://api.example.com', got %s", client.baseURL)
+	}
+
+	if client.stats == nil {
+		t.Error("expected stats to be enabled")
+	}
+
+	// Test that stats work with middleware
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("User-Agent") != "test-agent" {
+			t.Errorf("expected User-Agent header 'test-agent', got %s", r.Header.Get("User-Agent"))
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"ok":true}`))
+	}))
+	defer server.Close()
+
+	clientWithServer := New(server.URL,
+		WithStats(),
+		WithMiddlewares(UserAgentMiddleware("test-agent")),
+	)
+	ctx := context.Background()
+	clientWithServer.GetJSON(ctx, "/test", nil, nil)
+
+	stats := clientWithServer.Stats()
+	if stats.TotalCalls != 1 {
+		t.Errorf("expected 1 call, got %d", stats.TotalCalls)
 	}
 }

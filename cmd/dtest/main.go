@@ -138,4 +138,5 @@ func main() {
 
 	slog.Info("Successfully retrieved lab")
 	json.NewEncoder(os.Stdout).Encode(lab)
+	slog.Warn("stats", c.Stats())
 }

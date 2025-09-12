@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/rschmied/gocmlclient/pkg/errors"
@@ -193,6 +194,32 @@ func UserAgentMiddleware(userAgent string) Middleware {
 		return func(req *http.Request) (*http.Response, error) {
 			req.Header.Set("User-Agent", userAgent)
 			return next(req)
+		}
+	}
+}
+
+// StatsMiddleware collects API call statistics
+func StatsMiddleware(stats *Stats) Middleware {
+	return func(next DoFunc) DoFunc {
+		return func(req *http.Request) (*http.Response, error) {
+			start := time.Now()
+
+			res, err := next(req)
+			duration := time.Since(start)
+
+			// Extract endpoint from URL (remove base path)
+			endpoint := strings.TrimPrefix(req.URL.Path, APIBasePath)
+
+			if err != nil {
+				// Record failed call
+				stats.RecordCall(req.Method, endpoint, 0, duration)
+				return res, err
+			}
+
+			// Record successful call
+			stats.RecordCall(req.Method, endpoint, res.StatusCode, duration)
+
+			return res, err
 		}
 	}
 }

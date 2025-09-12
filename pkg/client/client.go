@@ -149,15 +149,20 @@ func newAPIClient(c *Config) (*api.Client, error) {
 	c.httpClient.Transport = authTransport
 
 	// 9. create API client with middlewares
-	apiClient := api.New(c.baseURL, api.Options{
-		HTTPClient: c.httpClient,
-		Middlewares: []api.Middleware{
+	apiClient := api.New(c.baseURL,
+		api.WithHTTPClient(c.httpClient),
+		api.WithStats(),
+		api.WithMiddlewares(
 			api.UserAgentMiddleware("gocmlclient"),
 			// api.LoggingMiddleware(c.logger),
 			// api.LogRequestBodyMiddleware(c.logger),
 			api.RetryMiddleware(api.DefaultRetryPolicy()),
-		},
-	})
+		),
+	)
 
 	return apiClient, nil
+}
+
+func (c *Client) Stats() api.Stats {
+	return c.apiClient.Stats()
 }

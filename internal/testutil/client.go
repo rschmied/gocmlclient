@@ -108,15 +108,15 @@ func newLiveClient(t *testing.T, config ClientConfig) (*api.Client, func()) {
 		httpClient.Transport = authTransport
 	}
 
-	apiClient := api.New(config.BaseURL, api.Options{
-		HTTPClient: httpClient,
-		Middlewares: []api.Middleware{
+	apiClient := api.New(config.BaseURL,
+		api.WithHTTPClient(httpClient),
+		api.WithMiddlewares(
 			api.UserAgentMiddleware("gocmlclient"),
 			// api.LoggingMiddleware(slog.Default()),
 			// api.LogRequestBodyMiddleware(slog.Default()),
 			// api.RetryMiddleware(api.DefaultRetryPolicy()),
-		},
-	})
+		),
+	)
 
 	return apiClient, func() {}
 }
@@ -131,12 +131,10 @@ func newMockClient(t *testing.T, config ClientConfig) (*api.Client, func()) {
 
 	SetupCommonMocks()
 
-	apiClient := api.New("https://mock", api.Options{
-		HTTPClient: client,
-		Middlewares: []api.Middleware{
-			api.UserAgentMiddleware("gocmlclient"),
-		},
-	})
+	apiClient := api.New("https://mock",
+		api.WithHTTPClient(client),
+		api.WithMiddlewares(api.UserAgentMiddleware("gocmlclient")),
+	)
 
 	return apiClient, func() {
 		httpmock.DeactivateAndReset()
