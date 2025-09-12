@@ -140,7 +140,7 @@ func TestNodeCRUD(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	labService := NewLabService(client, nil, nil, nil)
+	labService := NewLabService(client, nil, nil, nil, nil)
 	nodeService := NewNodeService(client, false)
 
 	lab := models.LabCreateRequest{Title: "this"}

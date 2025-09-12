@@ -26,5 +26,5 @@ type Link struct {
 	DstSlot int    `json:"slot_b"`
 }
 
-// LinkList is a slice of Link pointers.
-type LinkList []*Link
+// LinkList is a slice of Links.
+type LinkList []Link

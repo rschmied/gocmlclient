@@ -122,20 +122,20 @@ func main() {
 		return
 	}
 
-	id := "20c0efde-cdaf-4dad-b6df-dd568ddf6e8d"
-	lab, err := c.LabGet(ctx, id, true)
+	// id := "20c0efde-cdaf-4dad-b6df-dd568ddf6e8d"
+	// lab, err := c.LabGet(ctx, id, true)
+	name := "Serial demo"
+	lab, err := c.Lab.GetByTitle(ctx, name, true)
 	if err != nil {
 		handleError("get lab", err)
 		return
 	}
 
-	owner, err := c.User.GetByID(ctx, lab.Owner)
-	if err != nil {
-		handleError("get user", err)
-		return
+	// Owner is already fetched in deep mode
+	if lab.Owner != nil {
+		slog.Info("owner", "user", lab.Owner)
 	}
-	slog.Info("owner", "user", owner)
 
-	slog.Info("Successfully retrieved lab", "lab", lab, "owner", lab.Owner)
+	slog.Info("Successfully retrieved lab")
 	json.NewEncoder(os.Stdout).Encode(lab)
 }

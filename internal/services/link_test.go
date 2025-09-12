@@ -121,7 +121,7 @@ func TestLinkCRUD(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	labService := NewLabService(client, nil, nil, nil)
+	labService := NewLabService(client, nil, nil, nil, nil)
 	nodeService := NewNodeService(client, false)
 	interfaceService := NewInterfaceService(client)
 	linkService := NewLinkService(client)

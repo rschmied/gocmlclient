@@ -75,7 +75,7 @@ type Lab struct {
 	Title                string      `json:"lab_title,omitempty"`
 	Description          string      `json:"lab_description,omitempty"`
 	Notes                string      `json:"lab_notes,omitempty"`
-	Owner                UUID        `json:"owner,omitempty"`
+	OwnerID              UUID        `json:"owner,omitempty"`
 	OwnerUsername        string      `json:"owner_username,omitempty"`
 	OwnerFullname        string      `json:"owner_fullname,omitempty"`
 	NodeCount            int         `json:"node_count,omitempty"`
@@ -83,6 +83,7 @@ type Lab struct {
 	EffectivePermissions Permissions `json:"effective_permissions,omitempty"`
 
 	// non-schema helpers
+	Owner *User    `json:"-"` // Full user object (not serialized)
 	Nodes NodeMap  `json:"nodes,omitempty"`
 	Links LinkList `json:"links,omitempty"`
 }

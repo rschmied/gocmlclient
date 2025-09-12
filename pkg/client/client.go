@@ -63,7 +63,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	c := &Client{
 		config:          cfg,
 		apiClient:       apiClient,
-		Lab:             services.NewLabService(apiClient, interfaceService, linkService, userService),
+		Lab:             services.NewLabService(apiClient, interfaceService, linkService, userService, nodeService),
 		Interface:       interfaceService,
 		Link:            linkService,
 		Node:            nodeService,
@@ -154,7 +154,7 @@ func newAPIClient(c *Config) (*api.Client, error) {
 		Middlewares: []api.Middleware{
 			api.UserAgentMiddleware("gocmlclient"),
 			// api.LoggingMiddleware(c.logger),
-			api.LogRequestBodyMiddleware(c.logger),
+			// api.LogRequestBodyMiddleware(c.logger),
 			api.RetryMiddleware(api.DefaultRetryPolicy()),
 		},
 	})

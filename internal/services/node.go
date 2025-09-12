@@ -146,9 +146,20 @@ func (s *NodeService) GetNodesForLab(ctx context.Context, labID models.UUID) (mo
 		queryParms["exclude_configurations"] = "false"
 	}
 
+	// First unmarshal into a slice of nodes
+	var nodes []models.Node
+	err := s.apiClient.GetJSON(ctx, api, queryParms, &nodes)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert slice to NodeMap
 	nodeMap := make(models.NodeMap)
-	err := s.apiClient.GetJSON(ctx, api, queryParms, &nodeMap)
-	return nodeMap, err
+	for i := range nodes {
+		nodeMap[nodes[i].ID] = &nodes[i]
+	}
+
+	return nodeMap, nil
 }
 
 func (s *NodeService) setConfigData(ctx context.Context, node *models.Node, data any) error {

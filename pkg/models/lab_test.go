@@ -23,7 +23,7 @@ func TestLab_JSON(t *testing.T) {
 		Title:                "Test Lab",
 		Description:          "A test laboratory",
 		Notes:                "Some notes",
-		Owner:                "owner123",
+		OwnerID:              "owner123",
 		OwnerUsername:        "testuser",
 		NodeCount:            5,
 		LinkCount:            4,

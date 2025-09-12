@@ -8,6 +8,8 @@ require (
 	github.com/lmittmann/tint v1.1.2
 )
 
+require golang.org/x/sync v0.17.0
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

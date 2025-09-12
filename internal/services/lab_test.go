@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/jarcoal/httpmock"
@@ -49,7 +50,7 @@ func TestLabs(t *testing.T) {
 	client, cleanup := initLabTest(t, addLabsGetResponders)
 	defer cleanup()
 
-	service := NewLabService(client, nil, nil, nil)
+	service := NewLabService(client, nil, nil, nil, nil)
 	ctx := context.Background()
 
 	labs, err := service.Labs(ctx, true)
@@ -68,7 +69,7 @@ func TestLabCreate(t *testing.T) {
 	client, cleanup := initLabTest(t, addLabCreateResponders)
 	defer cleanup()
 
-	service := NewLabService(client, nil, nil, nil)
+	service := NewLabService(client, nil, nil, nil, nil)
 	ctx := context.Background()
 
 	lab := models.LabCreateRequest{Title: "this"}
@@ -92,4 +93,150 @@ func TestLabCreate(t *testing.T) {
 
 	err = service.Delete(ctx, newLab.ID)
 	assert.NoError(t, err)
+}
+
+func TestGetByIDDeep(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := initLabTest(t, func() {
+		// Mock responder for basic lab data
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid",
+			httpmock.NewStringResponder(200, `{
+				"id":"lab_uuid",
+				"state":"DEFINED_ON_CORE",
+				"created":"2025-08-26T09:41:36+00:00",
+				"modified":"2025-08-26T09:41:36+00:00",
+				"lab_title":"test lab",
+				"owner":"00000000-0000-4000-a000-000000000000",
+				"owner_username":"admin",
+				"effective_permissions":["lab_admin","lab_exec","lab_edit","lab_view"]
+			}`))
+
+		// Mock responders for deep fetch data
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/nodes",
+			httpmock.NewStringResponder(200, `[
+				{
+					"id": "node1",
+					"label": "test-node",
+					"node_definition": "test-def",
+					"state": "DEFINED_ON_CORE"
+				}
+			]`))
+
+		// Mock responder for user data
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/users/00000000-0000-4000-a000-000000000000",
+			httpmock.NewStringResponder(200, `{
+				"id": "00000000-0000-4000-a000-000000000000",
+				"username": "admin",
+				"fullname": "Administrator",
+				"admin": true
+			}`))
+
+		// Mock responder for L3 info
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/state/layer3_addresses",
+			httpmock.NewStringResponder(200, `{
+				"node1": {
+					"name": "R1",
+					"interfaces": {
+						"52:54:00:b3:0b:ed": {
+							"id": "eth0",
+							"label": "Ethernet 0",
+							"ip4": ["10.0.10.1"],
+							"ip6": []
+						}
+					}
+				}
+			}`))
+
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/links",
+			httpmock.NewStringResponder(200, `[
+				{
+					"id": "link1",
+					"src": "node1",
+					"dst": "node2",
+					"src_int": "eth0",
+					"dst_int": "eth0"
+				}
+			]`))
+
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/nodes/node1/interfaces",
+			httpmock.NewStringResponder(200, `[
+				{
+					"id": "eth0",
+					"label": "Ethernet 0",
+					"mac_address": "aa:bb:cc:dd:ee:ff",
+					"is_connected": true
+				}
+			]`))
+	})
+	defer cleanup()
+
+	// Create mock services
+	nodeService := NewNodeService(client, false)
+	interfaceService := NewInterfaceService(client)
+	linkService := NewLinkService(client)
+	linkService.Interface = interfaceService
+	linkService.Node = nodeService
+	groupService := NewGroupService(client)
+	userService := NewUserService(client, groupService)
+
+	service := NewLabService(client, interfaceService, linkService, userService, nodeService)
+	ctx := context.Background()
+
+	// Test deep=false (should not fetch additional data)
+	lab, err := service.GetByID(ctx, "lab_uuid", false)
+	assert.NoError(t, err)
+	assert.Equal(t, models.UUID("lab_uuid"), lab.ID)
+	assert.Empty(t, lab.Nodes) // Should be empty without deep fetch
+	assert.Empty(t, lab.Links) // Should be empty without deep fetch
+
+	// Test deep=true (should fetch additional data)
+	lab, err = service.GetByID(ctx, "lab_uuid", true)
+	assert.NoError(t, err)
+	assert.Equal(t, models.UUID("lab_uuid"), lab.ID)
+	assert.NotEmpty(t, lab.Nodes) // Should have nodes with deep fetch
+	assert.NotEmpty(t, lab.Links) // Should have links with deep fetch
+
+	// Verify node has interfaces populated
+	if len(lab.Nodes) > 0 {
+		node := lab.Nodes["node1"]
+		assert.NotEmpty(t, node.Interfaces) // Should have interfaces populated
+	}
+}
+
+func TestGetByIDDeepErrorHandling(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := initLabTest(t, func() {
+		// Mock responder for basic lab data
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/error_lab",
+			httpmock.NewStringResponder(200, `{
+				"id":"error_lab",
+				"state":"DEFINED_ON_CORE",
+				"lab_title":"error test lab"
+			}`))
+
+		// Mock error responder for nodes
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/error_lab/nodes",
+			httpmock.NewStringResponder(500, `{"error": "internal server error"}`))
+	})
+	defer cleanup()
+
+	nodeService := NewNodeService(client, false)
+	interfaceService := NewInterfaceService(client)
+	linkService := NewLinkService(client)
+
+	service := NewLabService(client, interfaceService, linkService, nil, nodeService)
+	ctx := context.Background()
+
+	// Test that errors in deep fetch are properly handled
+	_, err := service.GetByID(ctx, "error_lab", true)
+	assert.Error(t, err)
+	// The error could come from nodes or links fetch - both are acceptable
+	assert.True(t, strings.Contains(err.Error(), "failed to get nodes") ||
+		strings.Contains(err.Error(), "failed to get links"))
 }
