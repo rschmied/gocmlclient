@@ -42,6 +42,10 @@ func initLabTest(t *testing.T, responders func()) (*api.Client, func()) {
 }
 
 func TestLabs(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
 	client, cleanup := initLabTest(t, addLabsGetResponders)
 	defer cleanup()
 
@@ -57,6 +61,10 @@ func TestLabs(t *testing.T) {
 }
 
 func TestLabCreate(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires lab lifecycle management permissions")
+	}
+
 	client, cleanup := initLabTest(t, addLabCreateResponders)
 	defer cleanup()
 

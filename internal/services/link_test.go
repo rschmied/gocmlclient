@@ -89,6 +89,10 @@ func addInterfaceResponders() {
 }
 
 func TestLinkCRUD(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires lab and node setup with valid UUIDs")
+	}
+
 	client, cleanup := initLinkTest(t)
 	defer cleanup()
 
@@ -189,6 +193,10 @@ func TestLinkCRUD(t *testing.T) {
 }
 
 func TestLinkCondition(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific lab and link setup")
+	}
+
 	client, cleanup := initLinkTest(t)
 	defer cleanup()
 

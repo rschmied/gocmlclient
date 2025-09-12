@@ -12,6 +12,10 @@ import (
 )
 
 func TestInterfaceGetInterfacesForNode(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific lab and node setup")
+	}
+
 	client, cleanup := testutil.NewAPIClient(t)
 	defer cleanup()
 
@@ -64,6 +68,10 @@ func TestInterfaceGetInterfacesForNode(t *testing.T) {
 }
 
 func TestInterfaceGetByID(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific lab and interface setup")
+	}
+
 	client, cleanup := testutil.NewAPIClient(t)
 	defer cleanup()
 
@@ -99,6 +107,10 @@ func TestInterfaceGetByID(t *testing.T) {
 }
 
 func TestInterfaceCreateWithSlot(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific lab and node setup")
+	}
+
 	client, cleanup := testutil.NewAPIClient(t)
 	defer cleanup()
 
@@ -129,6 +141,10 @@ func TestInterfaceCreateWithSlot(t *testing.T) {
 }
 
 func TestInterfaceCreateWithoutSlot(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific lab and node setup")
+	}
+
 	client, cleanup := testutil.NewAPIClient(t)
 	defer cleanup()
 
@@ -157,6 +173,10 @@ func TestInterfaceCreateWithoutSlot(t *testing.T) {
 }
 
 func TestInterfaceGetByID_NotFound(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific lab setup")
+	}
+
 	client, cleanup := testutil.NewAPIClient(t)
 	defer cleanup()
 
@@ -176,6 +196,10 @@ func TestInterfaceGetByID_NotFound(t *testing.T) {
 }
 
 func TestInterfaceServerError(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific lab and node setup")
+	}
+
 	client, cleanup := testutil.NewAPIClient(t)
 	defer cleanup()
 
@@ -195,6 +219,10 @@ func TestInterfaceServerError(t *testing.T) {
 }
 
 func TestInterfaceAuthError(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific lab setup")
+	}
+
 	client, cleanup := testutil.NewAPIClient(t)
 	defer cleanup()
 
@@ -214,6 +242,10 @@ func TestInterfaceAuthError(t *testing.T) {
 }
 
 func TestInterfacePermissionError(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific lab setup")
+	}
+
 	client, cleanup := testutil.NewAPIClient(t)
 	defer cleanup()
 
@@ -233,6 +265,10 @@ func TestInterfacePermissionError(t *testing.T) {
 }
 
 func TestInterfaceMalformedJSON(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific lab setup")
+	}
+
 	client, cleanup := testutil.NewAPIClient(t)
 	defer cleanup()
 

@@ -20,6 +20,10 @@ func initNodeDefTest(t *testing.T) (*api.Client, func()) {
 }
 
 func TestNodeDefinitionService_NodeDefinitions(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
 	client, cleanup := initNodeDefTest(t)
 	defer cleanup()
 
