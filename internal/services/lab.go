@@ -187,7 +187,7 @@ func (s *LabService) Import(ctx context.Context, topology string) (models.Lab, e
 
 // HasConverged checks if all nodes in the lab have converged (are in BOOTED state)
 func (s *LabService) HasConverged(ctx context.Context, id models.UUID) (converged bool, err error) {
-	err = s.apiClient.GetJSON(ctx, labActionURL(id, convergedAPI), nil, &converged)
+	err = s.apiClient.GetJSON(ctx, fmt.Sprintf("%s/%s", labURL(id), convergedAPI), nil, &converged)
 	return converged, err
 }
 

@@ -512,7 +512,7 @@ func TestLabHasConverged(t *testing.T) {
 	defer cleanup()
 
 	// Register mock responder for converged state
-	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/state/check_if_converged",
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/check_if_converged",
 		httpmock.NewStringResponder(200, `true`))
 
 	service := NewLabService(client, nil, nil, nil, nil)
@@ -533,7 +533,7 @@ func TestLabHasConverged_False(t *testing.T) {
 	defer cleanup()
 
 	// Register mock responder for not converged state
-	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-456/state/check_if_converged",
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-456/check_if_converged",
 		httpmock.NewStringResponder(200, `false`))
 
 	service := NewLabService(client, nil, nil, nil, nil)
@@ -554,7 +554,7 @@ func TestLabHasConverged_Error(t *testing.T) {
 	defer cleanup()
 
 	// Register mock responder for error
-	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/error-lab/state/check_if_converged",
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/error-lab/check_if_converged",
 		httpmock.NewStringResponder(500, `{"error": "Internal server error"}`))
 
 	service := NewLabService(client, nil, nil, nil, nil)
