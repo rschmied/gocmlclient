@@ -46,7 +46,7 @@ type LabList []UUID
 
 // LabImport represents the result of importing a lab, including any warnings.
 type LabImport struct {
-	ID       string   `json:"id"`
+	ID       UUID     `json:"id"`
 	Warnings []string `json:"warnings"`
 }
 

@@ -23,12 +23,14 @@ type UserServiceInterface interface {
 // UserService provides user-related operations
 type UserService struct {
 	apiClient *api.Client
+	Group     GroupServiceInterface
 }
 
 // NewUserService creates a new user service
-func NewUserService(apiClient *api.Client) *UserService {
+func NewUserService(apiClient *api.Client, group GroupServiceInterface) *UserService {
 	return &UserService{
 		apiClient: apiClient,
+		Group:     group,
 	}
 }
 
@@ -89,4 +91,29 @@ func (s *UserService) Update(ctx context.Context, id models.UUID, user models.Us
 		return nil, err
 	}
 	return s.GetByID(ctx, result.ID)
+}
+
+// Groups retrieves the list of all groups the user belongs to.
+func (s *UserService) Groups(ctx context.Context, id models.UUID) (models.GroupList, error) {
+	api := fmt.Sprintf("users/%s/groups", id)
+	idList := []models.UUID{}
+	err := s.apiClient.GetJSON(ctx, api, nil, &idList)
+	if err != nil {
+		return nil, err
+	}
+
+	groups := models.GroupList{}
+	for _, gid := range idList {
+		group, err := s.Group.GetByID(ctx, gid)
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, group)
+	}
+
+	// sort the group list by their ID
+	sort.Slice(groups, func(i, j int) bool {
+		return groups[i].ID > groups[j].ID
+	})
+	return groups, nil
 }

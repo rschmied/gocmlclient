@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/rschmied/gocmlclient/internal/api"
+	"github.com/rschmied/gocmlclient/pkg/errors"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
@@ -21,6 +22,11 @@ const (
 	startAction  = "start"
 	stopAction   = "stop"
 )
+
+type labAlias struct {
+	Lab     models.Lab
+	OwnerID models.UUID `json:"owner"`
+}
 
 // LabService provides lab-related operations
 type LabService struct {
@@ -236,7 +242,7 @@ func (s *LabService) HasConverged(ctx context.Context, id models.UUID) (converge
 // 		defer slog.Debug("links done")
 // 		// wait for node data read complete
 // 		<-ch
-// 		linkList, err := s.Link.GetLinksForLab(ctx, lab)
+// 		linkList, err := s.Link.GetLinksForLab(ctx, lab.ID)
 // 		if err != nil {
 // 			return err
 // 		}
@@ -270,4 +276,24 @@ func (s *LabService) getL3Info(ctx context.Context, id models.UUID) (nodes *l3no
 	nodes = &l3nodes{}
 	err = s.apiClient.GetJSON(ctx, labActionURL(id, layer3Action), nil, nodes)
 	return nodes, err
+}
+
+// GetByTitle returns the lab identified by its `title`.
+func (s *LabService) GetByTitle(ctx context.Context, title string) (*models.Lab, error) {
+	var data map[string]map[string]*labAlias
+
+	err := s.apiClient.GetJSON(ctx, "populate_lab_tiles", nil, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	labs := data["lab_tiles"]
+	for _, lab := range labs {
+		if lab.Lab.Title == title {
+			lab.Lab.Owner = lab.OwnerID
+			return &lab.Lab, nil
+		}
+	}
+
+	return nil, errors.ErrElementNotFound
 }

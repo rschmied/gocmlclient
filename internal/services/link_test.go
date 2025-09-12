@@ -164,7 +164,7 @@ func TestLinkCRUD(t *testing.T) {
 	assert.NotEmpty(t, createdLink.ID)
 
 	// Get links for lab
-	links, err := linkService.GetLinksForLab(ctx, newLab)
+	links, err := linkService.GetLinksForLab(ctx, labID)
 	assert.NoError(t, err)
 	assert.Len(t, links, 1)
 	assert.Equal(t, createdLink.ID, links[0].ID)
@@ -176,7 +176,7 @@ func TestLinkCRUD(t *testing.T) {
 	assert.Equal(t, labID, fetchedLink.LabID)
 
 	// Delete link
-	err = linkService.Delete(ctx, *createdLink)
+	err = linkService.Delete(ctx, labID, createdLink.ID)
 	assert.NoError(t, err)
 
 	// Cleanup
@@ -292,11 +292,7 @@ func TestLinkDelete_NotFound(t *testing.T) {
 	service := NewLinkService(client)
 	ctx := context.Background()
 
-	link := &models.Link{
-		ID:    "nonexistent",
-		LabID: "lab-123",
-	}
-	err := service.Delete(ctx, *link)
+	err := service.Delete(ctx, "lab-123", "nonexistent")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "404")
 	assert.Contains(t, err.Error(), "Link not found")

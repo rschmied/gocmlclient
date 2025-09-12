@@ -20,8 +20,8 @@ var _ LinkServiceInterface = (*LinkService)(nil)
 
 // LinkServiceInterface defines methods needed by other services
 type LinkServiceInterface interface {
-	// GetLinksForLab(ctx context.Context, lab *models.Lab) error
-	GetLinksForLab(ctx context.Context, lab *models.Lab) ([]*models.Link, error)
+	GetLinksForLab(ctx context.Context, labID models.UUID) ([]*models.Link, error)
+	Delete(ctx context.Context, labID, linkID models.UUID) error
 	GetCondition(ctx context.Context, labID, linkID models.UUID) (*models.ConditionResponse, error)
 	SetCondition(ctx context.Context, labID, linkID models.UUID, config *models.LinkConditionConfiguration) (*models.ConditionResponse, error)
 	DeleteCondition(ctx context.Context, labID, linkID models.UUID) error
@@ -68,8 +68,8 @@ func (llist linkList) MarshalJSON() ([]byte, error) {
 	return json.Marshal(newlist)
 }
 
-func (s *LinkService) GetLinksForLab(ctx context.Context, lab *models.Lab) ([]*models.Link, error) {
-	api := linksURL(lab.ID)
+func (s *LinkService) GetLinksForLab(ctx context.Context, labID models.UUID) ([]*models.Link, error) {
+	api := linksURL(labID)
 
 	queryParm := map[string]string{
 		"data": "true",
@@ -186,10 +186,9 @@ func (s *LinkService) Create(ctx context.Context, link *models.Link) (*models.Li
 	return link, nil
 }
 
-// Delete removes a link from a lab identified by the Lab ID and Link ID
-// provided in the link arg.
-func (s *LinkService) Delete(ctx context.Context, link models.Link) error {
-	api := linkURL(link.LabID, link.ID)
+// Delete removes a link from a lab identified by the Lab ID and Link ID.
+func (s *LinkService) Delete(ctx context.Context, labID, linkID models.UUID) error {
+	api := linkURL(labID, linkID)
 	return s.apiClient.DeleteJSON(ctx, api, nil)
 }
 

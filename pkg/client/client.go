@@ -19,13 +19,16 @@ type Client struct {
 	apiClient *api.Client
 
 	// services
-	Interface *services.InterfaceService
-	Lab       *services.LabService
-	Link      *services.LinkService
-	Node      *services.NodeService
-	System    *services.SystemService
-	Group     *services.GroupService
-	User      *services.UserService
+	Interface       *services.InterfaceService
+	Lab             *services.LabService
+	Link            *services.LinkService
+	Node            *services.NodeService
+	System          *services.SystemService
+	Group           *services.GroupService
+	User            *services.UserService
+	ImageDefinition *services.ImageDefinitionService
+	NodeDefinition  *services.NodeDefinitionService
+	ExtConn         *services.ExtConnService
 }
 
 // New creates a new CML client with the given options.
@@ -48,21 +51,28 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	}
 
 	groupService := services.NewGroupService(apiClient)
-	userService := services.NewUserService(apiClient)
+	userService := services.NewUserService(apiClient, groupService)
 	nodeService := services.NewNodeService(apiClient, cfg.namedConfigs)
 	interfaceService := services.NewInterfaceService(apiClient)
 	linkService := services.NewLinkService(apiClient)
 
+	imageDefinitionService := services.NewImageDefinitionService(apiClient)
+	nodeDefinitionService := services.NewNodeDefinitionService(apiClient)
+	extConnService := services.NewExtConnService(apiClient)
+
 	c := &Client{
-		config:    cfg,
-		apiClient: apiClient,
-		Lab:       services.NewLabService(apiClient, interfaceService, linkService, userService, nodeService),
-		Interface: interfaceService,
-		Link:      linkService,
-		Node:      nodeService,
-		Group:     groupService,
-		User:      userService,
-		System:    services.NewSystemService(apiClient),
+		config:          cfg,
+		apiClient:       apiClient,
+		Lab:             services.NewLabService(apiClient, interfaceService, linkService, userService, nodeService),
+		Interface:       interfaceService,
+		Link:            linkService,
+		Node:            nodeService,
+		Group:           groupService,
+		User:            userService,
+		System:          services.NewSystemService(apiClient),
+		ImageDefinition: imageDefinitionService,
+		NodeDefinition:  nodeDefinitionService,
+		ExtConn:         extConnService,
 	}
 
 	// Perform system readiness check unless explicitly skipped

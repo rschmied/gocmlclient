@@ -69,7 +69,7 @@ func TestUserCRUD(t *testing.T) {
 	client, cleanup := initTest(t)
 	defer cleanup()
 
-	service := NewUserService(client)
+	service := NewUserService(client, nil)
 	ctx := context.Background()
 
 	// create new user
@@ -120,7 +120,7 @@ func TestUserGetByID_NotFound(t *testing.T) {
 	httpmock.RegisterResponder("GET", "https://mock/api/v0/users/nonexistent",
 		httpmock.NewStringResponder(404, `{"message": "User not found"}`))
 
-	service := NewUserService(client)
+	service := NewUserService(client, nil)
 	ctx := context.Background()
 
 	_, err := service.GetByID(ctx, "nonexistent")
@@ -137,7 +137,7 @@ func TestUserGetByName_NotFound(t *testing.T) {
 	httpmock.RegisterResponder("GET", "https://mock/api/v0/users/nonexistent/id",
 		httpmock.NewStringResponder(404, `{"description": "User does not exist: nonexistent.","code":404}`))
 
-	service := NewUserService(client)
+	service := NewUserService(client, nil)
 	ctx := context.Background()
 
 	_, err := service.GetByName(ctx, "nonexistent")
@@ -154,7 +154,7 @@ func TestUserCreate_ValidationError(t *testing.T) {
 	httpmock.RegisterResponder("POST", "https://mock/api/v0/users",
 		httpmock.NewStringResponder(400, `{"description": "{\"Input validation failed\": [{\"location\": [\"body\", \"username\"], \"type\": \"string_too_short\", \"message\": \"String should have at least 1 character\"}]}","code":400}`))
 
-	service := NewUserService(client)
+	service := NewUserService(client, nil)
 	ctx := context.Background()
 
 	// Create request with missing required fields
@@ -177,7 +177,7 @@ func TestUserUpdate_NotFound(t *testing.T) {
 	httpmock.RegisterResponder("PATCH", "https://mock/api/v0/users/nonexistent",
 		httpmock.NewStringResponder(404, `{"message": "User not found"}`))
 
-	service := NewUserService(client)
+	service := NewUserService(client, nil)
 	ctx := context.Background()
 
 	updateRequest := models.UserUpdateRequest{
@@ -203,7 +203,7 @@ func TestUserDelete_NotFound(t *testing.T) {
 	httpmock.RegisterResponder("DELETE", "https://mock/api/v0/users/nonexistent",
 		httpmock.NewStringResponder(404, `{"message": "User not found"}`))
 
-	service := NewUserService(client)
+	service := NewUserService(client, nil)
 	ctx := context.Background()
 
 	err := service.Delete(ctx, "nonexistent")
@@ -224,7 +224,7 @@ func TestUserServerError(t *testing.T) {
 	httpmock.RegisterResponder("GET", "https://mock/api/v0/users",
 		httpmock.NewStringResponder(500, `{"message": "Internal server error"}`))
 
-	service := NewUserService(client)
+	service := NewUserService(client, nil)
 	ctx := context.Background()
 
 	_, err := service.Users(ctx)
@@ -245,7 +245,7 @@ func TestUserAuthError(t *testing.T) {
 	httpmock.RegisterResponder("GET", "https://mock/api/v0/users",
 		httpmock.NewStringResponder(401, `{"message": "Unauthorized"}`))
 
-	service := NewUserService(client)
+	service := NewUserService(client, nil)
 	ctx := context.Background()
 
 	_, err := service.Users(ctx)
@@ -266,7 +266,7 @@ func TestUserPermissionError(t *testing.T) {
 	httpmock.RegisterResponder("GET", "https://mock/api/v0/users",
 		httpmock.NewStringResponder(403, `{"message": "Forbidden"}`))
 
-	service := NewUserService(client)
+	service := NewUserService(client, nil)
 	ctx := context.Background()
 
 	_, err := service.Users(ctx)
@@ -287,7 +287,7 @@ func TestUserMalformedJSON(t *testing.T) {
 	httpmock.RegisterResponder("GET", "https://mock/api/v0/users",
 		httpmock.NewStringResponder(200, `[{"id": "invalid-json"`)) // Missing closing brace
 
-	service := NewUserService(client)
+	service := NewUserService(client, nil)
 	ctx := context.Background()
 
 	_, err := service.Users(ctx)
