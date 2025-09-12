@@ -14,10 +14,7 @@ import (
 
 func initNodeTest(t *testing.T) (*api.Client, func()) {
 	client, cleanup := testutil.NewAPIClient(t)
-	if !testutil.IsLiveTesting() {
-		// Mock responses will be registered in individual tests
-		addLabCreateResponders()
-	}
+	// Mock responses will be registered in individual tests
 	return client, cleanup
 }
 
@@ -26,6 +23,11 @@ func TestNodeCRUD(t *testing.T) {
 	defer cleanup()
 
 	if !testutil.IsLiveTesting() {
+		// Mock responses for lab operations
+		labCreateResponse := `{"id": "lab_uuid", "title": "this"}`
+		labUpdateResponse := `{"id": "lab_uuid", "title": "this"}`
+		labGetResponse := `{"id": "lab_uuid", "title": "this"}`
+
 		// Mock responses for CRUD operations
 		createResponse := `{"id": "test-node-id"}`
 		nodeResponse := `{
@@ -129,6 +131,17 @@ func TestNodeCRUD(t *testing.T) {
 			return httpmock.NewStringResponse(200, `"test-node-id"`), nil
 		}
 
+		// Lab operation responders
+		httpmock.RegisterResponder("POST", "https://mock/api/v0/labs",
+			httpmock.NewStringResponder(200, labCreateResponse))
+		httpmock.RegisterResponder("PATCH", "https://mock/api/v0/labs/lab_uuid",
+			httpmock.NewStringResponder(200, labUpdateResponse))
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid",
+			httpmock.NewStringResponder(200, labGetResponse))
+		httpmock.RegisterResponder("DELETE", "https://mock/api/v0/labs/lab_uuid",
+			httpmock.NewJsonResponderOrPanic(204, nil))
+
+		// Node operation responders
 		httpmock.RegisterResponder("POST", "https://mock/api/v0/labs/lab_uuid/nodes",
 			httpmock.NewStringResponder(200, createResponse))
 		httpmock.RegisterResponder("PATCH", "https://mock/api/v0/labs/lab_uuid/nodes/test-node-id",
@@ -405,5 +418,211 @@ func TestNodeStateOperations(t *testing.T) {
 
 	// Wipe test
 	err = service.Wipe(ctx, "lab-123", "node-123")
+	assert.NoError(t, err)
+}
+
+func TestNodeSetConfig(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := initNodeTest(t)
+	defer cleanup()
+
+	if !testutil.IsLiveTesting() {
+		// Mock the PATCH request for setting config
+		httpmock.RegisterResponder("PATCH", "https://mock/api/v0/labs/lab-123/nodes/node-123",
+			httpmock.NewStringResponder(200, `"node-123"`))
+
+		// Mock the GET request for retrieving updated node
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/nodes/node-123",
+			httpmock.NewStringResponder(200, `{
+				"id": "node-123",
+				"lab_id": "lab-123",
+				"label": "ubuntu-0",
+				"node_definition": "ubuntu",
+				"configuration": "# updated configuration",
+				"state": "DEFINED_ON_CORE"
+			}`))
+	}
+
+	service := NewNodeService(client, false)
+	ctx := context.Background()
+
+	node := &models.Node{
+		ID:    "node-123",
+		LabID: "lab-123",
+	}
+
+	configContent := "#cloud-config\nhostname: test-node\nmanage_etc_hosts: True"
+
+	err := service.SetConfig(ctx, node, configContent)
+
+	assert.NoError(t, err)
+	// Configuration can be string, array of NodeConfig, or single NodeConfig
+	// When unmarshaled from JSON, strings become *string in interface{} fields
+	if configPtr, ok := node.Configuration.(*string); ok && configPtr != nil {
+		assert.Equal(t, "# updated configuration", *configPtr)
+	} else if configStr, ok := node.Configuration.(string); ok {
+		assert.Equal(t, "# updated configuration", configStr)
+	} else {
+		t.Errorf("Expected configuration to be string or *string, got %T", node.Configuration)
+	}
+}
+
+func TestNodeSetConfig_Error(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Register mock responder for error
+	httpmock.RegisterResponder("PATCH", "https://mock/api/v0/labs/lab-123/nodes/node-123",
+		httpmock.NewStringResponder(500, `{"error": "Internal server error"}`))
+
+	service := NewNodeService(client, false)
+	ctx := context.Background()
+
+	node := &models.Node{
+		ID:    "node-123",
+		LabID: "lab-123",
+	}
+
+	err := service.SetConfig(ctx, node, "test config")
+	assert.Error(t, err)
+}
+
+func TestNodeSetNamedConfigs(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := initNodeTest(t)
+	defer cleanup()
+
+	if !testutil.IsLiveTesting() {
+		// Mock the PATCH request for setting named configs
+		httpmock.RegisterResponder("PATCH", "https://mock/api/v0/labs/lab-123/nodes/node-456",
+			httpmock.NewStringResponder(200, `"node-456"`))
+
+		// Mock the GET request for retrieving updated node
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/nodes/node-456",
+			httpmock.NewStringResponder(200, `{
+				"id": "node-456",
+				"lab_id": "lab-123",
+				"label": "csr1000v-0",
+				"node_definition": "csr1000v",
+				"configuration": [
+					{
+						"name": "user-data",
+						"content": "#cloud-config\nhostname: csr1000v"
+					},
+					{
+						"name": "network-config",
+						"content": "#network-config\nversion: 2"
+					}
+				],
+				"state": "DEFINED_ON_CORE"
+			}`))
+	}
+
+	service := NewNodeService(client, false)
+	ctx := context.Background()
+
+	node := &models.Node{
+		ID:    "node-456",
+		LabID: "lab-123",
+	}
+
+	namedConfigs := []models.NodeConfig{
+		{
+			Name:    "user-data",
+			Content: "#cloud-config\nhostname: csr1000v",
+		},
+		{
+			Name:    "network-config",
+			Content: "#network-config\nversion: 2",
+		},
+	}
+
+	err := service.SetNamedConfigs(ctx, node, namedConfigs)
+
+	assert.NoError(t, err)
+	// The node should be updated with the new configuration
+	assert.NotNil(t, node.Configurations)
+	assert.Len(t, node.Configurations, 2)
+}
+
+func TestNodeSetNamedConfigs_Error(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Register mock responder for error
+	httpmock.RegisterResponder("PATCH", "https://mock/api/v0/labs/lab-123/nodes/node-456",
+		httpmock.NewStringResponder(404, `{"error": "Node not found"}`))
+
+	service := NewNodeService(client, false)
+	ctx := context.Background()
+
+	node := &models.Node{
+		ID:    "node-456",
+		LabID: "lab-123",
+	}
+
+	namedConfigs := []models.NodeConfig{
+		{
+			Name:    "user-data",
+			Content: "test content",
+		},
+	}
+
+	err := service.SetNamedConfigs(ctx, node, namedConfigs)
+	assert.Error(t, err)
+}
+
+func TestNodeSetNamedConfigs_EmptyList(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := initNodeTest(t)
+	defer cleanup()
+
+	if !testutil.IsLiveTesting() {
+		// Mock the PATCH request for setting empty named configs
+		httpmock.RegisterResponder("PATCH", "https://mock/api/v0/labs/lab-123/nodes/node-789",
+			httpmock.NewStringResponder(200, `"node-789"`))
+
+		// Mock the GET request for retrieving updated node
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/nodes/node-789",
+			httpmock.NewStringResponder(200, `{
+				"id": "node-789",
+				"lab_id": "lab-123",
+				"label": "test-node",
+				"node_definition": "test",
+				"configuration": [],
+				"state": "DEFINED_ON_CORE"
+			}`))
+	}
+
+	service := NewNodeService(client, false)
+	ctx := context.Background()
+
+	node := &models.Node{
+		ID:    "node-789",
+		LabID: "lab-123",
+	}
+
+	// Test with empty config list
+	var namedConfigs []models.NodeConfig
+
+	err := service.SetNamedConfigs(ctx, node, namedConfigs)
+
 	assert.NoError(t, err)
 }
