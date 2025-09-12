@@ -26,9 +26,6 @@ func TestNodeCRUD(t *testing.T) {
 	defer cleanup()
 
 	if !testutil.IsLiveTesting() {
-		// provide different responses when calling the GET multiple times
-		var createCounter int
-
 		// Mock responses for CRUD operations
 		createResponse := `{"id": "test-node-id"}`
 		nodeResponse := `{
@@ -85,22 +82,57 @@ func TestNodeCRUD(t *testing.T) {
 			"boot_progress": "Not running"
 		}`
 
-		_ = createCounter
-		_ = namedConfigResponse
+		updatedResponse := `{
+			"boot_disk_size": 4096,
+			"configuration": "# test configuration",
+			"cpu_limit": 20,
+			"cpus": 1,
+			"data_volume": 4096,
+			"hide_links": true,
+			"id": "test-node-id",
+			"image_definition": null,
+			"lab_id": "lab_uuid",
+			"label": "updated-node",
+			"node_definition": "ubuntu",
+			"parameters": {
+				"smbios.bios.vendor": "Lenovo"
+			},
+			"pinned_compute_id": null,
+			"ram": 1,
+			"tags": ["test"],
+			"x": 100,
+			"y": 200,
+			"state": "DEFINED_ON_CORE",
+			"boot_progress": "Not running"
+		}`
 
-		getResponder := func(req *http.Request) (*http.Response, error) {
-			_ = req
-			createCounter++
-			if createCounter == 1 {
+		// Track the sequence of previousOperations
+		previousOperations := ""
+		getResponder := func(*http.Request) (*http.Response, error) {
+			defer func() { previousOperations = "GET" }()
+
+			// GET after update operations should return updatedResponse
+			if previousOperations == "PATCH" {
+				return httpmock.NewStringResponse(200, updatedResponse), nil
+			}
+			// First GET after create should return nodeResponse
+			if previousOperations == "" {
 				return httpmock.NewStringResponse(200, nodeResponse), nil
 			}
+			// Other GETs return namedConfigResponse
 			return httpmock.NewStringResponse(200, namedConfigResponse), nil
+		}
+
+		// Track PATCH operations too
+		patchResponder := func(*http.Request) (*http.Response, error) {
+			defer func() { previousOperations = "PATCH" }()
+			return httpmock.NewStringResponse(200, `"test-node-id"`), nil
 		}
 
 		httpmock.RegisterResponder("POST", "https://mock/api/v0/labs/lab_uuid/nodes",
 			httpmock.NewStringResponder(200, createResponse))
 		httpmock.RegisterResponder("PATCH", "https://mock/api/v0/labs/lab_uuid/nodes/test-node-id",
-			httpmock.NewStringResponder(200, `"test-node-id"`))
+			patchResponder)
 		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/nodes/test-node-id", getResponder)
 		httpmock.RegisterResponder("DELETE", "https://mock/api/v0/labs/lab_uuid/nodes/test-node-id",
 			httpmock.NewJsonResponderOrPanic(204, nil))

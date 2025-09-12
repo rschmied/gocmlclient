@@ -18,7 +18,7 @@ var _ NodeServiceInterface = (*NodeService)(nil)
 
 // NodeServiceInterface defines methods needed by other services
 type NodeServiceInterface interface {
-	GetNodesForLab(ctx context.Context, labID models.UUID) error
+	GetNodesForLab(ctx context.Context, labID models.UUID) (models.NodeMap, error)
 	GetByID(ctx context.Context, labID, id models.UUID) (models.Node, error)
 }
 
@@ -57,7 +57,6 @@ func nodeWipeURL(labID, nodeID models.UUID) string {
 }
 
 type (
-	nodeList           []*models.Node
 	nodePatchPostAlias struct {
 		Label           string              `json:"label,omitempty"`
 		X               int                 `json:"x"`
@@ -135,7 +134,7 @@ func (node nodePatchPostAlias) MarshalJSON() ([]byte, error) {
 	return json.Marshal((alias)(node))
 }
 
-func (s *NodeService) GetNodesForLab(ctx context.Context, labID models.UUID) error {
+func (s *NodeService) GetNodesForLab(ctx context.Context, labID models.UUID) (models.NodeMap, error) {
 	api := nodesURL(labID)
 
 	queryParms := map[string]string{
@@ -147,16 +146,9 @@ func (s *NodeService) GetNodesForLab(ctx context.Context, labID models.UUID) err
 		queryParms["exclude_configurations"] = "false"
 	}
 
-	nodes := &nodeList{}
-	err := s.apiClient.GetJSON(ctx, api, queryParms, nodes)
-	if err != nil {
-		return err
-	}
-
-	// Note: This method now only fetches nodes but doesn't populate lab.Nodes
-	// The caller should handle populating the lab structure if needed
-
-	return nil
+	nodeMap := make(models.NodeMap)
+	err := s.apiClient.GetJSON(ctx, api, queryParms, &nodeMap)
+	return nodeMap, err
 }
 
 func (s *NodeService) setConfigData(ctx context.Context, node *models.Node, data any) error {
@@ -193,8 +185,8 @@ func (s *NodeService) SetNamedConfigs(ctx context.Context, node *models.Node, co
 	return s.setConfigData(ctx, node, nodeCfg)
 }
 
-// Update updates the node specified by data in `node` (e.g. ID and LabID)
-// with the other data provided. It returns the updated node.
+// Update updates the node specified by data in `node` (e.g. ID and LabID) with
+// the other data provided. It returns the updated node.
 func (s *NodeService) Update(ctx context.Context, node models.Node) (models.Node, error) {
 	api := nodeURL(node.LabID, node.ID)
 
@@ -212,21 +204,13 @@ func (s *NodeService) Update(ctx context.Context, node models.Node) (models.Node
 // Start starts the given node.
 func (s *NodeService) Start(ctx context.Context, labID, nodeID models.UUID) error {
 	api := nodeStateURL(labID, nodeID, "start")
-	err := s.apiClient.PutJSON(ctx, api, 0)
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.apiClient.PutJSON(ctx, api, 0)
 }
 
 // Stop stops the given node.
 func (s *NodeService) Stop(ctx context.Context, labID, nodeID models.UUID) error {
 	api := nodeStateURL(labID, nodeID, "stop")
-	err := s.apiClient.PutJSON(ctx, api, 0)
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.apiClient.PutJSON(ctx, api, 0)
 }
 
 // Create creates a new node on the controller based on the data provided
