@@ -99,20 +99,12 @@ func (s *LabService) Update(ctx context.Context, id models.UUID, data models.Lab
 
 // Start starts all nodes in a lab
 func (s *LabService) Start(ctx context.Context, id models.UUID) error {
-	err := s.apiClient.PutJSON(ctx, labActionURL(id, startAction), nil)
-	if err != nil {
-		return fmt.Errorf("start lab %s: %w", id, err)
-	}
-	return nil
+	return s.apiClient.PutJSON(ctx, labActionURL(id, startAction), nil)
 }
 
 // Stop stops all nodes in a lab
 func (s *LabService) Stop(ctx context.Context, id models.UUID) error {
-	err := s.apiClient.PutJSON(ctx, labActionURL(id, stopAction), nil)
-	if err != nil {
-		return fmt.Errorf("stop lab %s: %w", id, err)
-	}
-	return nil
+	return s.apiClient.PutJSON(ctx, labActionURL(id, stopAction), nil)
 }
 
 // Delete deletes the lab identified by the `id` (a UUIDv4).
