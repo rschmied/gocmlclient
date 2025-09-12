@@ -125,16 +125,36 @@ func TestNew(t *testing.T) {
 }
 
 func TestLabGet(t *testing.T) {
-	// Test that LabGet method exists and can be called
-	// We can't easily test the full HTTP flow without complex mocking
-	// So we'll just test that the client can be created and the method exists
-	client, err := New("https://example.com", SkipReadyCheck())
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v0/auth_extended":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"id":"user-123","username":"testuser","token":"mock-token-12345","admin":false}`))
+		case "/api/v0/labs/test-id":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{
+				"id": "test-id",
+				"lab_title": "Test Lab",
+				"lab_description": "A test lab",
+				"created": "2025-01-01T00:00:00Z",
+				"modified": "2025-01-01T00:00:00Z"
+			}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, SkipReadyCheck())
 	assert.NoError(t, err)
 	assert.NotNil(t, client.Lab)
 
-	// Test that the method signature is correct by checking it compiles
 	ctx := context.Background()
-	_, _ = client.LabGet(ctx, "test-id", false) // This should compile without error
+	lab, err := client.LabGet(ctx, "test-id", false)
+	assert.NoError(t, err)
+	assert.NotNil(t, lab)
+	assert.Equal(t, "test-id", string(lab.ID))
+	assert.Equal(t, "Test Lab", lab.Title)
 }
 
 func TestReadyCheckIntegration(t *testing.T) {
