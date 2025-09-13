@@ -60,43 +60,8 @@ func (s *LabService) Labs(ctx context.Context, showAll bool) (labs models.LabLis
 	return labs, err
 }
 
-// LabsWithData retrieves labs with optional full data
-func (s *LabService) LabsWithData(ctx context.Context, showAll, includeData bool) ([]models.LabResponse, error) {
-	queryParams := httputil.NewQueryBuilder().WithData(showAll).Build()
-
-	// First get the lab IDs
-	var labIDs models.LabList
-	err := s.apiClient.GetJSON(ctx, labsAPI, queryParams, &labIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	if !includeData {
-		// Return just UUIDs wrapped in LabResponse
-		labs := make([]models.LabResponse, len(labIDs))
-		for i, id := range labIDs {
-			labs[i] = models.LabResponse{ID: id}
-		}
-		return labs, nil
-	}
-
-	// When includeData=true, fetch full data for each lab
-	labs := make([]models.LabResponse, 0, len(labIDs))
-	for _, id := range labIDs {
-		var labResponse models.LabResponse
-		err := s.apiClient.GetJSON(ctx, labURL(id), nil, &labResponse)
-		if err != nil {
-			// Log error but continue with other labs
-			continue
-		}
-		labs = append(labs, labResponse)
-	}
-
-	return labs, nil
-}
-
-// LabsWithDataFast retrieves labs with data using the /populate_lab_tiles endpoint
-func (s *LabService) LabsWithDataFast(ctx context.Context) ([]models.LabResponse, error) {
+// LabsWithData retrieves labs with data using the /populate_lab_tiles endpoint
+func (s *LabService) LabsWithData(ctx context.Context) ([]models.LabResponse, error) {
 	var labTilesResponse models.LabTilesResponse
 	err := s.apiClient.GetJSON(ctx, "populate_lab_tiles", nil, &labTilesResponse)
 	if err != nil {
@@ -309,7 +274,7 @@ func (s *LabService) fillLabData(ctx context.Context, lab *models.Lab) error {
 // GetByTitle returns the lab identified by its `title`.
 func (s *LabService) GetByTitle(ctx context.Context, title string, deep bool) (models.Lab, error) {
 	// Get all labs with data using the fast endpoint
-	labs, err := s.LabsWithDataFast(ctx)
+	labs, err := s.LabsWithData(ctx)
 	if err != nil {
 		return models.Lab{}, fmt.Errorf("failed to get labs with data: %w", err)
 	}

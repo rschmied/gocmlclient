@@ -61,61 +61,6 @@ func TestLabs(t *testing.T) {
 	assert.Len(t, labs, 3)
 }
 
-func TestLabsWithData(t *testing.T) {
-	if testutil.IsLiveTesting() {
-		t.Skip("Skipping on live server - test expects specific mock data")
-	}
-
-	client, cleanup := initLabTest(t, func() {
-		// Mock responder for labs list
-		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs?data=true",
-			httpmock.NewStringResponder(200, `["uuid-1", "uuid-2"]`))
-
-		// Mock responders for individual labs
-		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/uuid-1",
-			httpmock.NewStringResponder(200, `{
-				"id": "uuid-1",
-				"lab_title": "Lab One",
-				"state": "STOPPED",
-				"owner": "owner-uuid",
-				"owner_username": "admin",
-				"effective_permissions": ["lab_admin"]
-			}`))
-		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/uuid-2",
-			httpmock.NewStringResponder(200, `{
-				"id": "uuid-2",
-				"lab_title": "Lab Two",
-				"state": "STARTED",
-				"owner": "owner-uuid",
-				"owner_username": "admin",
-				"effective_permissions": ["lab_view"]
-			}`))
-	})
-	defer cleanup()
-
-	service := NewLabService(client, nil, nil, nil, nil)
-	ctx := context.Background()
-
-	// Test with includeData=false (should return basic LabResponse with just IDs)
-	labsBasic, err := service.LabsWithData(ctx, true, false)
-	assert.NoError(t, err)
-	assert.Len(t, labsBasic, 2)
-	assert.Equal(t, models.UUID("uuid-1"), labsBasic[0].ID)
-	assert.Equal(t, models.UUID("uuid-2"), labsBasic[1].ID)
-	assert.Empty(t, labsBasic[0].Title) // Should be empty when includeData=false
-
-	// Test with includeData=true (should return full LabResponse data)
-	labsFull, err := service.LabsWithData(ctx, true, true)
-	assert.NoError(t, err)
-	assert.Len(t, labsFull, 2)
-	assert.Equal(t, models.UUID("uuid-1"), labsFull[0].ID)
-	assert.Equal(t, "Lab One", labsFull[0].Title)
-	assert.Equal(t, models.LabStateStopped, labsFull[0].State)
-	assert.Equal(t, models.UUID("uuid-2"), labsFull[1].ID)
-	assert.Equal(t, "Lab Two", labsFull[1].Title)
-	assert.Equal(t, models.LabStateStarted, labsFull[1].State)
-}
-
 func TestGetByTitle(t *testing.T) {
 	if testutil.IsLiveTesting() {
 		t.Skip("Skipping on live server - test expects specific mock data")
@@ -173,7 +118,7 @@ func TestGetByTitle(t *testing.T) {
 	assert.Contains(t, err.Error(), "lab with title \"Non-existent Lab\" not found")
 }
 
-func TestLabsWithDataFast(t *testing.T) {
+func TestLabsWithData(t *testing.T) {
 	if testutil.IsLiveTesting() {
 		t.Skip("Skipping on live server - test expects specific mock data")
 	}
@@ -208,7 +153,7 @@ func TestLabsWithDataFast(t *testing.T) {
 
 	service := NewLabService(client, nil, nil, nil, nil)
 	ctx := context.Background()
-	labs, err := service.LabsWithDataFast(ctx)
+	labs, err := service.LabsWithData(ctx)
 	assert.NoError(t, err)
 	assert.Len(t, labs, 2)
 
