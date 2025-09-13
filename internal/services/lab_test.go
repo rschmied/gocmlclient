@@ -352,8 +352,8 @@ func TestGetByIDDeepErrorHandling(t *testing.T) {
 	_, err := service.GetByID(ctx, "error_lab", true)
 	assert.Error(t, err)
 	// The error could come from nodes or links fetch - both are acceptable
-	assert.True(t, strings.Contains(err.Error(), "failed to get nodes") ||
-		strings.Contains(err.Error(), "failed to get links"))
+	assert.True(t, strings.Contains(err.Error(), "get nodes for lab") ||
+		strings.Contains(err.Error(), "get links for lab"))
 }
 
 func TestLabUpdate(t *testing.T) {

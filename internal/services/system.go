@@ -9,7 +9,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/rschmied/gocmlclient/internal/api"
-	cmlerrors "github.com/rschmied/gocmlclient/pkg/errors"
+	"github.com/rschmied/gocmlclient/pkg/errors"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
@@ -43,20 +43,17 @@ const (
 )
 
 func versionError(got string) error {
-	return fmt.Errorf(
-		"server not compatible, want %s, got %s (%w)",
-		versionConstraint, got, cmlerrors.ErrSystemNotReady,
-	)
+	return errors.Wrapf(errors.ErrSystemNotReady, "server not compatible, want %s, got %s", versionConstraint, got)
 }
 
 func (s *SystemService) versionCheck(ctx context.Context) error {
 	sv := models.SystemInformation{}
 	if err := s.apiClient.GetJSON(ctx, systeminfoAPI, nil, &sv); err != nil {
-		return fmt.Errorf("system info error %w", err)
+		return errors.Wrap(err, "get system info")
 	}
 
 	if !sv.Ready {
-		return cmlerrors.ErrSystemNotReady
+		return errors.ErrSystemNotReady
 	}
 
 	// set the version so VersionCheck can use it

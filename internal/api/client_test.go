@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rschmied/gocmlclient/internal/httputil"
+	gocmlerrors "github.com/rschmied/gocmlclient/pkg/errors"
 )
 
 func TestNew(t *testing.T) {
@@ -305,19 +306,19 @@ func TestHandleHTTPError(t *testing.T) {
 			name:         "structured JSON error",
 			statusCode:   http.StatusBadRequest,
 			responseBody: `{"message":"Invalid request","details":{"field":"name"}}`,
-			expectedMsg:  "HTTP 400: Invalid request",
+			expectedMsg:  "API request failed (HTTP 400): Invalid request",
 		},
 		{
 			name:         "plain text error",
 			statusCode:   http.StatusNotFound,
 			responseBody: "Resource not found",
-			expectedMsg:  "HTTP 404: Resource not found",
+			expectedMsg:  "API request failed (HTTP 404): Resource not found",
 		},
 		{
 			name:         "empty response",
 			statusCode:   http.StatusInternalServerError,
 			responseBody: "",
-			expectedMsg:  "HTTP 500",
+			expectedMsg:  "API request failed (HTTP 500)",
 		},
 	}
 
@@ -344,7 +345,7 @@ func TestHandleHTTPError(t *testing.T) {
 			}
 
 			// Check if it's our APIError type
-			if apiErr, ok := err.(*APIError); ok {
+			if apiErr, ok := err.(*gocmlerrors.APIError); ok {
 				if apiErr.StatusCode != tt.statusCode {
 					t.Errorf("expected status code %d, got %d", tt.statusCode, apiErr.StatusCode)
 				}
@@ -460,7 +461,7 @@ func TestDoJSONMalformedResponse(t *testing.T) {
 
 // TestAPIErrorEmptyFields tests APIError.Error() with empty Message and RawBody
 func TestAPIErrorEmptyFields(t *testing.T) {
-	apiErr := &APIError{
+	apiErr := &gocmlerrors.APIError{
 		StatusCode: 500,
 		Message:    "", // Empty message
 		RawBody:    "", // Empty raw body
@@ -474,7 +475,7 @@ func TestAPIErrorEmptyFields(t *testing.T) {
 
 // TestAPIErrorWithRawBody tests APIError.Error() with RawBody but no Message
 func TestAPIErrorWithRawBody(t *testing.T) {
-	apiErr := &APIError{
+	apiErr := &gocmlerrors.APIError{
 		StatusCode: 404,
 		Message:    "",                   // Empty message
 		RawBody:    "Resource not found", // Has raw body
@@ -503,7 +504,7 @@ func TestHandleHTTPErrorBodyReadError(t *testing.T) {
 	}
 
 	// Check that it's an APIError with the expected message
-	if apiErr, ok := err.(*APIError); ok {
+	if apiErr, ok := err.(*gocmlerrors.APIError); ok {
 		if apiErr.StatusCode != 500 {
 			t.Errorf("expected status code 500, got %d", apiErr.StatusCode)
 		}

@@ -181,14 +181,14 @@ func TestSystemReadyErrors(t *testing.T) {
 			responseBody:  "",
 			statusCode:    http.StatusInternalServerError,
 			expectError:   true,
-			errorContains: "system info error",
+			errorContains: "get system info",
 		},
 		{
 			name:          "malformed json",
 			responseBody:  `{"invalid": json}`,
 			statusCode:    http.StatusOK,
 			expectError:   true,
-			errorContains: "system info error",
+			errorContains: "get system info",
 		},
 	}
 
@@ -377,5 +377,5 @@ func TestSystemService_Ready_APIError(t *testing.T) {
 	err := service.Ready(ctx)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "system info error")
+	assert.Contains(t, err.Error(), "get system info")
 }

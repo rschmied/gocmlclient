@@ -11,6 +11,7 @@ import (
 
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/httputil"
+	"github.com/rschmied/gocmlclient/pkg/errors"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
@@ -65,7 +66,7 @@ func (s *LabService) LabsWithData(ctx context.Context) ([]models.LabResponse, er
 	var labTilesResponse models.LabTilesResponse
 	err := s.apiClient.GetJSON(ctx, "populate_lab_tiles", nil, &labTilesResponse)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get lab tiles: %w", err)
+		return nil, errors.Wrap(err, "get lab tiles")
 	}
 
 	// Convert LabTiles to LabResponse format
@@ -100,7 +101,7 @@ func (s *LabService) Create(ctx context.Context, lab models.LabCreateRequest) (m
 	var result models.Lab
 	err := s.apiClient.PostJSON(ctx, labsAPI, nil, lab, &result)
 	if err != nil {
-		return models.Lab{}, fmt.Errorf("create lab: %w", err)
+		return models.Lab{}, errors.Wrap(err, "create lab")
 	}
 	// Update with full data (handles groups, owner, etc.)
 	return s.Update(ctx, result.ID, models.LabUpdateRequest{})
@@ -111,7 +112,7 @@ func (s *LabService) GetByID(ctx context.Context, id models.UUID, deep bool) (mo
 	var result models.Lab
 	err := s.apiClient.GetJSON(ctx, labURL(id), nil, &result)
 	if err != nil {
-		return models.Lab{}, err
+		return models.Lab{}, errors.Wrapf(err, "get lab by ID %s", id)
 	}
 
 	// Set OwnerID from the API response (the "owner" field contains the UUID)
@@ -119,7 +120,7 @@ func (s *LabService) GetByID(ctx context.Context, id models.UUID, deep bool) (mo
 
 	if deep {
 		if err := s.fillLabData(ctx, &result); err != nil {
-			return models.Lab{}, err
+			return models.Lab{}, errors.Wrapf(err, "fill lab data for %s", id)
 		}
 	} else {
 		// For shallow fetch, set basic owner info
@@ -172,7 +173,7 @@ func (s *LabService) Import(ctx context.Context, topology string) (models.Lab, e
 
 	err := s.apiClient.PostJSON(ctx, importAPI, nil, topoReader, &importResponse)
 	if err != nil {
-		return models.Lab{}, fmt.Errorf("import lab: %w", err)
+		return models.Lab{}, errors.Wrap(err, "import lab")
 	}
 
 	if len(importResponse.Warnings) > 0 {
@@ -200,7 +201,7 @@ func (s *LabService) fillLabData(ctx context.Context, lab *models.Lab) error {
 		}
 		user, err := s.User.GetByID(gctx, lab.OwnerID)
 		if err != nil {
-			return fmt.Errorf("failed to get user for lab %s: %w", lab.ID, err)
+			return errors.Wrapf(err, "get user %s for lab %s", lab.OwnerID, lab.ID)
 		}
 		lab.Owner = &user
 		return nil
@@ -214,7 +215,7 @@ func (s *LabService) fillLabData(ctx context.Context, lab *models.Lab) error {
 		defer close(nodeDataReady) // Signal when node data is ready
 		nodes, err := s.Node.GetNodesForLab(gctx, lab.ID)
 		if err != nil {
-			return fmt.Errorf("failed to get nodes for lab %s: %w", lab.ID, err)
+			return errors.Wrapf(err, "get nodes for lab %s", lab.ID)
 		}
 		lab.Nodes = nodes
 		return nil
@@ -225,7 +226,7 @@ func (s *LabService) fillLabData(ctx context.Context, lab *models.Lab) error {
 		<-nodeDataReady // Wait for node data to be ready
 		links, err := s.Link.GetLinksForLab(gctx, lab.ID)
 		if err != nil {
-			return fmt.Errorf("failed to get links for lab %s: %w", lab.ID, err)
+			return errors.Wrapf(err, "get links for lab %s", lab.ID)
 		}
 		lab.Links = links
 		return nil
@@ -240,7 +241,7 @@ func (s *LabService) fillLabData(ctx context.Context, lab *models.Lab) error {
 	for i := range lab.Nodes {
 		interfaces, err := s.Interface.GetInterfacesForNode(ctx, lab.ID, lab.Nodes[i].ID)
 		if err != nil {
-			return fmt.Errorf("failed to get interfaces for node %s: %w", lab.Nodes[i].ID, err)
+			return errors.Wrapf(err, "get interfaces for node %s", lab.Nodes[i].ID)
 		}
 		lab.Nodes[i].Interfaces = interfaces
 	}
@@ -248,7 +249,7 @@ func (s *LabService) fillLabData(ctx context.Context, lab *models.Lab) error {
 	// Fetch and merge L3 information
 	l3info, err := s.getL3Info(ctx, lab.ID)
 	if err != nil {
-		return fmt.Errorf("failed to get L3 info for lab %s: %w", lab.ID, err)
+		return errors.Wrapf(err, "get L3 info for lab %s", lab.ID)
 	}
 
 	// Merge L3 data into interfaces
@@ -276,7 +277,7 @@ func (s *LabService) GetByTitle(ctx context.Context, title string, deep bool) (m
 	// Get all labs with data using the fast endpoint
 	labs, err := s.LabsWithData(ctx)
 	if err != nil {
-		return models.Lab{}, fmt.Errorf("failed to get labs with data: %w", err)
+		return models.Lab{}, errors.Wrap(err, "get labs with data")
 	}
 
 	// Find the lab with matching title
@@ -286,5 +287,5 @@ func (s *LabService) GetByTitle(ctx context.Context, title string, deep bool) (m
 			return s.GetByID(ctx, lab.ID, deep)
 		}
 	}
-	return models.Lab{}, fmt.Errorf("lab with title %q not found", title)
+	return models.Lab{}, errors.Wrapf(errors.ErrElementNotFound, "lab with title %q not found", title)
 }
