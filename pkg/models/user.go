@@ -53,6 +53,7 @@ type User struct {
 	Modified    string `json:"modified,omitempty"`
 	DirectoryDN string `json:"directory_dn,omitempty"`
 	Labs        []UUID `json:"labs,omitempty"`
+	Password    string `json:"password,omitempty"` // For backward compatibility
 }
 
 // UserList is a slice of User.

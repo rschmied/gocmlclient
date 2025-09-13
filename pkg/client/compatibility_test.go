@@ -123,3 +123,49 @@ func TestCompatibilityEdgeCases(t *testing.T) {
 		assert.Error(t, err) // Expected to fail with empty ID
 	})
 }
+
+// TestCompatibilityPasswordHandling tests password functionality in compatibility layer
+func TestCompatibilityPasswordHandling(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v0/auth_extended":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"id":"user-123","username":"testuser","token":"mock-token-12345","admin":false}`))
+		case "/api/v0/system_information":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"version": "2.5.0", "ready": true}`))
+		case "/api/v0/users":
+			if r.Method == "POST" {
+				w.WriteHeader(http.StatusCreated)
+				w.Write([]byte(`{"id":"user-new","username":"newuser","admin":false}`))
+			}
+		case "/api/v0/users/user-new":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"id":"user-new","username":"newuser","admin":false}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, SkipReadyCheck())
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+
+	t.Run("UserCreate with password", func(t *testing.T) {
+		user := &models.User{
+			UserBase: models.UserBase{
+				Username: "newuser",
+				Fullname: "New User",
+				Email:    "new@example.com",
+			},
+			Password: "testpassword123",
+		}
+
+		createdUser, err := client.UserCreate(ctx, user)
+		assert.NoError(t, err)
+		assert.Equal(t, "newuser", createdUser.Username)
+		assert.Equal(t, "user-new", string(createdUser.ID))
+	})
+}
