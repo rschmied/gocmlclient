@@ -14,7 +14,6 @@ import (
 	gocml "github.com/rschmied/gocmlclient"
 	"github.com/rschmied/gocmlclient/pkg/client"
 	"github.com/rschmied/gocmlclient/pkg/errors"
-	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
 // handleError centrally processes and logs errors with appropriate context
@@ -105,22 +104,22 @@ func main() {
 	}
 	slog.Debug("test")
 
-	newLab, err := c.Lab.Create(ctx, models.LabCreateRequest{
-		Title: "testclientlab",
-		// Description:  "",
-		// Notes:        "",
-		// Owner:        "",
-		// Associations: models.AssociationUsersGroups{},
-	})
-	if err != nil {
-		handleError("create lab", err)
-		return
-	}
-	err = c.Lab.Delete(ctx, newLab.ID)
-	if err != nil {
-		handleError("delete lab", err)
-		return
-	}
+	// newLab, err := c.Lab.Create(ctx, models.LabCreateRequest{
+	// 	Title: "testclientlab",
+	// 	// Description:  "",
+	// 	// Notes:        "",
+	// 	// Owner:        "",
+	// 	// Associations: models.AssociationUsersGroups{},
+	// })
+	// if err != nil {
+	// 	handleError("create lab", err)
+	// 	return
+	// }
+	// err = c.Lab.Delete(ctx, newLab.ID)
+	// if err != nil {
+	// 	handleError("delete lab", err)
+	// 	return
+	// }
 
 	// id := "20c0efde-cdaf-4dad-b6df-dd568ddf6e8d"
 	// lab, err := c.LabGet(ctx, id, true)
@@ -138,5 +137,5 @@ func main() {
 
 	slog.Info("Successfully retrieved lab")
 	json.NewEncoder(os.Stdout).Encode(lab)
-	slog.Warn("stats", "stats", c.Stats())
+	fmt.Fprintf(os.Stderr, "Stats:%s", c.Stats())
 }

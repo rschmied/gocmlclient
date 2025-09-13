@@ -595,28 +595,28 @@ func TestStats(t *testing.T) {
 	stats := client.Stats()
 
 	// Verify stats
-	if stats.TotalCalls != 4 {
-		t.Errorf("expected 4 total calls, got %d", stats.TotalCalls)
+	if stats.TotalCalls() != 4 {
+		t.Errorf("expected 4 total calls, got %d", stats.TotalCalls())
 	}
 
-	if stats.CallsByMethod["GET"] != 4 {
-		t.Errorf("expected 4 GET calls, got %d", stats.CallsByMethod["GET"])
+	if stats.CallsByMethod()["GET"] != 4 {
+		t.Errorf("expected 4 GET calls, got %d", stats.CallsByMethod()["GET"])
 	}
 
-	if stats.StatusCounts[200] != 2 {
-		t.Errorf("expected 2 status 200 calls, got %d", stats.StatusCounts[200])
+	if stats.StatusCounts()[200] != 2 {
+		t.Errorf("expected 2 status 200 calls, got %d", stats.StatusCounts()[200])
 	}
 
-	if stats.StatusCounts[404] != 1 {
-		t.Errorf("expected 1 status 404 call, got %d", stats.StatusCounts[404])
+	if stats.StatusCounts()[404] != 1 {
+		t.Errorf("expected 1 status 404 call, got %d", stats.StatusCounts()[404])
 	}
 
-	if stats.StatusCounts[500] != 1 {
-		t.Errorf("expected 1 status 500 call, got %d", stats.StatusCounts[500])
+	if stats.StatusCounts()[500] != 1 {
+		t.Errorf("expected 1 status 500 call, got %d", stats.StatusCounts()[500])
 	}
 
-	if len(stats.ResponseTimes) != 4 {
-		t.Errorf("expected 4 response times, got %d", len(stats.ResponseTimes))
+	if len(stats.EndpointGroups) != 3 {
+		t.Errorf("expected 3 endpoint groups, got %d", len(stats.EndpointGroups))
 	}
 
 	// Test with stats disabled
@@ -624,8 +624,8 @@ func TestStats(t *testing.T) {
 	clientNoStats.GetJSON(ctx, "/ok", nil, nil)
 	statsEmpty := clientNoStats.Stats()
 
-	if statsEmpty.TotalCalls != 0 {
-		t.Errorf("expected 0 calls when stats disabled, got %d", statsEmpty.TotalCalls)
+	if statsEmpty.TotalCalls() != 0 {
+		t.Errorf("expected 0 calls when stats disabled, got %d", statsEmpty.TotalCalls())
 	}
 }
 
@@ -663,7 +663,7 @@ func TestNewWithOptions(t *testing.T) {
 	clientWithServer.GetJSON(ctx, "/test", nil, nil)
 
 	stats := clientWithServer.Stats()
-	if stats.TotalCalls != 1 {
-		t.Errorf("expected 1 call, got %d", stats.TotalCalls)
+	if stats.TotalCalls() != 1 {
+		t.Errorf("expected 1 call, got %d", stats.TotalCalls())
 	}
 }

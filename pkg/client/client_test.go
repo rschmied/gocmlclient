@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/rschmied/gocmlclient/internal/api"
-	"github.com/stretchr/testify/assert"
-)
+	"github.com/rschmied/gocmlclient/pkg/models"
+	"github.com/stretchr/testify/assert")
 
 func TestNew(t *testing.T) {
 	tests := []struct {
@@ -253,11 +253,14 @@ func TestClient_Stats(t *testing.T) {
 	stats := client.Stats()
 	
 	// Verify it's the correct type (public Stats from pkg/client)
-	assert.IsType(t, Stats{}, stats)
+	assert.IsType(t, models.Stats{}, stats)
 	
-	// Verify fields are accessible (this would fail if it was internal api.Stats)
-	assert.NotNil(t, stats.CallsByMethod)
-	assert.NotNil(t, stats.CallsByEndpoint)
-	assert.NotNil(t, stats.StatusCounts)
-	assert.NotNil(t, stats.ResponseTimes)
+	// Verify EndpointGroups field is accessible
+	assert.NotNil(t, stats.EndpointGroups)
+	
+	// Test computed getter methods
+	assert.NotNil(t, stats.CallsByMethod())
+	assert.NotNil(t, stats.CallsByEndpoint())
+	assert.NotNil(t, stats.StatusCounts())
+	assert.Equal(t, 0, stats.TotalCalls()) // Should be 0 since no calls made yet
 }

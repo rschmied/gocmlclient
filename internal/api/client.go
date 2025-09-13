@@ -122,9 +122,9 @@ func (c *Client) Request(ctx context.Context, method, endpoint string, query map
 }
 
 // Stats returns current statistics snapshot
-func (c *Client) Stats() models.Stats {
+func (c *Client) Stats() *models.Stats {
 	if c.stats == nil {
-		return models.Stats{} // Return empty if stats disabled
+		return &models.Stats{} // Return empty if stats disabled
 	}
 	return c.stats.GetSnapshot()
 }

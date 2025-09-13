@@ -18,10 +18,7 @@ type Stats struct {
 func NewStats() *Stats {
 	return &Stats{
 		models.Stats{
-			CallsByMethod:   make(map[string]int),
-			CallsByEndpoint: make(map[string]int),
-			StatusCounts:    make(map[int]int),
-			ResponseTimes:   make([]time.Duration, 0),
+			EndpointGroups: make(map[string]*models.EndpointStats),
 		},
 		sync.RWMutex{},
 	}
@@ -32,36 +29,31 @@ func (s *Stats) RecordCall(method, endpoint string, status int, duration time.Du
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.TotalCalls++
-	s.CallsByMethod[method]++
-	s.CallsByEndpoint[endpoint]++
-	s.StatusCounts[status]++
-	s.ResponseTimes = append(s.ResponseTimes, duration)
+	s.Stats.RecordCall(method, endpoint, status, duration)
 }
 
 // GetSnapshot returns a thread-safe copy of current stats
-func (s *Stats) GetSnapshot() models.Stats {
+func (s *Stats) GetSnapshot() *models.Stats {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Deep copy maps and slice
-	callsByMethod := make(map[string]int)
-	maps.Copy(callsByMethod, s.CallsByMethod)
-
-	callsByEndpoint := make(map[string]int)
-	maps.Copy(callsByEndpoint, s.CallsByEndpoint)
-
-	statusCounts := make(map[int]int)
-	maps.Copy(statusCounts, s.StatusCounts)
-
-	responseTimes := make([]time.Duration, len(s.ResponseTimes))
-	copy(responseTimes, s.ResponseTimes)
-
-	return models.Stats{
-		TotalCalls:      s.TotalCalls,
-		CallsByMethod:   callsByMethod,
-		CallsByEndpoint: callsByEndpoint,
-		StatusCounts:    statusCounts,
-		ResponseTimes:   responseTimes,
+	// Create a deep copy of the stats
+	snapshot := &models.Stats{
+		EndpointGroups: make(map[string]*models.EndpointStats),
 	}
+
+	for key, group := range s.EndpointGroups {
+		groupCopy := &models.EndpointStats{
+			CallCount:    group.CallCount,
+			MinTime:      group.MinTime,
+			MaxTime:      group.MaxTime,
+			AvgTime:      group.AvgTime,
+			TotalTime:    group.TotalTime,
+			StatusCounts: make(map[int]int),
+		}
+		maps.Copy(groupCopy.StatusCounts, group.StatusCounts)
+		snapshot.EndpointGroups[key] = groupCopy
+	}
+
+	return snapshot
 }

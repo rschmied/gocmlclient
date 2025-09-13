@@ -11,6 +11,7 @@ import (
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/auth"
 	"github.com/rschmied/gocmlclient/internal/services"
+	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
 // Client is the main CML API client that provides access to all services.
@@ -163,13 +164,6 @@ func newAPIClient(c *Config) (*api.Client, error) {
 	return apiClient, nil
 }
 
-func (c *Client) Stats() Stats {
-	internalStats := c.apiClient.Stats()
-	return Stats{
-		TotalCalls:      internalStats.TotalCalls,
-		CallsByMethod:   internalStats.CallsByMethod,
-		CallsByEndpoint: internalStats.CallsByEndpoint,
-		StatusCounts:    internalStats.StatusCounts,
-		ResponseTimes:   internalStats.ResponseTimes,
-	}
+func (c *Client) Stats() *models.Stats {
+	return c.apiClient.Stats()
 }
