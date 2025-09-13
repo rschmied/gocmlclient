@@ -166,3 +166,83 @@ func (l *Lab) NodeByLabel(ctx context.Context, label string) (*Node, error) {
 	}
 	return nil, cmlerror.ErrElementNotFound
 }
+
+// LabTilesResponse represents the response from /populate_lab_tiles endpoint
+type LabTilesResponse struct {
+	LabTiles map[string]LabTile `json:"lab_tiles"`
+}
+
+// LabTile represents a lab tile with topology data
+type LabTile struct {
+	ID                   UUID        `json:"id"`
+	State                LabState    `json:"state"`
+	Created              string      `json:"created"`
+	Modified             string      `json:"modified"`
+	Title                string      `json:"lab_title"`
+	Description          string      `json:"lab_description"`
+	Notes                string      `json:"lab_notes"`
+	OwnerID              UUID        `json:"owner"`
+	OwnerUsername        string      `json:"owner_username"`
+	OwnerFullname        string      `json:"owner_fullname"`
+	NodeCount            int         `json:"node_count"`
+	LinkCount            int         `json:"link_count"`
+	Groups               []LabGroup  `json:"groups"`
+	Topology             Topology    `json:"topology"`
+	EffectivePermissions Permissions `json:"effective_permissions"`
+}
+
+// Topology represents the lab topology with nodes and links
+type Topology struct {
+	Nodes            []NodeTile       `json:"nodes"`
+	Links            []LinkTile       `json:"links"`
+	Annotations      []AnnotationTile `json:"annotations"`
+	SmartAnnotations []any            `json:"smart_annotations"` // Keep as any for now
+}
+
+// NodeTile represents a node in the topology
+type NodeTile struct {
+	ID              UUID    `json:"id"`
+	Label           string  `json:"label"`
+	X               float64 `json:"x"`
+	Y               float64 `json:"y"`
+	NodeDefinition  string  `json:"node_definition"`
+	ImageDefinition *string `json:"image_definition"`
+	State           string  `json:"state"`
+	CPUs            *int    `json:"cpus"`
+	CPULimit        *int    `json:"cpu_limit"`
+	RAM             *int    `json:"ram"`
+	DataVolume      *int    `json:"data_volume"`
+	BootDiskSize    *int    `json:"boot_disk_size"`
+	Tags            []any   `json:"tags"` // Keep as any for now
+}
+
+// LinkTile represents a link between nodes
+type LinkTile struct {
+	ID    UUID   `json:"id"`
+	NodeA UUID   `json:"node_a"`
+	NodeB UUID   `json:"node_b"`
+	State string `json:"state"`
+}
+
+// AnnotationTile represents an annotation in the topology
+type AnnotationTile struct {
+	ID           UUID    `json:"id"`
+	BorderColor  string  `json:"border_color,omitempty"`
+	BorderRadius float64 `json:"border_radius,omitempty"`
+	BorderStyle  string  `json:"border_style,omitempty"`
+	Color        string  `json:"color,omitempty"`
+	Rotation     float64 `json:"rotation,omitempty"`
+	TextBold     bool    `json:"text_bold,omitempty"`
+	TextContent  string  `json:"text_content,omitempty"`
+	TextFont     string  `json:"text_font,omitempty"`
+	TextItalic   bool    `json:"text_italic,omitempty"`
+	TextSize     float64 `json:"text_size,omitempty"`
+	TextUnit     string  `json:"text_unit,omitempty"`
+	Thickness    float64 `json:"thickness,omitempty"`
+	Type         string  `json:"type"`
+	X1           float64 `json:"x1,omitempty"`
+	Y1           float64 `json:"y1,omitempty"`
+	X2           float64 `json:"x2,omitempty"`
+	Y2           float64 `json:"y2,omitempty"`
+	ZIndex       float64 `json:"z_index,omitempty"`
+}

@@ -10,6 +10,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/rschmied/gocmlclient/internal/api"
 	cmlerrors "github.com/rschmied/gocmlclient/pkg/errors"
+	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
 const systeminfoAPI string = "system_information"
@@ -35,11 +36,6 @@ func NewSystemService(apiClient *api.Client) *SystemService {
 // }
 // 2.5.0-dev0+build.3.2f7875762
 
-type systemVersion struct {
-	Version string `json:"version"`
-	Ready   bool   `json:"ready"`
-}
-
 const (
 	versionConstraint      = ">=2.4.0,<3.0.0"
 	namedConfigsConstraint = ">=2.7.0"
@@ -54,7 +50,7 @@ func versionError(got string) error {
 }
 
 func (s *SystemService) versionCheck(ctx context.Context) error {
-	sv := systemVersion{}
+	sv := models.SystemInformation{}
 	if err := s.apiClient.GetJSON(ctx, systeminfoAPI, nil, &sv); err != nil {
 		return fmt.Errorf("system info error %w", err)
 	}

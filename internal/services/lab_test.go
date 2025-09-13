@@ -122,11 +122,30 @@ func TestGetByTitle(t *testing.T) {
 	}
 
 	client, cleanup := initLabTest(t, func() {
-		// Mock responder for labs list
-		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs?data=true",
-			httpmock.NewStringResponder(200, `["uuid-1", "uuid-2"]`))
+		// Mock responder for populate_lab_tiles
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/populate_lab_tiles",
+			httpmock.NewStringResponder(200, `{
+				"lab_tiles": {
+					"uuid-1": {
+						"id": "uuid-1",
+						"lab_title": "Lab One",
+						"state": "STOPPED",
+						"owner": "owner-uuid",
+						"owner_username": "admin",
+						"effective_permissions": ["lab_admin"]
+					},
+					"uuid-2": {
+						"id": "uuid-2",
+						"lab_title": "Lab Two",
+						"state": "STARTED",
+						"owner": "owner-uuid",
+						"owner_username": "admin",
+						"effective_permissions": ["lab_view"]
+					}
+				}
+			}`))
 
-		// Mock responders for individual labs
+		// Mock responder for individual lab details
 		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/uuid-1",
 			httpmock.NewStringResponder(200, `{
 				"id": "uuid-1",
@@ -135,15 +154,6 @@ func TestGetByTitle(t *testing.T) {
 				"owner": "owner-uuid",
 				"owner_username": "admin",
 				"effective_permissions": ["lab_admin"]
-			}`))
-		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/uuid-2",
-			httpmock.NewStringResponder(200, `{
-				"id": "uuid-2",
-				"lab_title": "Lab Two",
-				"state": "STARTED",
-				"owner": "owner-uuid",
-				"owner_username": "admin",
-				"effective_permissions": ["lab_view"]
 			}`))
 	})
 	defer cleanup()
@@ -161,6 +171,64 @@ func TestGetByTitle(t *testing.T) {
 	_, err = service.GetByTitle(ctx, "Non-existent Lab", false)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "lab with title \"Non-existent Lab\" not found")
+}
+
+func TestLabsWithDataFast(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := initLabTest(t, func() {
+		// Mock responder for populate_lab_tiles
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/populate_lab_tiles",
+			httpmock.NewStringResponder(200, `{
+				"lab_tiles": {
+					"lab1": {
+						"id": "lab1",
+						"lab_title": "Lab One",
+						"state": "DEFINED_ON_CORE",
+						"node_count": 5,
+						"link_count": 4,
+						"owner_username": "admin",
+						"effective_permissions": ["lab_admin"]
+					},
+					"lab2": {
+						"id": "lab2",
+						"lab_title": "Lab Two",
+						"state": "STOPPED",
+						"node_count": 3,
+						"link_count": 2,
+						"owner_username": "user",
+						"effective_permissions": ["lab_view"]
+					}
+				}
+			}`))
+	})
+	defer cleanup()
+
+	service := NewLabService(client, nil, nil, nil, nil)
+	ctx := context.Background()
+	labs, err := service.LabsWithDataFast(ctx)
+	assert.NoError(t, err)
+	assert.Len(t, labs, 2)
+
+	// Check first lab
+	assert.Equal(t, "lab1", string(labs[0].ID))
+	assert.Equal(t, "Lab One", labs[0].Title)
+	assert.Equal(t, models.LabStateDefined, labs[0].State)
+	assert.Equal(t, 5, labs[0].NodeCount)
+	assert.Equal(t, 4, labs[0].LinkCount)
+	assert.Equal(t, "admin", labs[0].OwnerUsername)
+	assert.Equal(t, models.Permissions{models.PermissionAdmin}, labs[0].EffectivePermissions)
+
+	// Check second lab
+	assert.Equal(t, "lab2", string(labs[1].ID))
+	assert.Equal(t, "Lab Two", labs[1].Title)
+	assert.Equal(t, models.LabStateStopped, labs[1].State)
+	assert.Equal(t, 3, labs[1].NodeCount)
+	assert.Equal(t, 2, labs[1].LinkCount)
+	assert.Equal(t, "user", labs[1].OwnerUsername)
+	assert.Equal(t, models.Permissions{models.PermissionView}, labs[1].EffectivePermissions)
 }
 
 func TestLabCreate(t *testing.T) {

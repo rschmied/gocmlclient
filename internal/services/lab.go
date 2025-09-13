@@ -95,6 +95,39 @@ func (s *LabService) LabsWithData(ctx context.Context, showAll, includeData bool
 	return labs, nil
 }
 
+// LabsWithDataFast retrieves labs with data using the /populate_lab_tiles endpoint
+func (s *LabService) LabsWithDataFast(ctx context.Context) ([]models.LabResponse, error) {
+	var labTilesResponse models.LabTilesResponse
+	err := s.apiClient.GetJSON(ctx, "populate_lab_tiles", nil, &labTilesResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get lab tiles: %w", err)
+	}
+
+	// Convert LabTiles to LabResponse format
+	labs := make([]models.LabResponse, 0, len(labTilesResponse.LabTiles))
+	for _, tile := range labTilesResponse.LabTiles {
+		lab := models.LabResponse{
+			ID:                   tile.ID,
+			State:                tile.State,
+			Created:              tile.Created,
+			Modified:             tile.Modified,
+			Title:                tile.Title,
+			Description:          tile.Description,
+			Notes:                tile.Notes,
+			OwnerID:              tile.OwnerID,
+			OwnerUsername:        tile.OwnerUsername,
+			OwnerFullname:        tile.OwnerFullname,
+			NodeCount:            tile.NodeCount,
+			LinkCount:            tile.LinkCount,
+			Groups:               tile.Groups,
+			EffectivePermissions: tile.EffectivePermissions,
+		}
+		labs = append(labs, lab)
+	}
+
+	return labs, nil
+}
+
 // Create creates a new lab on the controller. Only certain fields from the
 // full Lab model are accepted during creation. Use GetByID() to retrieve the
 // complete lab object after successful creation.
@@ -275,8 +308,8 @@ func (s *LabService) fillLabData(ctx context.Context, lab *models.Lab) error {
 
 // GetByTitle returns the lab identified by its `title`.
 func (s *LabService) GetByTitle(ctx context.Context, title string, deep bool) (models.Lab, error) {
-	// Get all labs with basic data (including titles)
-	labs, err := s.LabsWithData(ctx, true, true) // showAll=true, includeData=true
+	// Get all labs with data using the fast endpoint
+	labs, err := s.LabsWithDataFast(ctx)
 	if err != nil {
 		return models.Lab{}, fmt.Errorf("failed to get labs with data: %w", err)
 	}

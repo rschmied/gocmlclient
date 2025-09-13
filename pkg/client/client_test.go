@@ -9,7 +9,8 @@ import (
 
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/pkg/models"
-	"github.com/stretchr/testify/assert")
+	"github.com/stretchr/testify/assert"
+)
 
 func TestNew(t *testing.T) {
 	tests := []struct {
@@ -238,26 +239,32 @@ func TestNewAPIClient(t *testing.T) {
 }
 
 func TestClient_Stats(t *testing.T) {
-	// Create a test server
+	// Create a test server that handles authentication
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		switch r.URL.Path {
+		case "/api/v0/auth_extended":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"id":"user-123","username":"testuser","token":"mock-token-12345","admin":false}`))
+		default:
+			w.WriteHeader(http.StatusOK)
+		}
 	}))
 	defer server.Close()
 
-	// Create client with stats enabled
-	client, err := New(server.URL, SkipReadyCheck())
+	// Create client with authentication and stats enabled
+	client, err := New(server.URL, WithToken("test-token"), SkipReadyCheck())
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
 	// Get stats - should return public Stats type
 	stats := client.Stats()
-	
+
 	// Verify it's the correct type (public Stats from pkg/client)
-	assert.IsType(t, models.Stats{}, stats)
-	
+	assert.IsType(t, &models.Stats{}, stats)
+
 	// Verify EndpointGroups field is accessible
 	assert.NotNil(t, stats.EndpointGroups)
-	
+
 	// Test computed getter methods
 	assert.NotNil(t, stats.CallsByMethod())
 	assert.NotNil(t, stats.CallsByEndpoint())

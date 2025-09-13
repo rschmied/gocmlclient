@@ -2,6 +2,16 @@
 // here: node definition related types
 package models
 
+// SimplifiedNodeDefinitionResponse represents a simplified node definition
+type SimplifiedNodeDefinitionResponse struct {
+	ID               string   `json:"id"`
+	General          any      `json:"general"` // Keep as any for now
+	Device           any      `json:"device"`  // Keep as any for now
+	UI               any      `json:"ui"`      // Keep as any for now
+	Sim              any      `json:"sim"`     // Keep as any for now
+	ImageDefinitions []string `json:"image_definitions"`
+}
+
 // NodeDefinition represents a node definition available on the CML controller.
 // The node def data structure now matches the OpenAPI schema.
 type NodeDefinition struct {
