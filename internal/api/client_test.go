@@ -459,12 +459,11 @@ func TestDoJSONMalformedResponse(t *testing.T) {
 	}
 }
 
-// TestAPIErrorEmptyFields tests APIError.Error() with empty Message and RawBody
+// TestAPIErrorEmptyFields tests APIError.Error() with empty Message
 func TestAPIErrorEmptyFields(t *testing.T) {
 	apiErr := &gocmlerrors.APIError{
 		StatusCode: 500,
 		Message:    "", // Empty message
-		RawBody:    "", // Empty raw body
 	}
 
 	expected := "HTTP 500"
@@ -473,15 +472,14 @@ func TestAPIErrorEmptyFields(t *testing.T) {
 	}
 }
 
-// TestAPIErrorWithRawBody tests APIError.Error() with RawBody but no Message
+// TestAPIErrorWithRawBody tests APIError.Error() with no Message
 func TestAPIErrorWithRawBody(t *testing.T) {
 	apiErr := &gocmlerrors.APIError{
 		StatusCode: 404,
-		Message:    "",                   // Empty message
-		RawBody:    "Resource not found", // Has raw body
+		Message:    "", // Empty message
 	}
 
-	expected := "HTTP 404: Resource not found"
+	expected := "HTTP 404"
 	if apiErr.Error() != expected {
 		t.Errorf("expected %q, got %q", expected, apiErr.Error())
 	}

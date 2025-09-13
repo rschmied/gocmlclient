@@ -40,13 +40,10 @@ var (
 
 // APIError represents a structured API error response
 type APIError struct {
-	Operation  string         `json:"operation"`
-	StatusCode int            `json:"status_code"`
-	Message    string         `json:"message"`
-	Details    map[string]any `json:"details,omitempty"`
-	RequestID  string         `json:"request_id,omitempty"`
-	RawBody    string         `json:"-"`
-	Cause      error          `json:"-"`
+	Operation  string `json:"operation"`
+	StatusCode int    `json:"status_code"`
+	Message    string `json:"message"`
+	Cause      error  `json:"-"`
 }
 
 func (e *APIError) Error() string {
@@ -54,25 +51,16 @@ func (e *APIError) Error() string {
 		if e.Message != "" {
 			return fmt.Sprintf("API %s failed (HTTP %d): %s", e.Operation, e.StatusCode, e.Message)
 		}
-		if e.RawBody != "" {
-			return fmt.Sprintf("API %s failed (HTTP %d): %s", e.Operation, e.StatusCode, e.RawBody)
-		}
 		return fmt.Sprintf("API %s failed (HTTP %d)", e.Operation, e.StatusCode)
 	}
 	if e.StatusCode > 0 {
 		if e.Message != "" {
 			return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.Message)
 		}
-		if e.RawBody != "" {
-			return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.RawBody)
-		}
 		return fmt.Sprintf("HTTP %d", e.StatusCode)
 	}
 	if e.Message != "" {
 		return e.Message
-	}
-	if e.RawBody != "" {
-		return e.RawBody
 	}
 	return "API error"
 }

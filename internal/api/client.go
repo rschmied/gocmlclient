@@ -204,7 +204,7 @@ func (c *Client) handleHTTPError(res *http.Response) error {
 			Operation:  "request",
 			StatusCode: res.StatusCode,
 			Message:    "failed to read error response",
-			RawBody:    err.Error(),
+			Cause:      err,
 		}
 	}
 
@@ -216,7 +216,6 @@ func (c *Client) handleHTTPError(res *http.Response) error {
 		// Successfully parsed JSON error
 		apiErr.Operation = "request"
 		apiErr.StatusCode = res.StatusCode
-		apiErr.RawBody = bodyStr
 		return &apiErr
 	}
 

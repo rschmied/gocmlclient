@@ -141,7 +141,6 @@ func TestAPIError(t *testing.T) {
 				Operation:  "create",
 				StatusCode: 400,
 				Message:    "invalid input",
-				RawBody:    "detailed error",
 			},
 			expected: "API create failed (HTTP 400): invalid input",
 		},
@@ -159,13 +158,7 @@ func TestAPIError(t *testing.T) {
 			},
 			expected: "server error",
 		},
-		{
-			name: "error with raw body only",
-			apiErr: &APIError{
-				RawBody: "internal server error",
-			},
-			expected: "internal server error",
-		},
+
 		{
 			name:     "empty error",
 			apiErr:   &APIError{},
