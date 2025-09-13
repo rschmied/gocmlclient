@@ -110,6 +110,17 @@ func TestNew(t *testing.T) {
 				assert.True(t, client.config.skipReadyCheck)
 			},
 		},
+		{
+			name:    "error new api client",
+			baseURL: "https://api.example.com",
+			opts: []Option{
+				WithTokenStorageFile("/nonexistent/path/token.json"),
+			},
+			wantErr: true,
+			validate: func(t *testing.T, client *Client) {
+				// Should not reach here
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -117,6 +128,7 @@ func TestNew(t *testing.T) {
 			client, err := New(tt.baseURL, tt.opts...)
 			if tt.wantErr {
 				assert.Error(t, err)
+				assert.Nil(t, client)
 				return
 			}
 			assert.NoError(t, err)
@@ -217,6 +229,55 @@ func TestNewAPIClient(t *testing.T) {
 				baseURL:        "https://api.example.com",
 				httpClient:     &http.Client{Timeout: 10 * time.Second},
 				skipReadyCheck: true, // Skip ready check for tests
+			},
+			wantErr: false,
+			validate: func(t *testing.T, apiClient *api.Client) {
+				assert.NotNil(t, apiClient)
+			},
+		},
+		{
+			name: "with token storage file",
+			config: &Config{
+				baseURL:          "https://api.example.com",
+				tokenStorageFile: "/tmp/test_token.json",
+				skipReadyCheck:   true,
+			},
+			wantErr: false,
+			validate: func(t *testing.T, apiClient *api.Client) {
+				assert.NotNil(t, apiClient)
+			},
+		},
+		{
+			name: "with invalid token storage file",
+			config: &Config{
+				baseURL:          "https://api.example.com",
+				tokenStorageFile: "/nonexistent/path/token.json",
+				skipReadyCheck:   true,
+			},
+			wantErr: true,
+			validate: func(t *testing.T, apiClient *api.Client) {
+				// Should not reach here
+			},
+		},
+		{
+			name: "with username password",
+			config: &Config{
+				baseURL:        "https://api.example.com",
+				username:       "testuser",
+				password:       "testpass",
+				skipReadyCheck: true,
+			},
+			wantErr: false,
+			validate: func(t *testing.T, apiClient *api.Client) {
+				assert.NotNil(t, apiClient)
+			},
+		},
+		{
+			name: "with preset token",
+			config: &Config{
+				baseURL:        "https://api.example.com",
+				token:          "test-token",
+				skipReadyCheck: true,
 			},
 			wantErr: false,
 			validate: func(t *testing.T, apiClient *api.Client) {

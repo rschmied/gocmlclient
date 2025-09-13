@@ -415,3 +415,126 @@ func TestLinkListMarshalJSON(t *testing.T) {
 	]`
 	assert.JSONEq(t, expected, string(data))
 }
+
+func TestLinkCreate_InterfaceCreationFailure(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific setup")
+	}
+
+	client, cleanup := initLinkTest(t)
+	defer cleanup()
+
+	// Mock interface creation failure
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/nodes/src-node/interfaces?data=true",
+		httpmock.NewJsonResponderOrPanic(200, []map[string]any{})) // No interfaces available
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/nodes/dst-node/interfaces?data=true",
+		httpmock.NewJsonResponderOrPanic(200, []map[string]any{})) // No interfaces available
+	httpmock.RegisterResponder("POST", "https://mock/api/v0/labs/lab-123/interfaces",
+		httpmock.NewStringResponder(500, `{"message": "Interface creation failed"}`))
+
+	service := NewLinkService(client)
+	// Initialize required services
+	service.Interface = NewInterfaceService(client)
+	service.Node = NewNodeService(client, false)
+	ctx := context.Background()
+
+	link := models.Link{
+		LabID:   "lab-123",
+		SrcNode: "src-node",
+		DstNode: "dst-node",
+		SrcSlot: 0,
+		DstSlot: 0,
+	}
+
+	_, err := service.Create(ctx, link)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "500")
+	assert.Contains(t, err.Error(), "Interface creation failed")
+}
+
+func TestLinkCreate_GetInterfacesFailure(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific setup")
+	}
+
+	client, cleanup := initLinkTest(t)
+	defer cleanup()
+
+	// Mock interface listing failure
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/nodes/src-node/interfaces?data=true",
+		httpmock.NewStringResponder(404, `{"message": "Node not found"}`))
+
+	service := NewLinkService(client)
+	// Initialize required services
+	service.Interface = NewInterfaceService(client)
+	service.Node = NewNodeService(client, false)
+	ctx := context.Background()
+
+	link := models.Link{
+		LabID:   "lab-123",
+		SrcNode: "src-node",
+		DstNode: "dst-node",
+		SrcSlot: 0,
+		DstSlot: 0,
+	}
+
+	_, err := service.Create(ctx, link)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "404")
+	assert.Contains(t, err.Error(), "Node not found")
+}
+
+func TestLinkCreate_GetByIDFailure(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific setup")
+	}
+
+	client, cleanup := initLinkTest(t)
+	defer cleanup()
+
+	// Mock successful link creation but failed GetByID
+	httpmock.RegisterResponder("POST", "https://mock/api/v0/labs/lab-123/links",
+		httpmock.NewStringResponder(200, `{"id": "link-123"}`))
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/links/link-123",
+		httpmock.NewStringResponder(404, `{"message": "Link not found after creation"}`))
+
+	service := NewLinkService(client)
+	ctx := context.Background()
+
+	link := models.Link{
+		LabID: "lab-123",
+		SrcID: "iface-a",
+		DstID: "iface-b",
+	}
+
+	_, err := service.Create(ctx, link)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "404")
+	assert.Contains(t, err.Error(), "Link not found after creation")
+}
+
+func TestLinkGetByID_LabIDMismatch(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific setup")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	// Mock response with different lab ID
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/links/link-456",
+		httpmock.NewStringResponder(200, `{
+			"id": "link-456",
+			"lab_id": "different-lab",
+			"interface_a": "iface-a",
+			"interface_b": "iface-b"
+		}`))
+
+	service := NewLinkService(client)
+	ctx := context.Background()
+
+	_, err := service.GetByID(ctx, "lab-123", "link-456")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "link lab ID mismatch")
+	assert.Contains(t, err.Error(), "expected lab-123, got different-lab")
+}

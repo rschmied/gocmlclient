@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildRequest(t *testing.T) {
@@ -403,5 +405,57 @@ func BenchmarkBuildRequestSimple(b *testing.B) {
 		if err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
+	}
+}
+
+func TestBuildRequestErrorCases(t *testing.T) {
+	tests := []struct {
+		name        string
+		ctx         context.Context
+		baseURL     string
+		method      string
+		endpoint    string
+		query       map[string]string
+		body        any
+		expectError bool
+	}{
+		{
+			name:        "invalid base URL",
+			ctx:         context.Background(),
+			baseURL:     "://invalid-url",
+			method:      "GET",
+			endpoint:    "/test",
+			expectError: true,
+		},
+		{
+			name:        "invalid body marshaling",
+			ctx:         context.Background(),
+			baseURL:     "https://api.example.com",
+			method:      "POST",
+			endpoint:    "/test",
+			body:        make(chan int), // unmarshalable
+			expectError: true,
+		},
+		{
+			name:        "invalid method",
+			ctx:         context.Background(),
+			baseURL:     "https://api.example.com",
+			method:      "INVALID METHOD",
+			endpoint:    "/test",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := BuildRequest(tt.ctx, tt.baseURL, tt.method, tt.endpoint, tt.query, tt.body)
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Nil(t, req)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, req)
+			}
+		})
 	}
 }

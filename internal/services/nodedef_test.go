@@ -212,3 +212,65 @@ func TestNodeDefinitionService_NodeDefinitions(t *testing.T) {
 	assert.True(t, iosvDef.HasSerial())
 	assert.Equal(t, 2, iosvDef.SerialPorts())
 }
+
+func TestNodeDefinitionService_NodeDefinitions_Error(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := initNodeDefTest(t)
+	defer cleanup()
+
+	// Mock API error
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/simplified_node_definitions",
+		httpmock.NewStringResponder(500, `{"message": "Internal server error"}`))
+
+	ctx := context.Background()
+	nodeDefService := NewNodeDefinitionService(client)
+
+	_, err := nodeDefService.NodeDefinitions(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "500")
+	assert.Contains(t, err.Error(), "Internal server error")
+}
+
+func TestNodeDefinitionService_NodeDefinitions_MalformedJSON(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := initNodeDefTest(t)
+	defer cleanup()
+
+	// Mock malformed JSON response
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/simplified_node_definitions",
+		httpmock.NewStringResponder(200, `{"invalid": json}`))
+
+	ctx := context.Background()
+	nodeDefService := NewNodeDefinitionService(client)
+
+	_, err := nodeDefService.NodeDefinitions(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "decode response")
+}
+
+func TestNodeDefinitionService_NodeDefinitions_EmptyResponse(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test expects specific mock data")
+	}
+
+	client, cleanup := initNodeDefTest(t)
+	defer cleanup()
+
+	// Mock empty response
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/simplified_node_definitions",
+		httpmock.NewStringResponder(200, `[]`))
+
+	ctx := context.Background()
+	nodeDefService := NewNodeDefinitionService(client)
+
+	nodeDefs, err := nodeDefService.NodeDefinitions(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, nodeDefs)
+	assert.Len(t, nodeDefs, 0)
+}

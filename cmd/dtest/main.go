@@ -89,12 +89,9 @@ func main() {
 		client.Conditional(*tokenFile != "", client.WithTokenStorageFile(*tokenFile)),
 	}
 
-	// add authentication (token takes precedence)
-	if token != "" {
-		options = append(options, client.WithToken(token))
-	} else {
-		options = append(options, client.WithUsernamePassword(username, password))
-	}
+	// add both authentication options (token takes precedence)
+	options = append(options, client.WithToken(token))
+	options = append(options, client.WithUsernamePassword(username, password))
 
 	// create client
 	c, err := gocml.New(host, options...)

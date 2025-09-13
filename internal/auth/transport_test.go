@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -607,6 +608,75 @@ func TestTransportRoundTripEmptyBody(t *testing.T) {
 		t.Fatalf("request with empty body failed: %v", err)
 	}
 	resp.Body.Close()
+}
+
+func TestNewTransportNilBase(t *testing.T) {
+	manager := createMockManager("test-token", time.Now().Add(time.Hour), nil)
+
+	// Test with nil base transport
+	transport := NewTransport(nil, manager, nil)
+
+	if transport.base != http.DefaultTransport {
+		t.Error("expected http.DefaultTransport when base is nil")
+	}
+
+	// Check default skip endpoints
+	expectedSkips := []string{
+		"/api/v0/auth",
+		"/api/v0/auth_extended",
+		"/api/v0/authok",
+	}
+
+	for _, expected := range expectedSkips {
+		found := slices.Contains(transport.skipAuthEndpoints, expected)
+		if !found {
+			t.Errorf("expected skip endpoint %s not found", expected)
+		}
+	}
+}
+
+func TestDrainAndClose(t *testing.T) {
+	// Test with nil reader
+	err := drainAndClose(nil)
+	if err != nil {
+		t.Errorf("expected no error for nil reader, got %v", err)
+	}
+
+	// Test with valid reader
+	reader := io.NopCloser(strings.NewReader("test data"))
+	err = drainAndClose(reader)
+	if err != nil {
+		t.Errorf("expected no error for valid reader, got %v", err)
+	}
+}
+
+func TestTransportRoundTripBodyReadError(t *testing.T) {
+	// Create a mock manager that will succeed
+	manager := createMockManager("test-token", time.Now().Add(time.Hour), nil)
+	transport := NewTransport(http.DefaultTransport, manager, nil)
+
+	// Create a request with a body that will fail to read
+	req, _ := http.NewRequest("POST", "http://example.com/api/data", &failingReader{})
+
+	_, err := transport.RoundTrip(req)
+	if err == nil {
+		t.Fatal("expected error from failing body read")
+	}
+
+	if !strings.Contains(err.Error(), "body read error") {
+		t.Errorf("expected body read error, got %q", err.Error())
+	}
+}
+
+// failingReader is a reader that always fails
+type failingReader struct{}
+
+func (f *failingReader) Read(p []byte) (n int, err error) {
+	return 0, fmt.Errorf("body read error")
+}
+
+func (f *failingReader) Close() error {
+	return nil
 }
 
 func BenchmarkTransportRoundTripSkipAuth(b *testing.B) {
