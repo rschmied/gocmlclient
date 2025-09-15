@@ -61,7 +61,7 @@ func addNodeResponders() {
 
 func addInterfaceResponders() {
 	// Mock get interfaces for node
-	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/nodes/node-a/interfaces?data=true",
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/nodes/node-a/interfaces",
 		httpmock.NewJsonResponderOrPanic(200, []map[string]any{
 			{
 				"id":           "iface-a-uuid",
@@ -71,7 +71,7 @@ func addInterfaceResponders() {
 				"type":         "physical",
 			},
 		}))
-	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/nodes/node-b/interfaces?data=true",
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/nodes/node-b/interfaces",
 		httpmock.NewJsonResponderOrPanic(200, []map[string]any{
 			{
 				"id":           "iface-b-uuid",
@@ -112,7 +112,7 @@ func TestLinkCRUD(t *testing.T) {
 
 		httpmock.RegisterResponder("POST", "https://mock/api/v0/labs/lab_uuid/links",
 			httpmock.NewStringResponder(200, createResponse))
-		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/links?data=true",
+		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/links",
 			httpmock.NewStringResponder(200, linksResponse))
 		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/links/link-uuid",
 			httpmock.NewStringResponder(200, linkResponse))
@@ -425,9 +425,9 @@ func TestLinkCreate_InterfaceCreationFailure(t *testing.T) {
 	defer cleanup()
 
 	// Mock interface creation failure
-	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/nodes/src-node/interfaces?data=true",
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/nodes/src-node/interfaces",
 		httpmock.NewJsonResponderOrPanic(200, []map[string]any{})) // No interfaces available
-	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/nodes/dst-node/interfaces?data=true",
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/nodes/dst-node/interfaces",
 		httpmock.NewJsonResponderOrPanic(200, []map[string]any{})) // No interfaces available
 	httpmock.RegisterResponder("POST", "https://mock/api/v0/labs/lab-123/interfaces",
 		httpmock.NewStringResponder(500, `{"message": "Interface creation failed"}`))
@@ -461,7 +461,7 @@ func TestLinkCreate_GetInterfacesFailure(t *testing.T) {
 	defer cleanup()
 
 	// Mock interface listing failure
-	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/nodes/src-node/interfaces?data=true",
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab-123/nodes/src-node/interfaces",
 		httpmock.NewStringResponder(404, `{"message": "Node not found"}`))
 
 	service := NewLinkService(client)

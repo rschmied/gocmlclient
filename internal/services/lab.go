@@ -19,6 +19,7 @@ const (
 	labsAPI      = "labs"
 	importAPI    = "import"
 	convergedAPI = "check_if_converged"
+	populateAPI  = "populate_lab_tiles"
 	wipeAction   = "wipe"
 	startAction  = "start"
 	stopAction   = "stop"
@@ -64,7 +65,7 @@ func (s *LabService) Labs(ctx context.Context, showAll bool) (labs models.LabLis
 // LabsWithData retrieves labs with data using the /populate_lab_tiles endpoint
 func (s *LabService) LabsWithData(ctx context.Context) ([]models.LabResponse, error) {
 	var labTilesResponse models.LabTilesResponse
-	err := s.apiClient.GetJSON(ctx, "populate_lab_tiles", nil, &labTilesResponse)
+	err := s.apiClient.GetJSON(ctx, populateAPI, nil, &labTilesResponse)
 	if err != nil {
 		return nil, errors.Wrap(err, "get lab tiles")
 	}
@@ -238,12 +239,12 @@ func (s *LabService) fillLabData(ctx context.Context, lab *models.Lab) error {
 	}
 
 	// Fetch interfaces for each node (sequentially)
-	for i := range lab.Nodes {
-		interfaces, err := s.Interface.GetInterfacesForNode(ctx, lab.ID, lab.Nodes[i].ID)
+	for nodeID := range lab.Nodes {
+		interfaces, err := s.Interface.GetInterfacesForNode(ctx, lab.ID, nodeID)
 		if err != nil {
-			return errors.Wrapf(err, "get interfaces for node %s", lab.Nodes[i].ID)
+			return errors.Wrapf(err, "get interfaces for node %s", nodeID)
 		}
-		lab.Nodes[i].Interfaces = interfaces
+		lab.Nodes[nodeID].Interfaces = interfaces
 	}
 
 	// Fetch and merge L3 information
@@ -266,6 +267,7 @@ func (s *LabService) fillLabData(ctx context.Context, lab *models.Lab) error {
 					}
 				}
 			}
+			lab.Nodes[models.UUID(nodeID)] = node
 		}
 	}
 

@@ -36,7 +36,7 @@ func (s *InterfaceService) GetInterfacesForNode(ctx context.Context, labID, id m
 	// with the data=true option, we get not only the list of IDs but the
 	// interfaces themselves as well!
 	api := fmt.Sprintf("labs/%s/nodes/%s/interfaces", labID, id)
-	queryParams := httputil.NewQueryBuilder().WithData(true).Build()
+	queryParams := httputil.NewQueryBuilder().WithOperational().WithData(true).Build()
 
 	interfaceList := models.InterfaceList{}
 	err := s.apiClient.GetJSON(ctx, api, queryParams, &interfaceList)

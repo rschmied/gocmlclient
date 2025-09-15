@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"testing"
 
@@ -157,6 +158,11 @@ func TestLabsWithData(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, labs, 2)
 
+	// Sort labs by ID to ensure consistent order
+	sort.Slice(labs, func(i, j int) bool {
+		return string(labs[i].ID) < string(labs[j].ID)
+	})
+
 	// Check first lab
 	assert.Equal(t, "lab1", string(labs[0].ID))
 	assert.Equal(t, "Lab One", labs[0].Title)
@@ -259,7 +265,7 @@ func TestGetByIDDeep(t *testing.T) {
 							"id": "eth0",
 							"label": "Ethernet 0",
 							"ip4": ["10.0.10.1"],
-							"ip6": []
+							"ip6": ["2008:db8::100"]
 						}
 					}
 				}
@@ -281,8 +287,11 @@ func TestGetByIDDeep(t *testing.T) {
 				{
 					"id": "eth0",
 					"label": "Ethernet 0",
-					"mac_address": "aa:bb:cc:dd:ee:ff",
-					"is_connected": true
+					"mac_address": null,
+					"is_connected": true,
+					"operational": {
+						"mac_address": "52:54:00:b3:0b:ed"
+					}
 				}
 			]`))
 	})
