@@ -35,6 +35,15 @@ func handleError(operation string, err error) {
 	slog.Error("Operation failed", "operation", operation, "error", err.Error())
 }
 
+func getLogLevel(levelStr string) slog.Level {
+	var level slog.Level
+	err := level.UnmarshalText([]byte(levelStr))
+	if err != nil {
+		level = slog.LevelWarn
+	}
+	return level
+}
+
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
@@ -49,6 +58,23 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Flags:\n")
 		flag.PrintDefaults()
 	}
+
+	// parse command line flags
+	noNamedConfigs := flag.Bool("no-named-configs", false, "Disable named configurations")
+	insecureTLS := flag.Bool("insecure", false, "Skip TLS certificate verification")
+	tokenFile := flag.String("tokenfile", "", "Specify file to save token, use memory storage otherwise")
+	loglvl := flag.String("level", "warn", "log level")
+	flag.Parse()
+
+	// set up logger
+	slog.SetDefault(slog.New(
+		tint.NewHandler(os.Stderr, &tint.Options{
+			AddSource:  true,
+			Level:      getLogLevel(*loglvl),
+			TimeFormat: time.Kitchen,
+		}),
+	))
+
 	host, hostOK := os.LookupEnv("CML_HOST")
 	username, userOK := os.LookupEnv("CML_USER")
 	password, passwordOK := os.LookupEnv("CML_PASS")
@@ -65,21 +91,7 @@ func main() {
 		return
 	}
 
-	// Parse command line flags
-	noNamedConfigs := flag.Bool("no-named-configs", false, "Disable named configurations")
-	insecureTLS := flag.Bool("insecure", false, "Skip TLS certificate verification")
-	tokenFile := flag.String("tokenfile", "", "Specify file to save token, use memory storage otherwise")
-	flag.Parse()
-
 	ctx := context.Background()
-
-	slog.SetDefault(slog.New(
-		tint.NewHandler(os.Stderr, &tint.Options{
-			AddSource:  true,
-			Level:      slog.LevelInfo,
-			TimeFormat: time.Kitchen,
-		}),
-	))
 
 	options := []client.Option{
 		client.WithHTTPClient(http.DefaultClient),
