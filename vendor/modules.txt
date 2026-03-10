@@ -8,7 +8,7 @@ github.com/davecgh/go-spew/spew
 ## explicit; go 1.18
 github.com/jarcoal/httpmock
 github.com/jarcoal/httpmock/internal
-# github.com/lmittmann/tint v1.1.2
+# github.com/lmittmann/tint v1.1.3
 ## explicit; go 1.21
 github.com/lmittmann/tint
 # github.com/pmezard/go-difflib v1.0.0
@@ -18,8 +18,8 @@ github.com/pmezard/go-difflib/difflib
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
-# golang.org/x/sync v0.17.0
-## explicit; go 1.24.0
+# golang.org/x/sync v0.20.0
+## explicit; go 1.25.0
 golang.org/x/sync/errgroup
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit

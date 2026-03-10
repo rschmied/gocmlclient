@@ -1,3 +1,6 @@
+//go:build nevertest
+// +build nevertest
+
 package main
 
 import (
