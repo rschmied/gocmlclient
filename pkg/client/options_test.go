@@ -101,3 +101,10 @@ func TestSkipReadyCheck(t *testing.T) {
 	opt(c)
 	assert.True(t, c.skipReadyCheck)
 }
+
+func TestWithCACertPEM(t *testing.T) {
+	c := &Config{}
+	opt := WithCACertPEM([]byte("-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n"))
+	opt(c)
+	assert.NotEmpty(t, c.caCertPEM)
+}

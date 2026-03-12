@@ -284,6 +284,18 @@ func TestNewAPIClient(t *testing.T) {
 				assert.NotNil(t, apiClient)
 			},
 		},
+		{
+			name: "with CA cert PEM",
+			config: &Config{
+				baseURL:        "https://api.example.com",
+				caCertPEM:      []byte("-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n"),
+				skipReadyCheck: true,
+			},
+			wantErr: true,
+			validate: func(t *testing.T, apiClient *api.Client) {
+				// Should not reach here
+			},
+		},
 	}
 
 	for _, tt := range tests {

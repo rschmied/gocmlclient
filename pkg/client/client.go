@@ -4,6 +4,8 @@ package client
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -95,16 +97,37 @@ func newAPIClient(c *Config) (*api.Client, error) {
 	}
 
 	// 2. handle TLS configuration if needed
-	if c.insecureSkipVerify {
+	if c.insecureSkipVerify || len(c.caCertPEM) > 0 {
 		transport, ok := c.httpClient.Transport.(*http.Transport)
 		if !ok || transport == nil {
 			transport = http.DefaultTransport.(*http.Transport).Clone()
 		} else {
 			transport = transport.Clone()
 		}
-		transport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
+
+		tlsCfg := transport.TLSClientConfig
+		if tlsCfg == nil {
+			tlsCfg = &tls.Config{}
+		} else {
+			tlsCfg = tlsCfg.Clone()
 		}
+
+		if len(c.caCertPEM) > 0 {
+			pool, err := x509.SystemCertPool()
+			if err != nil || pool == nil {
+				pool = x509.NewCertPool()
+			}
+			if ok := pool.AppendCertsFromPEM(c.caCertPEM); !ok {
+				return nil, fmt.Errorf("append CA certs: invalid PEM")
+			}
+			tlsCfg.RootCAs = pool
+		}
+
+		if c.insecureSkipVerify {
+			tlsCfg.InsecureSkipVerify = true
+		}
+
+		transport.TLSClientConfig = tlsCfg
 		c.httpClient.Transport = transport
 	}
 

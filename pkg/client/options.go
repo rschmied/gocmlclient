@@ -17,6 +17,7 @@ type Config struct {
 	token              string
 	tokenStorageFile   string
 	insecureSkipVerify bool
+	caCertPEM          []byte
 	namedConfigs       bool
 	httpClient         *http.Client
 	logger             *slog.Logger
@@ -52,6 +53,14 @@ func WithInsecureTLS() Option {
 func WithToken(token string) Option {
 	return func(c *Config) {
 		c.token = token
+	}
+}
+
+// WithCACertPEM sets a custom CA certificate bundle (PEM). The certificates
+// are added to the system cert pool.
+func WithCACertPEM(certPEM []byte) Option {
+	return func(c *Config) {
+		c.caCertPEM = certPEM
 	}
 }
 
