@@ -39,7 +39,7 @@ func NewSystemService(apiClient *api.Client) *SystemService {
 const (
 	versionConstraint      = ">=2.4.0,<3.0.0"
 	namedConfigsConstraint = ">=2.7.0"
-	versionRegexPattern    = `^(\d\.\d\.\d)((-dev0)?\+build.*)?$`
+	versionRegexPattern    = `^(\d+\.\d+\.\d+)((-dev0)?\+build.*)?$`
 )
 
 func versionError(got string) error {
@@ -91,7 +91,7 @@ func (s *SystemService) checkVersionConstraint(version, constraintStr string) (b
 	re := regexp.MustCompile(versionRegexPattern)
 	m := re.FindStringSubmatch(version)
 	if m == nil {
-		return false, fmt.Errorf("version doesn't match expected format")
+		return false, fmt.Errorf("version %s doesn't match expected format", version)
 	}
 
 	slog.Info("checkVersion", "version", version, "constraint", constraintStr)

@@ -589,13 +589,11 @@ func TestRetryMiddlewareBodyError(t *testing.T) {
 
 	// Execute the middleware
 	_, err := wrappedNext(req)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if err == nil {
+		t.Fatalf("expected error")
 	}
-
-	// Should still make retry attempts despite body read error
-	if callCount != 3 { // initial + 2 retries
-		t.Errorf("expected 3 calls, got %d", callCount)
+	if callCount != 0 {
+		t.Errorf("expected 0 calls, got %d", callCount)
 	}
 }
 

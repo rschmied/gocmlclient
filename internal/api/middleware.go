@@ -2,13 +2,15 @@ package api
 
 import (
 	"bytes"
+	"context"
+	stdErrors "errors"
 	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/rschmied/gocmlclient/pkg/errors"
+	cmlerrors "github.com/rschmied/gocmlclient/pkg/errors"
 )
 
 // LoggingMiddleware logs HTTP requests and responses
@@ -96,20 +98,24 @@ func DefaultRetryPolicy() RetryPolicy {
 func RetryMiddleware(policy RetryPolicy) Middleware {
 	return func(next DoFunc) DoFunc {
 		return func(req *http.Request) (*http.Response, error) {
+			ctx := req.Context()
+
+			getBody, err := makeGetBody(req)
+			if err != nil {
+				return nil, err
+			}
+
 			var lastErr error
 			delay := policy.InitialDelay
 
 			for attempt := 0; attempt <= policy.MaxRetries; attempt++ {
-				// Clone the request for retry attempts
-				reqClone := req.Clone(req.Context())
-
-				// If there's a body, we need to restore it for each attempt
-				if req.Body != nil {
-					body, err := io.ReadAll(req.Body)
-					if err == nil {
-						req.Body = io.NopCloser(bytes.NewReader(body))
-						reqClone.Body = io.NopCloser(bytes.NewReader(body))
+				reqClone := req.Clone(ctx)
+				if getBody != nil {
+					body, err := getBody()
+					if err != nil {
+						return nil, err
 					}
+					reqClone.Body = body
 				}
 
 				res, err := next(reqClone)
@@ -118,8 +124,8 @@ func RetryMiddleware(policy RetryPolicy) Middleware {
 					if !isRetryableStatus(res.StatusCode) {
 						return res, nil
 					}
-					// Close the response body before retrying
-					res.Body.Close()
+					// Drain + close the response body before retrying (helps connection reuse)
+					_ = drainAndClose(res.Body)
 					lastErr = &HTTPError{StatusCode: res.StatusCode}
 				} else {
 					lastErr = err
@@ -127,13 +133,14 @@ func RetryMiddleware(policy RetryPolicy) Middleware {
 
 				// Don't wait after the last attempt
 				if attempt < policy.MaxRetries {
-					if isRetryableError(lastErr) {
-						time.Sleep(delay)
-						delay = min(time.Duration(float64(delay)*policy.BackoffFactor), policy.MaxDelay)
-					} else {
+					if !isRetryableError(lastErr) {
 						// Non-retryable error, return immediately
 						return res, lastErr
 					}
+					if err := sleepWithContext(ctx, delay); err != nil {
+						return nil, err
+					}
+					delay = min(time.Duration(float64(delay)*policy.BackoffFactor), policy.MaxDelay)
 				}
 			}
 
@@ -170,6 +177,9 @@ func isRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
+	if stdErrors.Is(err, context.Canceled) || stdErrors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
 
 	// Check for HTTP errors
 	if httpErr, ok := err.(*HTTPError); ok {
@@ -177,7 +187,7 @@ func isRetryableError(err error) bool {
 	}
 
 	// Check for TLS/certificate validation errors - these should NOT be retried
-	if errors.IsTLSCertificateError(err) {
+	if cmlerrors.IsTLSCertificateError(err) {
 		return false
 	}
 
@@ -186,6 +196,60 @@ func isRetryableError(err error) bool {
 	// based on your error handling needs
 
 	return true // Default to retrying for unknown errors
+}
+
+func sleepWithContext(ctx context.Context, d time.Duration) error {
+	if d <= 0 {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			return nil
+		}
+	}
+
+	t := time.NewTimer(d)
+	defer t.Stop()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
+}
+
+func drainAndClose(r io.ReadCloser) error {
+	if r == nil {
+		return nil
+	}
+	_, _ = io.Copy(io.Discard, r)
+	return r.Close()
+}
+
+func makeGetBody(req *http.Request) (func() (io.ReadCloser, error), error) {
+	if req == nil {
+		return nil, nil
+	}
+	if req.Body == nil {
+		return nil, nil
+	}
+	if req.GetBody != nil {
+		return req.GetBody, nil
+	}
+
+	bodyBytes, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	_ = req.Body.Close()
+
+	// Restore the body so other middleware/callers aren't surprised.
+	req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+
+	return func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(bodyBytes)), nil
+	}, nil
 }
 
 // UserAgentMiddleware adds a User-Agent header to requests

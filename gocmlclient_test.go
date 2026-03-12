@@ -10,7 +10,10 @@ import (
 func TestNew(t *testing.T) {
 	// Test that New function exists and has correct signature
 	// We can't actually call it without a server, but we can verify it compiles
-	opts := []client.Option{client.SkipReadyCheck()}
+	opts := []client.Option{
+		client.SkipReadyCheck(),
+		client.WithInsecureTLS(),
+	}
 	assert.NotNil(t, opts)
 }
 

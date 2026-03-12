@@ -33,7 +33,7 @@ func TestUserBase_JSON(t *testing.T) {
 		IsAdmin:      true,
 		Groups:       []UUID{"group1", "group2"},
 		ResourcePool: uuidPtr("pool1"),
-		OptIn:        boolPtr(true),
+		OptIn:        optInPtr(OptInAccepted),
 		TourVersion:  "1.0.0",
 		PubkeyInfo:   "ssh-rsa AAAAB3NzaC1yc...",
 	}
@@ -57,6 +57,10 @@ func TestUserBase_JSON(t *testing.T) {
 	assert.Equal(t, userBase.OptIn, unmarshaled.OptIn)
 	assert.Equal(t, userBase.TourVersion, unmarshaled.TourVersion)
 	assert.Equal(t, userBase.PubkeyInfo, unmarshaled.PubkeyInfo)
+}
+
+func optInPtr(v OptInState) *OptInState {
+	return &v
 }
 
 func TestUserCreateRequest_JSON(t *testing.T) {
