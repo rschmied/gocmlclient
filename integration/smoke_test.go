@@ -11,6 +11,7 @@ import (
 func TestIntegration_Smoke(t *testing.T) {
 	cfg := LoadConfigFromEnv()
 	c := newClient(t, cfg)
+	wireClientServices(c)
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Timeout)
 	defer cancel()
@@ -40,7 +41,7 @@ func TestIntegration_LabImportFromFiles(t *testing.T) {
 	defer cancel()
 
 	for _, file := range cfg.LabTopologyFiles {
-		file := file
+		// file := file
 		t.Run(file, func(t *testing.T) {
 			topo, err := readFile(file)
 			if err != nil {

@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rschmied/gocmlclient/pkg/client"
+	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
 type Config struct {
@@ -23,6 +25,8 @@ type Config struct {
 	SkipReadyCheck   bool
 	TokenStorageFile string
 	Timeout          time.Duration
+	AllowMutations   bool
+	AllowUserMgmt    bool
 
 	LabTopologyFiles []string
 }
@@ -51,6 +55,8 @@ func LoadConfigFromEnv() Config {
 		TokenStorageFile: strings.TrimSpace(os.Getenv("CML_TOKEN_STORAGE_FILE")),
 		Timeout:          envDuration("CML_TIMEOUT", 60*time.Second),
 		LabTopologyFiles: splitCSV(os.Getenv("CML_LAB_TOPOLOGY_FILES")),
+		AllowMutations:   envBool("CML_IT_ALLOW_MUTATIONS"),
+		AllowUserMgmt:    envBool("CML_IT_ALLOW_USER_MGMT"),
 	}
 
 	for i := range c.LabTopologyFiles {
@@ -149,4 +155,18 @@ func readFile(path string) (string, error) {
 		return "", errors.New("empty file")
 	}
 	return string(b), nil
+}
+
+func converge(ctx context.Context, t *testing.T, c *client.Client, id models.UUID) {
+	booted := false
+	var err error
+	for !booted {
+		booted, err = c.Lab.HasConverged(ctx, id)
+		if err != nil {
+			t.Fatalf("Lab.HasConverged(): %v", err)
+		}
+		t.Log("waiting for convergence...")
+		time.Sleep(5 * time.Second)
+	}
+	t.Log("lab converged")
 }

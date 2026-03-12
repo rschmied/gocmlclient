@@ -51,13 +51,21 @@ func labURL(id models.UUID) string {
 }
 
 // labActionURL builds URL for lab state operations
-func labActionURL(labID models.UUID, action string) string {
+func labActionLegacyURL(labID models.UUID, action string) string {
 	return fmt.Sprintf("%s/state/%s", labURL(labID), action)
+}
+
+func labActionURL(labID models.UUID, action string) string {
+	return fmt.Sprintf("%s/%s", labURL(labID), action)
 }
 
 func (s *LabService) Labs(ctx context.Context, showAll bool) (labs models.LabList, err error) {
 	labs = models.LabList{}
-	queryParams := httputil.NewQueryBuilder().WithData(showAll).Build()
+	qb := httputil.NewQueryBuilder()
+	if showAll {
+		qb.Set("show_all", "true")
+	}
+	queryParams := qb.Build()
 	err = s.apiClient.GetJSON(ctx, labsAPI, queryParams, &labs)
 	return labs, err
 }
@@ -145,12 +153,24 @@ func (s *LabService) Update(ctx context.Context, id models.UUID, data models.Lab
 
 // Start starts all nodes in a lab
 func (s *LabService) Start(ctx context.Context, id models.UUID) error {
-	return s.apiClient.PutJSON(ctx, labActionURL(id, startAction), nil)
+	if err := s.apiClient.PutJSON(ctx, labActionURL(id, startAction), nil); err != nil {
+		if errors.IsNotFound(err) {
+			return s.apiClient.PutJSON(ctx, labActionLegacyURL(id, startAction), nil)
+		}
+		return err
+	}
+	return nil
 }
 
 // Stop stops all nodes in a lab
 func (s *LabService) Stop(ctx context.Context, id models.UUID) error {
-	return s.apiClient.PutJSON(ctx, labActionURL(id, stopAction), nil)
+	if err := s.apiClient.PutJSON(ctx, labActionURL(id, stopAction), nil); err != nil {
+		if errors.IsNotFound(err) {
+			return s.apiClient.PutJSON(ctx, labActionLegacyURL(id, stopAction), nil)
+		}
+		return err
+	}
+	return nil
 }
 
 // Delete deletes the lab identified by the `id` (a UUIDv4).
@@ -160,7 +180,13 @@ func (s *LabService) Delete(ctx context.Context, id models.UUID) error {
 
 // Wipe wipes the lab identified by the `id` (a UUIDv4).
 func (s *LabService) Wipe(ctx context.Context, id models.UUID) error {
-	return s.apiClient.PutJSON(ctx, labActionURL(id, wipeAction), nil)
+	if err := s.apiClient.PutJSON(ctx, labActionURL(id, wipeAction), nil); err != nil {
+		if errors.IsNotFound(err) {
+			return s.apiClient.PutJSON(ctx, labActionLegacyURL(id, wipeAction), nil)
+		}
+		return err
+	}
+	return nil
 }
 
 // Import imports a lab from YAML topology

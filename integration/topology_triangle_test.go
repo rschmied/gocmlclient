@@ -12,6 +12,7 @@ import (
 )
 
 func TestIntegration_TriangleWithExtConnAndUnmanagedSwitch(t *testing.T) {
+	// t.Skip("for now")
 	cfg := LoadConfigFromEnv()
 	if cfg.Timeout < 3*time.Minute {
 		cfg.Timeout = 3 * time.Minute
@@ -25,6 +26,7 @@ func TestIntegration_TriangleWithExtConnAndUnmanagedSwitch(t *testing.T) {
 	extParamKey := envString("CML_EXT_CONNECTOR_PARAM_KEY", "external_connector_id")
 
 	c := newClient(t, cfg)
+	wireClientServices(c)
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Timeout)
 	defer cancel()
@@ -63,9 +65,21 @@ func TestIntegration_TriangleWithExtConnAndUnmanagedSwitch(t *testing.T) {
 		t.Fatalf("Lab.Create: %v", err)
 	}
 	t.Cleanup(func() {
-		// cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 2*time.Minute)
-		// defer cleanupCancel()
-		// _ = c.Lab.Delete(cleanupCtx, lab.ID)
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cleanupCancel()
+		err = c.Lab.Stop(cleanupCtx, lab.ID)
+		if err != nil {
+			t.Logf("Lab.Stop(): %v", err)
+		}
+		converge(cleanupCtx, t, c, lab.ID)
+		err = c.Lab.Wipe(cleanupCtx, lab.ID)
+		if err != nil {
+			t.Logf("Lab.Wipe(): %v", err)
+		}
+		err = c.Lab.Delete(cleanupCtx, lab.ID)
+		if err != nil {
+			t.Logf("Lab.Delete(): %v", err)
+		}
 	})
 
 	// Create nodes.
@@ -147,4 +161,12 @@ func TestIntegration_TriangleWithExtConnAndUnmanagedSwitch(t *testing.T) {
 	if len(loaded.Links) != 7 {
 		t.Fatalf("expected 7 links (3 iol->sw + sw->ext + iol triangle), got %d", len(loaded.Links))
 	}
+
+	// start the lab
+	err = c.Lab.Start(ctx, lab.ID)
+	if err != nil {
+		t.Fatalf("Lab.Start(): %v", err)
+	}
+	// wait before done
+	converge(ctx, t, c, lab.ID)
 }

@@ -25,6 +25,15 @@ func addLabCreateResponders() {
 		httpmock.NewStringResponder(200, `{"id":"lab_uuid","state":"DEFINED_ON_CORE","created":"2025-08-26T09:41:36+00:00","modified":"2025-08-26T09:41:36+00:00","lab_title":"this","owner":"00000000-0000-4000-a000-000000000000","owner_username":"admin","effective_permissions":["lab_admin","lab_exec","lab_edit","lab_view"]}`))
 	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid",
 		httpmock.NewStringResponder(200, `{"id":"lab_uuid","state":"DEFINED_ON_CORE","created":"2025-08-26T09:41:36+00:00","modified":"2025-08-26T09:41:36+00:00","lab_title":"this","owner":"00000000-0000-4000-a000-000000000000","owner_username":"admin","effective_permissions":["lab_admin","lab_exec","lab_edit","lab_view"]}`))
+
+	// Prefer schema endpoints first; mock them as 404 so legacy fallback is exercised.
+	httpmock.RegisterResponder("PUT", "https://mock/api/v0/labs/lab_uuid/start",
+		httpmock.NewStringResponder(404, `{"message":"not found"}`))
+	httpmock.RegisterResponder("PUT", "https://mock/api/v0/labs/lab_uuid/stop",
+		httpmock.NewStringResponder(404, `{"message":"not found"}`))
+	httpmock.RegisterResponder("PUT", "https://mock/api/v0/labs/lab_uuid/wipe",
+		httpmock.NewStringResponder(404, `{"message":"not found"}`))
+
 	httpmock.RegisterResponder("PUT", "https://mock/api/v0/labs/lab_uuid/state/start",
 		httpmock.NewStringResponder(200, `{"id":"lab_uuid","state":"QUEUED","created":"2025-08-26T09:41:36+00:00","modified":"2025-08-26T09:41:36+00:00","lab_title":"this","owner":"00000000-0000-4000-a000-000000000000","owner_username":"admin","effective_permissions":["lab_admin","lab_exec","lab_edit","lab_view"]}`))
 	httpmock.RegisterResponder("PUT", "https://mock/api/v0/labs/lab_uuid/state/stop",
