@@ -4,4 +4,4 @@
 
 A CML2 Client in Golang
 
-(c) Ralph Schmieder  2022, 2023
+(c) Ralph Schmieder  2022-2026

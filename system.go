@@ -75,7 +75,7 @@ func (c *Client) checkVersionConstraint(version, constraintStr string) (bool, er
 		return false, err
 	}
 
-	re := regexp.MustCompile(`^(\d\.\d\.\d)((-dev0)?\+build.*)?$`)
+	re := regexp.MustCompile(`^(\d+\.\d+\.\d+)((-dev0)?\+build.*)?$`)
 	m := re.FindStringSubmatch(version)
 	if m == nil {
 		return false, fmt.Errorf("version doesn't match expected format")

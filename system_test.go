@@ -49,7 +49,7 @@ func TestClient_VersionCheck(t *testing.T) {
 		// these three yield an error, useNamedConfigs is untouched
 		{"too old", `{"version": "2.1.0","ready": true}`, true, true},
 		{"garbage", `{"version": "garbage","ready": true}`, true, true},
-		{"too new", `{"version": "2.35.0","ready": true}`, true, true},
+		{"too new", `{"version": "3.0.0","ready": true}`, true, true},
 		// the rest will reset useNamedConfigs, if needed
 		{"perfect", `{"version": "2.4.0","ready": true}`, false, false},
 		{"actual", `{"version": "2.4.0+build.1","ready": true}`, false, false},
