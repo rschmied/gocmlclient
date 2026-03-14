@@ -2,6 +2,13 @@
 
 Lists the changes in the gocmlclient package.
 
+## Version 0.1.3
+
+- use go 1.25
+- update dependencies
+- allow multi-digit version strings like 2.10 by modifying regex
+- adapt test case "too new" from using 2.35 to 3.0 to make it pass with new regex
+
 ## Version 0.1.2
 
 - rollback the token insertion / no auth from 0.1.1 -- it doesn't work. This

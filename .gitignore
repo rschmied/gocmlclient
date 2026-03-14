@@ -6,3 +6,5 @@ coverage.html
 mise.toml
 cmd/ctest/main.go
 
+# Go vendoring
+vendor/
