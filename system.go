@@ -22,8 +22,9 @@ type systemVersion struct {
 }
 
 const (
-	versionConstraint      = ">=2.4.0,<3.0.0"
-	namedConfigsConstraint = ">=2.7.0"
+	// Keep constraints in canonical form to avoid parser edge-cases.
+	versionConstraint      = ">= 2.4.0, < 3.0.0"
+	namedConfigsConstraint = ">= 2.7.0"
 )
 
 func versionError(got string) error {
