@@ -40,9 +40,7 @@ func (up userPass) valid() bool {
 // whether auth is OK, so it will take a different path
 func (c *Client) authRequired(api *url.URL) bool {
 	url := api.String()
-	return !(strings.HasSuffix(url, authAPI) ||
-		strings.HasSuffix(url, authokAPI) ||
-		strings.HasSuffix(url, systeminfoAPI))
+	return !strings.HasSuffix(url, authAPI) && !strings.HasSuffix(url, authokAPI) && !strings.HasSuffix(url, systeminfoAPI)
 }
 
 func (c *Client) authenticate(ctx context.Context, userpass userPass, depth int32) error {

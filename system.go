@@ -22,8 +22,9 @@ type systemVersion struct {
 }
 
 const (
-	versionConstraint      = ">=2.4.0,<3.0.0"
-	namedConfigsConstraint = ">=2.7.0"
+	// Keep constraints in canonical form to avoid parser edge-cases.
+	versionConstraint      = ">= 2.4.0, < 3.0.0"
+	namedConfigsConstraint = ">= 2.7.0"
 )
 
 func versionError(got string) error {
@@ -75,7 +76,7 @@ func (c *Client) checkVersionConstraint(version, constraintStr string) (bool, er
 		return false, err
 	}
 
-	re := regexp.MustCompile(`^(\d\.\d\.\d)((-dev0)?\+build.*)?$`)
+	re := regexp.MustCompile(`^(\d+\.\d+\.\d+)((-dev0)?\+build.*)?$`)
 	m := re.FindStringSubmatch(version)
 	if m == nil {
 		return false, fmt.Errorf("version doesn't match expected format")

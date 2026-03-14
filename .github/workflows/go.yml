@@ -6,22 +6,42 @@ on:
   pull_request:
     branches: [ "main" ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v5
 
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24
+        go-version-file: go.mod
+        cache: true
+        cache-dependency-path: go.sum
+
+    - name: Verify module files tidy
+      env:
+        GOFLAGS: -mod=readonly
+      run: |
+        go mod tidy
+        git diff --exit-code -- go.mod go.sum
 
     - name: Build
+      env:
+        GOFLAGS: -mod=readonly
       run: go build -v ./...
 
     - name: Run Unit tests
+      env:
+        GOFLAGS: -mod=readonly
       run: |
         # don't measure coverage on the testutil internal package which is
         # test-only. get a list of all packages, excluding the 'testutil'
@@ -30,10 +50,9 @@ jobs:
         go test -race -covermode atomic -coverprofile=covprofile $PACKAGES_TO_TEST
 
     - name: Install goveralls
-      run: go install github.com/mattn/goveralls@latest
+      run: go install github.com/mattn/goveralls@v0.0.12
 
     - name: Send coverage
       env:
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: goveralls -coverprofile=covprofile -service=github
-
