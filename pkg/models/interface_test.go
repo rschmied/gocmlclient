@@ -18,6 +18,7 @@ func TestInterfaceJSONMarshalUnmarshal(t *testing.T) {
 		"type": "physical",
 		"state": "STARTED",
 		"is_connected": true,
+		"mac_address": null,
 		"operational": {
 			"device_name": "eth0",
 			"mac_address": "00:11:22:33:44:55",
@@ -36,6 +37,7 @@ func TestInterfaceJSONMarshalUnmarshal(t *testing.T) {
 	assert.NotNil(t, iface.Slot)
 	assert.Equal(t, 0, *iface.Slot)
 	assert.True(t, iface.IsConnected)
+	assert.Nil(t, iface.MACAddress)
 
 	// Test marshaling back to JSON
 	marshaledData, err := json.Marshal(iface)

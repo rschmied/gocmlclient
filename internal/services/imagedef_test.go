@@ -25,7 +25,11 @@ func addImageDefinitionResponders() {
 				"disk_image_2": "iosv-159-disk2.qcow2",
 				"disk_image_3": null,
 				"read_only": false,
-				"disk_subfolder": "iosv",
+				"disk_image_4": null,
+				"docker_tag": null,
+				"efi_boot": false,
+				"sha256": null,
+				"configuration": null,
 				"ram": 512,
 				"cpus": 1,
 				"cpu_limit": 100,
@@ -42,7 +46,11 @@ func addImageDefinitionResponders() {
 				"disk_image_2": null,
 				"disk_image_3": null,
 				"read_only": true,
-				"disk_subfolder": "csr1000v",
+				"disk_image_4": null,
+				"docker_tag": null,
+				"efi_boot": false,
+				"sha256": null,
+				"configuration": null,
 				"ram": 4096,
 				"cpus": 2,
 				"cpu_limit": 50,
@@ -59,7 +67,11 @@ func addImageDefinitionResponders() {
 				"disk_image_2": null,
 				"disk_image_3": null,
 				"read_only": false,
-				"disk_subfolder": "nxosv",
+				"disk_image_4": null,
+				"docker_tag": null,
+				"efi_boot": false,
+				"sha256": null,
+				"configuration": null,
 				"ram": 2048,
 				"cpus": 1,
 				"cpu_limit": null,
@@ -105,11 +117,12 @@ func TestImageDefinitionService_ImageDefinitions(t *testing.T) {
 	assert.Equal(t, models.UUID("img-def-789"), imageDefs[0].ID)
 	assert.Equal(t, "nxosv", imageDefs[0].NodeDefID)
 	assert.Equal(t, "NX-OSv 9.3", imageDefs[0].Label)
-	assert.Equal(t, "nxosv-93.qcow2", imageDefs[0].DiskImage1)
+	if assert.NotNil(t, imageDefs[0].DiskImage) {
+		assert.Equal(t, "nxosv-93.qcow2", *imageDefs[0].DiskImage)
+	}
 	assert.Nil(t, imageDefs[0].DiskImage2)
 	assert.Nil(t, imageDefs[0].DiskImage3)
 	assert.False(t, imageDefs[0].ReadOnly)
-	assert.Equal(t, "nxosv", imageDefs[0].DiskSubfolder)
 	assert.Equal(t, 2048, *imageDefs[0].RAM)
 	assert.Equal(t, 1, *imageDefs[0].CPUs)
 	assert.Nil(t, imageDefs[0].CPUlimit)
@@ -119,11 +132,12 @@ func TestImageDefinitionService_ImageDefinitions(t *testing.T) {
 	assert.Equal(t, models.UUID("img-def-456"), imageDefs[1].ID)
 	assert.Equal(t, "iosv", imageDefs[1].NodeDefID)
 	assert.Equal(t, "IOSv 15.9", imageDefs[1].Label)
-	assert.Equal(t, "iosv-159.qcow2", imageDefs[1].DiskImage1)
+	if assert.NotNil(t, imageDefs[1].DiskImage) {
+		assert.Equal(t, "iosv-159.qcow2", *imageDefs[1].DiskImage)
+	}
 	assert.Equal(t, "iosv-159-disk2.qcow2", *imageDefs[1].DiskImage2)
 	assert.Nil(t, imageDefs[1].DiskImage3)
 	assert.False(t, imageDefs[1].ReadOnly)
-	assert.Equal(t, "iosv", imageDefs[1].DiskSubfolder)
 	assert.Equal(t, 512, *imageDefs[1].RAM)
 	assert.Equal(t, 1, *imageDefs[1].CPUs)
 	assert.Equal(t, 100, *imageDefs[1].CPUlimit)
@@ -133,11 +147,12 @@ func TestImageDefinitionService_ImageDefinitions(t *testing.T) {
 	assert.Equal(t, models.UUID("img-def-123"), imageDefs[2].ID)
 	assert.Equal(t, "csr1000v", imageDefs[2].NodeDefID)
 	assert.Equal(t, "CSR1000v 17.3", imageDefs[2].Label)
-	assert.Equal(t, "csr1000v-173.qcow2", imageDefs[2].DiskImage1)
+	if assert.NotNil(t, imageDefs[2].DiskImage) {
+		assert.Equal(t, "csr1000v-173.qcow2", *imageDefs[2].DiskImage)
+	}
 	assert.Nil(t, imageDefs[2].DiskImage2)
 	assert.Nil(t, imageDefs[2].DiskImage3)
 	assert.True(t, imageDefs[2].ReadOnly)
-	assert.Equal(t, "csr1000v", imageDefs[2].DiskSubfolder)
 	assert.Equal(t, 4096, *imageDefs[2].RAM)
 	assert.Equal(t, 2, *imageDefs[2].CPUs)
 	assert.Equal(t, 50, *imageDefs[2].CPUlimit)
@@ -200,7 +215,11 @@ func TestImageDefinitionService_ImageDefinitions_SingleItem(t *testing.T) {
 				"label": "Test Image",
 				"disk_image": "test.qcow2",
 				"read_only": false,
-				"disk_subfolder": "test"
+				"disk_image_4": null,
+				"docker_tag": null,
+				"efi_boot": false,
+				"sha256": null,
+				"configuration": null
 			}
 		]`))
 
@@ -214,9 +233,10 @@ func TestImageDefinitionService_ImageDefinitions_SingleItem(t *testing.T) {
 	assert.Equal(t, models.UUID("single-img"), imageDefs[0].ID)
 	assert.Equal(t, "test", imageDefs[0].NodeDefID)
 	assert.Equal(t, "Test Image", imageDefs[0].Label)
-	assert.Equal(t, "test.qcow2", imageDefs[0].DiskImage1)
+	if assert.NotNil(t, imageDefs[0].DiskImage) {
+		assert.Equal(t, "test.qcow2", *imageDefs[0].DiskImage)
+	}
 	assert.False(t, imageDefs[0].ReadOnly)
-	assert.Equal(t, "test", imageDefs[0].DiskSubfolder)
 }
 
 func TestImageDefinitionService_NewImageDefinitionService(t *testing.T) {

@@ -65,7 +65,7 @@ type (
 		State       IfaceState   `json:"state,omitempty"`
 		IsConnected bool         `json:"is_connected"`
 		Operational *Operational `json:"operational,omitempty"`
-		// MACAddress  *string      `json:"mac_address,omitempty"`
+		MACAddress  *string      `json:"mac_address,omitempty"`
 		// SrcUDPPort  int          `json:"src_udp_port"`
 		// DstUDPPort  int          `json:"dst_udp_port"`
 		// DeviceName  *string      `json:"device_name,omitempty"`
