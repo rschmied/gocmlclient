@@ -145,6 +145,13 @@ func TestNode_UnmarshalJSON(t *testing.T) {
 			},
 		},
 		{
+			name:    "object configuration",
+			jsonStr: `{"id":"node1","label":"test","configuration":{"name":"startup","content":"hostname test"}}`,
+			expectedConfigs: []NodeConfig{
+				{Name: "startup", Content: "hostname test"},
+			},
+		},
+		{
 			name:           "null configuration",
 			jsonStr:        `{"id":"node1","label":"test","configuration":null}`,
 			expectedConfig: nil,
@@ -170,9 +177,54 @@ func TestNode_UnmarshalJSON(t *testing.T) {
 	}
 }
 
+func TestNode_UnmarshalJSON_LegacyTopLevelOperationalFields(t *testing.T) {
+	jsonStr := `{
+		"id":"node1",
+		"label":"test",
+		"compute_id":"compute123",
+		"vnc_key":"vnc123",
+		"iol_app_id":42,
+		"resource_pool":"pool1",
+		"serial_consoles":[{"console_key":"console1","device_number":0}]
+	}`
+
+	var node Node
+	err := json.Unmarshal([]byte(jsonStr), &node)
+	assert.NoError(t, err)
+	if assert.NotNil(t, node.Operational) {
+		assert.Equal(t, uuidPtr("compute123"), node.Operational.ComputeID)
+		assert.Equal(t, uuidPtr("vnc123"), node.Operational.VNCkey)
+		assert.Equal(t, intPtr(42), node.Operational.IOLAppID)
+		assert.Equal(t, stringPtr("pool1"), node.Operational.ResourcePool)
+		assert.Len(t, node.Operational.SerialConsoles, 1)
+	}
+}
+
+func TestNode_JSON_PriorityAndPyATS(t *testing.T) {
+	prio := 10
+	user := "u"
+	pass := "p"
+	enable := "e"
+
+	node := Node{ID: "node123", Label: "Test Node", Priority: &prio, PyATS: &PyAtsCredentials{Username: &user, Password: &pass, EnablePassword: &enable}}
+	data, err := json.Marshal(node)
+	assert.NoError(t, err)
+
+	var m map[string]any
+	err = json.Unmarshal(data, &m)
+	assert.NoError(t, err)
+	assert.Equal(t, float64(10), m["priority"])
+	pyats, ok := m["pyats"].(map[string]any)
+	if assert.True(t, ok) {
+		assert.Equal(t, "u", pyats["username"])
+		assert.Equal(t, "p", pyats["password"])
+		assert.Equal(t, "e", pyats["enable_password"])
+	}
+}
+
 func TestNode_UnmarshalJSON_InvalidConfiguration(t *testing.T) {
 	// Test with invalid configuration type
-	jsonStr := `{"id":"node1","label":"test","configuration":{"invalid":"type"}}`
+	jsonStr := `{"id":"node1","label":"test","configuration":123}`
 
 	var node Node
 	err := json.Unmarshal([]byte(jsonStr), &node)

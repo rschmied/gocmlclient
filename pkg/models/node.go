@@ -32,6 +32,14 @@ type NodeConfig struct {
 	Content string `json:"content"`
 }
 
+// PyAtsCredentials represents node-level PyATS credentials.
+// This matches the OpenAPI 2.10 schema `PyAtsCredentials`.
+type PyAtsCredentials struct {
+	Username       *string `json:"username"`
+	Password       *string `json:"password"`
+	EnablePassword *string `json:"enable_password"`
+}
+
 // BootProgress represents the boot progress state of a node.
 type BootProgress string
 
@@ -74,13 +82,15 @@ type NodeOperational struct {
 
 // Node represents a CML node with its configuration and state.
 type Node struct {
-	ID             UUID   `json:"id"`
-	LabID          UUID   `json:"lab_id"`
-	Label          string `json:"label"`
-	X              int    `json:"x"`
-	Y              int    `json:"y"`
-	NodeDefinition string `json:"node_definition"`
-	CPUs           int    `json:"cpus"`
+	ID             UUID              `json:"id"`
+	LabID          UUID              `json:"lab_id"`
+	Label          string            `json:"label"`
+	X              int               `json:"x"`
+	Y              int               `json:"y"`
+	NodeDefinition string            `json:"node_definition"`
+	CPUs           int               `json:"cpus"`
+	Priority       *int              `json:"priority,omitempty"`
+	PyATS          *PyAtsCredentials `json:"pyats,omitempty"`
 
 	// Optional fields with proper null handling
 	ImageDefinition *string          `json:"image_definition,omitempty"`
@@ -92,13 +102,8 @@ type Node struct {
 	Tags            []string         `json:"tags,omitempty"`
 	State           NodeState        `json:"state,omitempty"`
 	BootProgress    BootProgress     `json:"boot_progress,omitempty"`
-	ComputeID       *UUID            `json:"compute_id,omitempty"`
-	IOLAppID        *int             `json:"iol_app_id,omitempty"`
 	Operational     *NodeOperational `json:"operational,omitempty"`
-	ResourcePool    *string          `json:"resource_pool,omitempty"`
-	VNCkey          *UUID            `json:"vnc_key,omitempty"`
 	PinnedComputeID *UUID            `json:"pinned_compute_id,omitempty"`
-	SerialConsoles  []SerialConsole  `json:"serial_consoles,omitempty"`
 
 	// Configuration can be string, array of NodeConfig, or single NodeConfig
 	Configuration  any          `json:"configuration,omitempty"`
@@ -140,6 +145,13 @@ func (n *Node) UnmarshalJSON(data []byte) error {
 	var tmpNode struct {
 		nodeAlias
 		Configs any `json:"configuration"`
+
+		// Legacy/variant top-level operational fields seen on some backends.
+		LegacyComputeID      *UUID           `json:"compute_id"`
+		LegacyVNCkey         *UUID           `json:"vnc_key"`
+		LegacyIOLAppID       *int            `json:"iol_app_id"`
+		LegacyResourcePool   *string         `json:"resource_pool"`
+		LegacySerialConsoles []SerialConsole `json:"serial_consoles"`
 	}
 
 	// Unmarshal the JSON into the tmpNode struct.
@@ -163,8 +175,41 @@ func (n *Node) UnmarshalJSON(data []byte) error {
 		if err != nil {
 			return err
 		}
+	case map[string]any:
+		b, err := json.Marshal(thing)
+		if err != nil {
+			return err
+		}
+		var cfg NodeConfig
+		if err := json.Unmarshal(b, &cfg); err != nil {
+			return err
+		}
+		na.Configurations = []NodeConfig{cfg}
 	default:
 		return fmt.Errorf("unexpected type: %T", thing)
+	}
+
+	// If operational-only fields are present at top-level (legacy), migrate them.
+	if tmpNode.LegacyComputeID != nil || tmpNode.LegacyVNCkey != nil || tmpNode.LegacyIOLAppID != nil ||
+		tmpNode.LegacyResourcePool != nil || len(tmpNode.LegacySerialConsoles) > 0 {
+		if na.Operational == nil {
+			na.Operational = &NodeOperational{}
+		}
+		if tmpNode.LegacyComputeID != nil {
+			na.Operational.ComputeID = tmpNode.LegacyComputeID
+		}
+		if tmpNode.LegacyVNCkey != nil {
+			na.Operational.VNCkey = tmpNode.LegacyVNCkey
+		}
+		if tmpNode.LegacyIOLAppID != nil {
+			na.Operational.IOLAppID = tmpNode.LegacyIOLAppID
+		}
+		if tmpNode.LegacyResourcePool != nil {
+			na.Operational.ResourcePool = tmpNode.LegacyResourcePool
+		}
+		if len(tmpNode.LegacySerialConsoles) > 0 {
+			na.Operational.SerialConsoles = tmpNode.LegacySerialConsoles
+		}
 	}
 	*n = (Node)(na)
 
@@ -175,12 +220,13 @@ func (n *Node) UnmarshalJSON(data []byte) error {
 func (n *Node) MarshalJSON() ([]byte, error) {
 	type alias Node
 	if len(n.Configurations) > 0 {
-		n.Configuration = nil
+		copyNode := *n
+		copyNode.Configuration = nil
 		return json.Marshal(&struct {
 			*alias
 			NamedConfig []NodeConfig `json:"configuration"`
 		}{
-			(*alias)(n),
+			(*alias)(&copyNode),
 			n.Configurations,
 		})
 	}

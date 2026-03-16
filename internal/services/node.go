@@ -66,20 +66,22 @@ func nodeWipeURL(labID, nodeID models.UUID) string {
 
 type (
 	nodePatchPostAlias struct {
-		Label           string              `json:"label,omitempty"`
-		X               int                 `json:"x"`
-		Y               int                 `json:"y"`
-		HideLinks       *bool               `json:"hide_links,omitempty"`
-		NodeDefinition  string              `json:"node_definition,omitempty"`
-		ImageDefinition *string             `json:"image_definition,omitempty"`
-		Configuration   *string             `json:"configuration,omitempty"`
-		Configurations  []models.NodeConfig `json:"-"`
-		CPUs            int                 `json:"cpus,omitempty"`
-		CPUlimit        *int                `json:"cpu_limit,omitempty"`
-		RAM             *int                `json:"ram,omitempty"`
-		DataVolume      *int                `json:"data_volume,omitempty"`
-		BootDiskSize    *int                `json:"boot_disk_size,omitempty"`
-		Tags            []string            `json:"tags"`
+		Label           string                   `json:"label,omitempty"`
+		X               int                      `json:"x"`
+		Y               int                      `json:"y"`
+		HideLinks       *bool                    `json:"hide_links,omitempty"`
+		NodeDefinition  string                   `json:"node_definition,omitempty"`
+		ImageDefinition *string                  `json:"image_definition,omitempty"`
+		Configuration   *string                  `json:"configuration,omitempty"`
+		Configurations  []models.NodeConfig      `json:"-"`
+		CPUs            int                      `json:"cpus,omitempty"`
+		CPUlimit        *int                     `json:"cpu_limit,omitempty"`
+		RAM             *int                     `json:"ram,omitempty"`
+		DataVolume      *int                     `json:"data_volume,omitempty"`
+		BootDiskSize    *int                     `json:"boot_disk_size,omitempty"`
+		Priority        *int                     `json:"priority,omitempty"`
+		PyATS           *models.PyAtsCredentials `json:"pyats,omitempty"`
+		Tags            []string                 `json:"tags"`
 	}
 )
 
@@ -90,6 +92,8 @@ func newNodeAlias(node *models.Node, update bool) nodePatchPostAlias {
 	npp.X = node.X
 	npp.Y = node.Y
 	npp.Tags = node.Tags
+	npp.Priority = node.Priority
+	npp.PyATS = node.PyATS
 
 	// Handle pointer types
 	npp.HideLinks = node.HideLinks
