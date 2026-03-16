@@ -38,6 +38,24 @@ func (qb *QueryBuilder) WithNamedConfigs(useNamedConfigs bool) *QueryBuilder {
 	return qb
 }
 
+// WithExcludeConfigurations explicitly sets exclude_configurations.
+//
+// If v is nil, it does not set any parameter.
+// If v is non-nil, it also sets operational=true to ensure configuration-related
+// fields are available where required.
+func (qb *QueryBuilder) WithExcludeConfigurations(v *bool) *QueryBuilder {
+	if v == nil {
+		return qb
+	}
+	qb.params["operational"] = "true"
+	if *v {
+		qb.params["exclude_configurations"] = "true"
+	} else {
+		qb.params["exclude_configurations"] = "false"
+	}
+	return qb
+}
+
 // WithPopulateInterfaces adds populate_interfaces=true
 func (qb *QueryBuilder) WithPopulateInterfaces() *QueryBuilder {
 	qb.params["populate_interfaces"] = "true"

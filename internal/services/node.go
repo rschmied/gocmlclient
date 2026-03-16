@@ -27,6 +27,7 @@ type NodeServiceInterface interface {
 type NodeService struct {
 	apiClient       *api.Client
 	useNamedConfigs bool
+	excludeConfigs  *bool
 }
 
 // NewNodeService creates a new node service
@@ -35,6 +36,12 @@ func NewNodeService(apiClient *api.Client, useNamedConfigs bool) *NodeService {
 		apiClient:       apiClient,
 		useNamedConfigs: useNamedConfigs,
 	}
+}
+
+// SetExcludeConfigurations forces exclude_configurations query behavior for node
+// read operations (GET/LIST). If v is nil, the parameter is omitted.
+func (s *NodeService) SetExcludeConfigurations(v *bool) {
+	s.excludeConfigs = v
 }
 
 // nodesURL builds base URL for nodes in a lab
@@ -141,6 +148,7 @@ func (s *NodeService) GetNodesForLab(ctx context.Context, labID models.UUID) (mo
 	queryParams := httputil.NewQueryBuilder().
 		WithData(true).
 		WithNamedConfigs(s.useNamedConfigs).
+		WithExcludeConfigurations(s.excludeConfigs).
 		Build()
 
 	// First unmarshal into a slice of nodes
@@ -287,6 +295,7 @@ func (s *NodeService) GetByID(ctx context.Context, labID, id models.UUID) (model
 	api := nodeURL(labID, id)
 	queryParams := httputil.NewQueryBuilder().
 		WithNamedConfigs(s.useNamedConfigs).
+		WithExcludeConfigurations(s.excludeConfigs).
 		Build()
 	err = s.apiClient.GetJSON(ctx, api, queryParams, &newNode)
 	return newNode, err

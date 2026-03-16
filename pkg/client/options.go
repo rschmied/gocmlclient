@@ -19,9 +19,16 @@ type Config struct {
 	insecureSkipVerify bool
 	caCertPEM          []byte
 	namedConfigs       bool
-	httpClient         *http.Client
-	logger             *slog.Logger
-	skipReadyCheck     bool
+	// nodeExcludeConfigurations, when set, forces Node GET/LIST query behavior by
+	// explicitly sending exclude_configurations=true/false.
+	//
+	// This is independent from namedConfigs. It exists because older CML versions
+	// may default the configuration field to different shapes when the parameter
+	// is omitted (e.g. string vs named-config list).
+	nodeExcludeConfigurations *bool
+	httpClient                *http.Client
+	logger                    *slog.Logger
+	skipReadyCheck            bool
 }
 
 // Conditional applies an option only if the condition is true.
@@ -96,6 +103,18 @@ func WithLogger(l *slog.Logger) Option {
 func WithoutNamedConfigs() Option {
 	return func(c *Config) {
 		c.namedConfigs = false
+	}
+}
+
+// WithNodeExcludeConfigurations forces the node GET/LIST query parameter
+// exclude_configurations.
+//
+// Passing true omits configuration payloads, passing false includes configuration
+// payloads. This is useful to keep node configuration shape stable across CML
+// versions.
+func WithNodeExcludeConfigurations(v bool) Option {
+	return func(c *Config) {
+		c.nodeExcludeConfigurations = &v
 	}
 }
 

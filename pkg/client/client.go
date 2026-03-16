@@ -80,11 +80,23 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 		ExtConn:         extConnService,
 	}
 
+	// If configured, force deterministic node configuration query behavior across
+	// CML versions.
+	if cfg.nodeExcludeConfigurations != nil {
+		nodeService.SetExcludeConfigurations(cfg.nodeExcludeConfigurations)
+	}
+
 	// Perform system readiness check unless explicitly skipped
 	if !cfg.skipReadyCheck {
 		if err := c.System.Ready(context.Background()); err != nil {
 			return nil, err
 		}
+	}
+
+	// If configured, force deterministic node configuration query behavior across
+	// CML versions.
+	if cfg.nodeExcludeConfigurations != nil {
+		nodeService.SetExcludeConfigurations(cfg.nodeExcludeConfigurations)
 	}
 
 	return c, nil

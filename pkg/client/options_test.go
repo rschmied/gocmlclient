@@ -95,6 +95,16 @@ func TestWithoutNamedConfigs(t *testing.T) {
 	assert.False(t, c.namedConfigs)
 }
 
+func TestWithNodeExcludeConfigurations(t *testing.T) {
+	c := &Config{}
+	opt := WithNodeExcludeConfigurations(false)
+	opt(c)
+	if c.nodeExcludeConfigurations == nil {
+		t.Fatalf("expected nodeExcludeConfigurations to be set")
+	}
+	assert.False(t, *c.nodeExcludeConfigurations)
+}
+
 func TestSkipReadyCheck(t *testing.T) {
 	c := &Config{}
 	opt := SkipReadyCheck()
