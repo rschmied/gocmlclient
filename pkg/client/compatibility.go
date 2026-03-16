@@ -334,7 +334,7 @@ func (c *Client) UserGroups(ctx context.Context, id string) ([]*models.Group, er
 }
 
 // UserUpdatePassword updates a user's password with old and new password verification.
-func (c *Client) UserUpdatePassword(ctx context.Context, userID string, oldPassword, newPassword string) error {
+func (c *Client) UserUpdatePassword(ctx context.Context, userID, oldPassword, newPassword string) error {
 	updateRequest := models.UserUpdateRequest{
 		Password: &models.UpdatePassword{
 			Old: oldPassword,
