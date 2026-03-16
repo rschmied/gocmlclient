@@ -17,6 +17,7 @@ A comprehensive Go client library for Cisco Modeling Labs (CML) 2.x, providing b
   - [Groups](#groups)
   - [Links](#links)
   - [Interfaces](#interfaces)
+  - [Annotations](#annotations)
   - [System](#system)
 - [Compatibility Layer](#compatibility-layer)
 - [Error Handling](#error-handling)
@@ -464,6 +465,52 @@ iface, err := client.Interface.GetByID(ctx, "lab-uuid", "interface-uuid")
 
 // Create a new interface
 newInterface, err := client.Interface.Create(ctx, "lab-uuid", "node-uuid", 0) // slot 0
+```
+
+### Annotations
+
+Manage classic annotations (text/rectangle/ellipse/line) and smart annotations.
+
+```go
+// Create a text annotation
+create := models.AnnotationCreate{
+	Type: models.AnnotationTypeText,
+	Text: &models.TextAnnotation{
+		Type:        models.AnnotationTypeText,
+		BorderColor: "#000000",
+		BorderStyle: "",
+		Color:       "#ffffff",
+		Thickness:   1,
+		X1:          10,
+		Y1:          10,
+		ZIndex:      0,
+		Rotation:    0,
+		TextBold:    false,
+		TextContent: "hello",
+		TextFont:    "sans",
+		TextItalic:  false,
+		TextSize:    12,
+		TextUnit:    "px",
+	},
+}
+ann, err := client.Annotation.Create(ctx, "lab-uuid", create)
+
+// List annotations
+anns, err := client.Annotation.List(ctx, "lab-uuid")
+
+// Patch an annotation (OpenAPI requires `type`)
+updated := "hello-updated"
+upd := models.AnnotationUpdate{Type: models.AnnotationTypeText, Text: &models.TextAnnotationPartial{Type: models.AnnotationTypeText, TextContent: &updated}}
+ann, err = client.Annotation.Update(ctx, "lab-uuid", ann.Text.ID, upd)
+
+// Delete
+err = client.Annotation.Delete(ctx, "lab-uuid", ann.Text.ID)
+
+// Smart annotations
+smart, err := client.SmartAnnotation.List(ctx, "lab-uuid")
+if len(smart) > 0 {
+	_, _ = client.SmartAnnotation.Get(ctx, "lab-uuid", smart[0].ID)
+}
 ```
 
 ### System

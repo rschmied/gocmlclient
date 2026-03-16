@@ -1,3 +1,4 @@
+// Package version provides a version string
 package version
 
 import (

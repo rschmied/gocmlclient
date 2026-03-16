@@ -36,6 +36,8 @@ type Client struct {
 	ImageDefinition *services.ImageDefinitionService
 	NodeDefinition  *services.NodeDefinitionService
 	ExtConn         *services.ExtConnService
+	Annotation      *services.AnnotationService
+	SmartAnnotation *services.SmartAnnotationService
 }
 
 // New creates a new CML client with the given options.
@@ -68,6 +70,8 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	imageDefinitionService := services.NewImageDefinitionService(apiClient)
 	nodeDefinitionService := services.NewNodeDefinitionService(apiClient)
 	extConnService := services.NewExtConnService(apiClient)
+	annotationService := services.NewAnnotationService(apiClient)
+	smartAnnotationService := services.NewSmartAnnotationService(apiClient)
 
 	c := &Client{
 		config:          cfg,
@@ -82,6 +86,8 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 		ImageDefinition: imageDefinitionService,
 		NodeDefinition:  nodeDefinitionService,
 		ExtConn:         extConnService,
+		Annotation:      annotationService,
+		SmartAnnotation: smartAnnotationService,
 	}
 
 	// If configured, force deterministic node configuration query behavior across

@@ -14,6 +14,15 @@ type ExtConnService struct {
 	apiClient *api.Client
 }
 
+// Ensure ExtConnService implements interface
+var _ ExtConnServiceInterface = (*ExtConnService)(nil)
+
+// ExtConnServiceInterface defines methods needed by other services/clients.
+type ExtConnServiceInterface interface {
+	Get(ctx context.Context, extConnID models.UUID) (models.ExtConn, error)
+	List(ctx context.Context) ([]*models.ExtConn, error)
+}
+
 // NewExtConnService creates a new external connector service
 func NewExtConnService(apiClient *api.Client) *ExtConnService {
 	return &ExtConnService{

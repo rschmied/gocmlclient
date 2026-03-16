@@ -15,6 +15,17 @@ import (
 
 const systeminfoAPI string = "system_information"
 
+// Ensure SystemService implements interface
+var _ SystemServiceInterface = (*SystemService)(nil)
+
+// SystemServiceInterface defines methods needed by other services/clients.
+type SystemServiceInterface interface {
+	Ready(ctx context.Context) error
+	Version() string
+	VersionCheck(ctx context.Context, constraintStr string) (bool, error)
+	UseNamedConfigs()
+}
+
 // SystemService provides system-related operations
 type SystemService struct {
 	apiClient       *api.Client

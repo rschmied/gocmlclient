@@ -25,6 +25,25 @@ const (
 	stopAction   = "stop"
 )
 
+// Ensure LabService implements interface
+var _ LabServiceInterface = (*LabService)(nil)
+
+// LabServiceInterface defines methods needed by other services/clients.
+type LabServiceInterface interface {
+	Labs(ctx context.Context, showAll bool) (models.LabList, error)
+	LabsWithData(ctx context.Context) ([]models.LabResponse, error)
+	Create(ctx context.Context, lab models.LabCreateRequest) (models.Lab, error)
+	GetByID(ctx context.Context, id models.UUID, deep bool) (models.Lab, error)
+	GetByTitle(ctx context.Context, title string, deep bool) (models.Lab, error)
+	Update(ctx context.Context, labID models.UUID, lab models.LabUpdateRequest) (models.Lab, error)
+	Delete(ctx context.Context, id models.UUID) error
+	Import(ctx context.Context, topologyYAML string) (models.Lab, error)
+	Start(ctx context.Context, labID models.UUID) error
+	Stop(ctx context.Context, labID models.UUID) error
+	Wipe(ctx context.Context, labID models.UUID) error
+	HasConverged(ctx context.Context, id models.UUID) (bool, error)
+}
+
 // LabService provides lab-related operations
 type LabService struct {
 	apiClient *api.Client

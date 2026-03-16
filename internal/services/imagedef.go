@@ -14,6 +14,14 @@ type ImageDefinitionService struct {
 	apiClient *api.Client
 }
 
+// Ensure ImageDefinitionService implements interface
+var _ ImageDefinitionServiceInterface = (*ImageDefinitionService)(nil)
+
+// ImageDefinitionServiceInterface defines methods needed by other services/clients.
+type ImageDefinitionServiceInterface interface {
+	ImageDefinitions(ctx context.Context) ([]models.ImageDefinition, error)
+}
+
 // NewImageDefinitionService creates a new image definition service
 func NewImageDefinitionService(apiClient *api.Client) *ImageDefinitionService {
 	return &ImageDefinitionService{

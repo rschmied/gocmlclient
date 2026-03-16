@@ -13,6 +13,14 @@ type NodeDefinitionService struct {
 	apiClient *api.Client
 }
 
+// Ensure NodeDefinitionService implements interface
+var _ NodeDefinitionServiceInterface = (*NodeDefinitionService)(nil)
+
+// NodeDefinitionServiceInterface defines methods needed by other services/clients.
+type NodeDefinitionServiceInterface interface {
+	NodeDefinitions(ctx context.Context) (models.NodeDefinitionMap, error)
+}
+
 // NewNodeDefinitionService creates a new node definition service
 func NewNodeDefinitionService(apiClient *api.Client) *NodeDefinitionService {
 	return &NodeDefinitionService{
