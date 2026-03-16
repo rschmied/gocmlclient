@@ -4,6 +4,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 
 	cmlerror "github.com/rschmied/gocmlclient/pkg/errors"
 )
@@ -83,6 +84,35 @@ type LabResponse struct {
 type LabImport struct {
 	ID       UUID     `json:"id"`
 	Warnings []string `json:"warnings"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// The OpenAPI schema allows `warnings` to be null.
+func (li *LabImport) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		return nil
+	}
+
+	var tmp struct {
+		ID       UUID            `json:"id"`
+		Warnings json.RawMessage `json:"warnings"`
+	}
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		return err
+	}
+
+	li.ID = tmp.ID
+	if len(tmp.Warnings) == 0 || string(tmp.Warnings) == "null" {
+		li.Warnings = nil
+		return nil
+	}
+
+	var warnings []string
+	if err := json.Unmarshal(tmp.Warnings, &warnings); err != nil {
+		return err
+	}
+	li.Warnings = warnings
+	return nil
 }
 
 // LabCreateRequest represents the data required to create a new lab.
