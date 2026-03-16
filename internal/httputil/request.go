@@ -10,27 +10,12 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"sync"
-
-	"github.com/google/uuid"
 )
 
 const (
 	ClientID        = "gocmlclient"
 	ContentTypeJSON = "application/json"
 )
-
-var (
-	clientUUIDOnce sync.Once
-	clientUUID     string
-)
-
-func getClientUUID() string {
-	clientUUIDOnce.Do(func() {
-		clientUUID = uuid.NewString()
-	})
-	return clientUUID
-}
 
 // BuildRequest creates an HTTP request with proper URL construction and body handling
 func BuildRequest(ctx context.Context, baseURL, method, endpoint string, query map[string]string, body any) (*http.Request, error) {
@@ -66,8 +51,6 @@ func BuildRequest(ctx context.Context, baseURL, method, endpoint string, query m
 
 	if body != nil {
 		req.Header.Set("Content-Type", ContentTypeJSON)
-		req.Header.Set("X-CML-CLIENT", ClientID)
-		req.Header.Set("X-Client-UUID", getClientUUID())
 	}
 
 	return req, nil

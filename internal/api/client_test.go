@@ -46,6 +46,15 @@ func TestRequest(t *testing.T) {
 		if r.Header.Get("Content-Type") != httputil.ContentTypeJSON {
 			t.Errorf("expected Content-Type application/json, got %s", r.Header.Get("Content-Type"))
 		}
+		if r.Header.Get("X-CML-CLIENT") != "gocmlclient" {
+			t.Errorf("expected X-CML-CLIENT header 'gocmlclient', got %q", r.Header.Get("X-CML-CLIENT"))
+		}
+		if r.Header.Get("X-Client-UUID") != "test-uuid" {
+			t.Errorf("expected X-Client-UUID header 'test-uuid', got %q", r.Header.Get("X-Client-UUID"))
+		}
+		if r.Header.Get("X-CML-CLIENT-VERSION") != "test-version" {
+			t.Errorf("expected X-CML-CLIENT-VERSION header 'test-version', got %q", r.Header.Get("X-CML-CLIENT-VERSION"))
+		}
 
 		// Read body
 		body, err := io.ReadAll(r.Body)
@@ -67,6 +76,7 @@ func TestRequest(t *testing.T) {
 
 	// Create API client
 	client := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
+	client.SetClientInfo("gocmlclient", "test-uuid", "test-version")
 
 	// Make request
 	ctx := context.Background()

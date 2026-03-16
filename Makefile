@@ -1,4 +1,5 @@
 NAME := coverage
+VERSION ?=
 
 .PHONY: cover clean covero coversum
 
@@ -18,6 +19,10 @@ coversum: cover
 
 clean:
 	@bash -c "rm -f $(NAME).{html,out}"
+
+.PHONY: build
+build:
+	go build -ldflags "-X github.com/rschmied/gocmlclient/internal/version.Version=$(VERSION)" ./...
 
 .PHONY: update
 update:

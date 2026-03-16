@@ -12,8 +12,12 @@ import (
 
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/auth"
+	"github.com/rschmied/gocmlclient/internal/httputil"
 	"github.com/rschmied/gocmlclient/internal/services"
+	"github.com/rschmied/gocmlclient/internal/version"
 	"github.com/rschmied/gocmlclient/pkg/models"
+
+	"github.com/google/uuid"
 )
 
 // Client is the main CML API client that provides access to all services.
@@ -103,6 +107,9 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 }
 
 func newAPIClient(c *Config) (*api.Client, error) {
+	clientUUID := uuid.NewString()
+	clientVersion := version.Effective()
+
 	// 1. create or use provided HTTP client
 	if c.httpClient == nil {
 		c.httpClient = &http.Client{
@@ -169,6 +176,9 @@ func newAPIClient(c *Config) (*api.Client, error) {
 		Password:    c.password,
 		PresetToken: c.token,
 		Client:      c.httpClient,
+		ClientID:    httputil.ClientID,
+		ClientUUID:  clientUUID,
+		Version:     clientVersion,
 	})
 
 	// 5. create manager with token storage (default is memory storage)
@@ -197,6 +207,7 @@ func newAPIClient(c *Config) (*api.Client, error) {
 			api.RetryMiddleware(api.DefaultRetryPolicy()),
 		),
 	)
+	apiClient.SetClientInfo(httputil.ClientID, clientUUID, clientVersion)
 
 	return apiClient, nil
 }

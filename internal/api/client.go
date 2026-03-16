@@ -30,6 +30,10 @@ type Client struct {
 	baseURL string
 	do      DoFunc
 	stats   *Stats
+
+	clientID      string
+	clientUUID    string
+	clientVersion string
 }
 
 // Option is a functional option for configuring the API client
@@ -90,6 +94,10 @@ func New(baseURL string, opts ...Option) *Client {
 	client := &Client{
 		baseURL: baseURL,
 		do:      do,
+		// Defaults; callers may override via SetClientInfo.
+		clientID:      httputil.ClientID,
+		clientVersion: "",
+		clientUUID:    "",
 	}
 
 	// Initialize stats if enabled
@@ -102,12 +110,24 @@ func New(baseURL string, opts ...Option) *Client {
 	return client
 }
 
+// SetClientInfo configures client-identification headers.
+//
+// Empty values mean "do not set" for that header.
+func (c *Client) SetClientInfo(id, uuid, version string) {
+	c.clientID = id
+	c.clientUUID = uuid
+	c.clientVersion = version
+}
+
 // Request makes a raw HTTP request to the API
 func (c *Client) Request(ctx context.Context, method, endpoint string, query map[string]string, body any) (*http.Response, error) {
 	req, err := httputil.BuildRequest(ctx, c.baseURL, method, endpoint, query, body)
 	if err != nil {
 		return nil, err
 	}
+
+	// Client identity headers.
+	httputil.ApplyClientIdentityHeaders(req.Header, c.clientID, c.clientUUID, c.clientVersion)
 
 	// HTTP client will automatically set Content-Length for known body sizes
 

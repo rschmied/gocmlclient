@@ -91,6 +91,16 @@ func TestFetchTokenWithPreset(t *testing.T) {
 func TestFetchTokenAuthentication(t *testing.T) {
 	// Create a test server that simulates authentication
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-CML-CLIENT") != "gocmlclient" {
+			t.Errorf("expected X-CML-CLIENT header 'gocmlclient', got %q", r.Header.Get("X-CML-CLIENT"))
+		}
+		if r.Header.Get("X-Client-UUID") != "test-uuid" {
+			t.Errorf("expected X-Client-UUID header 'test-uuid', got %q", r.Header.Get("X-Client-UUID"))
+		}
+		if r.Header.Get("X-CML-CLIENT-VERSION") != "test-version" {
+			t.Errorf("expected X-CML-CLIENT-VERSION header 'test-version', got %q", r.Header.Get("X-CML-CLIENT-VERSION"))
+		}
+
 		if r.Method != "POST" {
 			t.Errorf("expected POST method, got %s", r.Method)
 		}
@@ -128,10 +138,13 @@ func TestFetchTokenAuthentication(t *testing.T) {
 	defer server.Close()
 
 	config := AuthConfig{
-		BaseURL:  server.URL,
-		Username: "testuser",
-		Password: "testpass",
-		Client:   &http.Client{Timeout: 10 * time.Second},
+		BaseURL:    server.URL,
+		Username:   "testuser",
+		Password:   "testpass",
+		Client:     &http.Client{Timeout: 10 * time.Second},
+		ClientID:   "gocmlclient",
+		ClientUUID: "test-uuid",
+		Version:    "test-version",
 	}
 
 	provider := NewAuthProvider(config)

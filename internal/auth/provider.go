@@ -19,6 +19,9 @@ type AuthProvider struct {
 	username    string
 	password    string
 	presetToken string // Optional: use this token once before falling back to username/password
+	clientID    string
+	clientUUID  string
+	version     string
 
 	client *http.Client
 }
@@ -30,6 +33,9 @@ type AuthConfig struct {
 	Password    string
 	PresetToken string
 	Client      *http.Client
+	ClientID    string
+	ClientUUID  string
+	Version     string
 	Timeout     time.Duration
 }
 
@@ -52,6 +58,9 @@ func NewAuthProvider(config AuthConfig) *AuthProvider {
 		username:    config.Username,
 		password:    config.Password,
 		presetToken: config.PresetToken,
+		clientID:    config.ClientID,
+		clientUUID:  config.ClientUUID,
+		version:     config.Version,
 		client:      config.Client,
 	}
 }
@@ -87,6 +96,7 @@ func (p *AuthProvider) authenticateWithPassword(ctx context.Context) (string, ti
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("build auth request: %w", err)
 	}
+	httputil.ApplyClientIdentityHeaders(req.Header, p.clientID, p.clientUUID, p.version)
 
 	// Execute request
 	slog.Debug("Sending authentication request", "url", req.URL.String())
