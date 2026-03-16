@@ -98,15 +98,15 @@ func TestIntegration_TriangleWithExtConnAndUnmanagedSwitch(t *testing.T) {
 		t.Fatalf("Node.Create(sw): %v", err)
 	}
 
-	r1, err := c.Node.Create(ctx, models.Node{LabID: lab.ID, Label: "r1", NodeDefinition: iolDef, CPUs: 1, X: 150, Y: -150})
+	r1, err := c.Node.Create(ctx, models.Node{LabID: lab.ID, Label: "r1", NodeDefinition: iolDef, X: 150, Y: -150})
 	if err != nil {
 		t.Fatalf("Node.Create(r1): %v", err)
 	}
-	r2, err := c.Node.Create(ctx, models.Node{LabID: lab.ID, Label: "r2", NodeDefinition: iolDef, CPUs: 1, X: 350, Y: 0})
+	r2, err := c.Node.Create(ctx, models.Node{LabID: lab.ID, Label: "r2", NodeDefinition: iolDef, X: 350, Y: 0})
 	if err != nil {
 		t.Fatalf("Node.Create(r2): %v", err)
 	}
-	r3, err := c.Node.Create(ctx, models.Node{LabID: lab.ID, Label: "r3", NodeDefinition: iolDef, CPUs: 1, X: 150, Y: 150})
+	r3, err := c.Node.Create(ctx, models.Node{LabID: lab.ID, Label: "r3", NodeDefinition: iolDef, X: 150, Y: 150})
 	if err != nil {
 		t.Fatalf("Node.Create(r3): %v", err)
 	}

@@ -25,11 +25,11 @@ func TestIntegration_NodeInterfaceLink(t *testing.T) {
 	// Create two nodes (definition via env so users can adapt)
 	def := envString("CML_IT_NODE_DEFINITION", envString("CML_IOL_NODE_DEFINITION", "iol-xe"))
 
-	n1, err := c.Node.Create(ctx, models.Node{LabID: lab.ID, Label: "n1", NodeDefinition: def, CPUs: 1, X: 0, Y: 0})
+	n1, err := c.Node.Create(ctx, models.Node{LabID: lab.ID, Label: "n1", NodeDefinition: def, X: 0, Y: 0})
 	if err != nil {
 		requireNoErrorOrSkipStatus(t, err, 400, 403, 404)
 	}
-	n2, err := c.Node.Create(ctx, models.Node{LabID: lab.ID, Label: "n2", NodeDefinition: def, CPUs: 1, X: 200, Y: 0})
+	n2, err := c.Node.Create(ctx, models.Node{LabID: lab.ID, Label: "n2", NodeDefinition: def, X: 200, Y: 0})
 	if err != nil {
 		requireNoErrorOrSkipStatus(t, err, 400, 403, 404)
 	}

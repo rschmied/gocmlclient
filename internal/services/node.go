@@ -72,7 +72,7 @@ type (
 		RAM             *int                `json:"ram,omitempty"`
 		DataVolume      *int                `json:"data_volume,omitempty"`
 		BootDiskSize    *int                `json:"boot_disk_size,omitempty"`
-		Tags            []string            `json:"tags,omitempty"`
+		Tags            []string            `json:"tags"`
 	}
 )
 

@@ -32,6 +32,6 @@ type AssociationList []Association
 
 // AssociationUsersGroups contains associations for users and groups.
 type AssociationUsersGroups struct {
-	Groups AssociationList `json:"groups"`
-	Users  AssociationList `json:"users"`
+	Groups AssociationList `json:"groups,omitempty"`
+	Users  AssociationList `json:"users,omitempty"`
 }

@@ -6,7 +6,7 @@ package models
 type Group struct {
 	ID              UUID          `json:"id,omitempty"`
 	Description     string        `json:"description,omitempty"`
-	Members         []UUID        `json:"members,omitempty"`
+	Members         []UUID        `json:"members"`
 	Name            string        `json:"name"`
 	Associations    []Association `json:"associations,omitempty"`
 	Created         string        `json:"created,omitempty"`

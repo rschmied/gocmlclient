@@ -93,6 +93,7 @@ type LabCreateRequest struct {
 	Description  string                 `json:"description,omitempty"`
 	Notes        string                 `json:"notes,omitempty"`
 	Owner        UUID                   `json:"owner,omitempty"`
+	Groups       []LabGroup             `json:"groups,omitzero"`
 	Associations AssociationUsersGroups `json:"associations,omitzero"`
 }
 
@@ -116,6 +117,7 @@ type Lab struct {
 	NodeCount            int         `json:"node_count,omitempty"`
 	LinkCount            int         `json:"link_count,omitempty"`
 	EffectivePermissions Permissions `json:"effective_permissions,omitempty"`
+	Groups               []LabGroup  `json:"groups,omitempty"`
 
 	// non-schema helpers
 	Owner *User    `json:"-"` // Full user object (not serialized)

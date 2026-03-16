@@ -58,6 +58,8 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	nodeService := services.NewNodeService(apiClient, cfg.namedConfigs)
 	interfaceService := services.NewInterfaceService(apiClient)
 	linkService := services.NewLinkService(apiClient)
+	linkService.Interface = interfaceService
+	linkService.Node = nodeService
 
 	imageDefinitionService := services.NewImageDefinitionService(apiClient)
 	nodeDefinitionService := services.NewNodeDefinitionService(apiClient)

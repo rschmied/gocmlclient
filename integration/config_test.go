@@ -50,13 +50,13 @@ func LoadConfigFromEnv() Config {
 		Username:         strings.TrimSpace(os.Getenv("CML_USERNAME")),
 		Password:         os.Getenv("CML_PASSWORD"),
 		Token:            strings.TrimSpace(os.Getenv("CML_TOKEN")),
-		InsecureTLS:      envBool("CML_INSECURE_TLS"),
-		SkipReadyCheck:   envBool("CML_SKIP_READY_CHECK"),
+		InsecureTLS:      envBool("CML_INSECURE_TLS", true),
+		SkipReadyCheck:   envBool("CML_SKIP_READY_CHECK", true),
 		TokenStorageFile: strings.TrimSpace(os.Getenv("CML_TOKEN_STORAGE_FILE")),
 		Timeout:          envDuration("CML_TIMEOUT", 60*time.Second),
 		LabTopologyFiles: splitCSV(os.Getenv("CML_LAB_TOPOLOGY_FILES")),
-		AllowMutations:   envBool("CML_IT_ALLOW_MUTATIONS"),
-		AllowUserMgmt:    envBool("CML_IT_ALLOW_USER_MGMT"),
+		AllowMutations:   envBool("CML_IT_ALLOW_MUTATIONS", true),
+		AllowUserMgmt:    envBool("CML_IT_ALLOW_USER_MGMT", true),
 	}
 
 	for i := range c.LabTopologyFiles {
@@ -97,10 +97,10 @@ func newClient(t *testing.T, cfg Config) *client.Client {
 	return c
 }
 
-func envBool(key string) bool {
+func envBool(key string, preset bool) bool {
 	v := strings.TrimSpace(os.Getenv(key))
 	if v == "" {
-		return false
+		return preset
 	}
 	v = strings.ToLower(v)
 	return v == "1" || v == "true" || v == "yes" || v == "y" || v == "on"
