@@ -19,10 +19,10 @@ type (
 	Stats = api.Stats
 )
 
-// Re-export common options for convenience
-var (
-	SkipReadyCheck       = client.SkipReadyCheck
-	WithUsernamePassword = client.WithUsernamePassword
-	WithToken            = client.WithToken
-	WithInsecureTLS      = client.WithInsecureTLS
-)
+// // Re-export common options for convenience
+// var (
+// 	SkipReadyCheck       = client.SkipReadyCheck
+// 	WithUsernamePassword = client.WithUsernamePassword
+// 	WithToken            = client.WithToken
+// 	WithInsecureTLS      = client.WithInsecureTLS
+// )

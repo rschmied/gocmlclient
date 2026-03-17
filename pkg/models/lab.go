@@ -62,22 +62,31 @@ type LabGroup struct {
 	Name       string        `json:"name,omitempty"`
 }
 
+// NodeStaging represents lab node staging configuration.
+// This matches the OpenAPI `NodeStaging` schema.
+type NodeStaging struct {
+	Enabled        bool `json:"enabled"`
+	StartRemaining bool `json:"start_remaining"`
+	AbortOnFailure bool `json:"abort_on_failure"`
+}
+
 // LabResponse represents the response from /labs/{lab_id} endpoint
 type LabResponse struct {
-	ID                   UUID        `json:"id"`
-	Created              string      `json:"created,omitempty"`
-	Modified             string      `json:"modified,omitempty"`
-	Title                string      `json:"lab_title"`
-	Description          string      `json:"lab_description,omitempty"`
-	Notes                string      `json:"lab_notes,omitempty"`
-	OwnerID              UUID        `json:"owner"`
-	OwnerUsername        string      `json:"owner_username"`
-	OwnerFullname        string      `json:"owner_fullname"`
-	State                LabState    `json:"state"`
-	NodeCount            int         `json:"node_count"`
-	LinkCount            int         `json:"link_count"`
-	Groups               []LabGroup  `json:"groups,omitempty"`
-	EffectivePermissions Permissions `json:"effective_permissions"`
+	ID                   UUID         `json:"id"`
+	Created              string       `json:"created,omitempty"`
+	Modified             string       `json:"modified,omitempty"`
+	Title                string       `json:"lab_title"`
+	Description          string       `json:"lab_description,omitempty"`
+	Notes                string       `json:"lab_notes,omitempty"`
+	OwnerID              UUID         `json:"owner"`
+	OwnerUsername        string       `json:"owner_username"`
+	OwnerFullname        string       `json:"owner_fullname"`
+	State                LabState     `json:"state"`
+	NodeCount            int          `json:"node_count"`
+	LinkCount            int          `json:"link_count"`
+	Groups               []LabGroup   `json:"groups,omitempty"`
+	EffectivePermissions Permissions  `json:"effective_permissions"`
+	NodeStaging          *NodeStaging `json:"node_staging,omitempty"`
 }
 
 // LabImport represents the result of importing a lab, including any warnings.
@@ -125,6 +134,7 @@ type LabCreateRequest struct {
 	Owner        UUID                   `json:"owner,omitempty"`
 	Groups       []LabGroup             `json:"groups,omitzero"`
 	Associations AssociationUsersGroups `json:"associations,omitzero"`
+	NodeStaging  *NodeStaging           `json:"node_staging,omitempty"`
 }
 
 // LabUpdateRequest is identical to LabCreateRequest and, in fact,
@@ -132,22 +142,27 @@ type LabCreateRequest struct {
 // clearer.
 type LabUpdateRequest LabCreateRequest
 
+// LabRequest exists for OpenAPI parity: in CML OpenAPI 2.10 the same schema is
+// used for create and update.
+type LabRequest = LabCreateRequest
+
 // Lab represents a CML lab with its nodes, links, and metadata.
 type Lab struct {
-	ID                   UUID        `json:"id"`
-	State                LabState    `json:"state,omitempty"`
-	Created              string      `json:"created,omitempty"`
-	Modified             string      `json:"modified,omitempty"`
-	Title                string      `json:"lab_title,omitempty"`
-	Description          string      `json:"lab_description,omitempty"`
-	Notes                string      `json:"lab_notes,omitempty"`
-	OwnerID              UUID        `json:"owner,omitempty"`
-	OwnerUsername        string      `json:"owner_username,omitempty"`
-	OwnerFullname        string      `json:"owner_fullname,omitempty"`
-	NodeCount            int         `json:"node_count,omitempty"`
-	LinkCount            int         `json:"link_count,omitempty"`
-	EffectivePermissions Permissions `json:"effective_permissions,omitempty"`
-	Groups               []LabGroup  `json:"groups,omitempty"`
+	ID                   UUID         `json:"id"`
+	State                LabState     `json:"state,omitempty"`
+	Created              string       `json:"created,omitempty"`
+	Modified             string       `json:"modified,omitempty"`
+	Title                string       `json:"lab_title,omitempty"`
+	Description          string       `json:"lab_description,omitempty"`
+	Notes                string       `json:"lab_notes,omitempty"`
+	OwnerID              UUID         `json:"owner,omitempty"`
+	OwnerUsername        string       `json:"owner_username,omitempty"`
+	OwnerFullname        string       `json:"owner_fullname,omitempty"`
+	NodeCount            int          `json:"node_count,omitempty"`
+	LinkCount            int          `json:"link_count,omitempty"`
+	EffectivePermissions Permissions  `json:"effective_permissions,omitempty"`
+	Groups               []LabGroup   `json:"groups,omitempty"`
+	NodeStaging          *NodeStaging `json:"node_staging,omitempty"`
 
 	// non-schema helpers
 	Owner *User    `json:"-"` // Full user object (not serialized)

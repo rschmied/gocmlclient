@@ -31,6 +31,10 @@ update:
 	go mod download
 	go mod tidy
 
+.PHONY: integration
+integration:
+	go test -count=1 -v -tags=integration ./integration # -run TestIntegration_LabImportFromFiles
+
 .PHONY: loc
 loc:
 	@echo "=== Lines of Code ==="

@@ -54,6 +54,12 @@ func TestIntegration_Lab(t *testing.T) {
 		t.Fatalf("Lab.Update: %v", err)
 	}
 
+	// Node staging update (best effort; requires CML 2.10+)
+	_, err = c.Lab.Update(ctx, lab.ID, models.LabUpdateRequest{NodeStaging: &models.NodeStaging{Enabled: false, StartRemaining: true, AbortOnFailure: false}})
+	if err != nil {
+		requireNoErrorOrSkipStatus(t, err, 400, 403, 404)
+	}
+
 	// GetByTitle
 	// This endpoint uses /populate_lab_tiles under the hood and can be eventually consistent.
 	var lastErr error

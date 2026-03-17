@@ -131,7 +131,7 @@ func main() {
 	// }
 
 	// id := "20c0efde-cdaf-4dad-b6df-dd568ddf6e8d"
-	// lab, err := c.LabGet(ctx, id, true)
+	// lab, err := c.Lab.GetByID(ctx, id, true)
 	name := "Serial demo"
 	lab, err := c.Lab.GetByTitle(ctx, name, true)
 	if err != nil {

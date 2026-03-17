@@ -22,9 +22,9 @@ func addLabCreateResponders() {
 	httpmock.RegisterResponder("POST", "https://mock/api/v0/labs",
 		httpmock.NewStringResponder(200, `{"id":"lab_uuid","state":"DEFINED_ON_CORE","created":"2025-08-26T09:41:36+00:00","modified":"2025-08-26T09:41:36+00:00","lab_title":"this","owner":"00000000-0000-4000-a000-000000000000","owner_username":"admin","effective_permissions":["lab_admin","lab_exec","lab_edit","lab_view"]}`))
 	httpmock.RegisterResponder("PATCH", "https://mock/api/v0/labs/lab_uuid",
-		httpmock.NewStringResponder(200, `{"id":"lab_uuid","state":"DEFINED_ON_CORE","created":"2025-08-26T09:41:36+00:00","modified":"2025-08-26T09:41:36+00:00","lab_title":"this","owner":"00000000-0000-4000-a000-000000000000","owner_username":"admin","effective_permissions":["lab_admin","lab_exec","lab_edit","lab_view"]}`))
+		httpmock.NewStringResponder(200, `{"id":"lab_uuid","state":"DEFINED_ON_CORE","created":"2025-08-26T09:41:36+00:00","modified":"2025-08-26T09:41:36+00:00","lab_title":"this","owner":"00000000-0000-4000-a000-000000000000","owner_username":"admin","effective_permissions":["lab_admin","lab_exec","lab_edit","lab_view"],"node_staging":{"enabled":false,"start_remaining":true,"abort_on_failure":false}}`))
 	httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid",
-		httpmock.NewStringResponder(200, `{"id":"lab_uuid","state":"DEFINED_ON_CORE","created":"2025-08-26T09:41:36+00:00","modified":"2025-08-26T09:41:36+00:00","lab_title":"this","owner":"00000000-0000-4000-a000-000000000000","owner_username":"admin","effective_permissions":["lab_admin","lab_exec","lab_edit","lab_view"]}`))
+		httpmock.NewStringResponder(200, `{"id":"lab_uuid","state":"DEFINED_ON_CORE","created":"2025-08-26T09:41:36+00:00","modified":"2025-08-26T09:41:36+00:00","lab_title":"this","owner":"00000000-0000-4000-a000-000000000000","owner_username":"admin","effective_permissions":["lab_admin","lab_exec","lab_edit","lab_view"],"node_staging":{"enabled":false,"start_remaining":true,"abort_on_failure":false}}`))
 
 	// Prefer schema endpoints first; mock them as 404 so legacy fallback is exercised.
 	httpmock.RegisterResponder("PUT", "https://mock/api/v0/labs/lab_uuid/start",
@@ -389,6 +389,7 @@ func TestLabUpdate(t *testing.T) {
 			"lab_title": "Updated Lab Title",
 			"lab_description": "Updated description",
 			"lab_notes": "Updated notes",
+			"node_staging": {"enabled": false, "start_remaining": true, "abort_on_failure": false},
 			"state": "DEFINED_ON_CORE",
 			"owner": "owner-uuid",
 			"owner_username": "admin",
@@ -404,6 +405,7 @@ func TestLabUpdate(t *testing.T) {
 		Title:       "Updated Lab Title",
 		Description: "Updated description",
 		Notes:       "Updated notes",
+		NodeStaging: &models.NodeStaging{Enabled: false, StartRemaining: true, AbortOnFailure: false},
 	}
 
 	updatedLab, err := service.Update(ctx, "lab-123", updateData)
@@ -413,6 +415,11 @@ func TestLabUpdate(t *testing.T) {
 	assert.Equal(t, "Updated Lab Title", updatedLab.Title)
 	assert.Equal(t, "Updated description", updatedLab.Description)
 	assert.Equal(t, "Updated notes", updatedLab.Notes)
+	if assert.NotNil(t, updatedLab.NodeStaging) {
+		assert.False(t, updatedLab.NodeStaging.Enabled)
+		assert.True(t, updatedLab.NodeStaging.StartRemaining)
+		assert.False(t, updatedLab.NodeStaging.AbortOnFailure)
+	}
 }
 
 func TestLabUpdate_Error(t *testing.T) {

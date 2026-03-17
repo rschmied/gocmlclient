@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -135,39 +134,6 @@ func TestNew(t *testing.T) {
 			tt.validate(t, client)
 		})
 	}
-}
-
-func TestLabGet(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/api/v0/auth_extended":
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id":"user-123","username":"testuser","token":"mock-token-12345","admin":false}`))
-		case "/api/v0/labs/test-id":
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{
-				"id": "test-id",
-				"lab_title": "Test Lab",
-				"lab_description": "A test lab",
-				"created": "2025-01-01T00:00:00Z",
-				"modified": "2025-01-01T00:00:00Z"
-			}`))
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer server.Close()
-
-	client, err := New(server.URL, SkipReadyCheck())
-	assert.NoError(t, err)
-	assert.NotNil(t, client.Lab)
-
-	ctx := context.Background()
-	lab, err := client.LabGet(ctx, "test-id", false)
-	assert.NoError(t, err)
-	assert.NotNil(t, lab)
-	assert.Equal(t, "test-id", string(lab.ID))
-	assert.Equal(t, "Test Lab", lab.Title)
 }
 
 func TestReadyCheckIntegration(t *testing.T) {

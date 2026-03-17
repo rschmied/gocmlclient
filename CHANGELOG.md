@@ -2,6 +2,24 @@
 
 Lists the changes in the gocmlclient package.
 
+## Version 0.2.0 (bravenewworld) (Unreleased)
+
+BREAKING:
+
+- Complete rewrite vs 0.1.x
+- No backward compatibility with the 0.1.x public API (method names, package layout, and types changed)
+- Different semantics in multiple areas (e.g. service boundaries and request/response shapes); existing callers must be migrated
+- Compatibility layer removed (no legacy `Client.LabGet`, `Client.NodeGet`, etc.)
+
+Changes:
+
+- README: fix examples for required IDs (e.g. node/link creation) and remove use of `internal/...` packages from public docs
+- docs: add coverage for additional endpoints/services (lab tiles, image defs, node defs, external connectors)
+- labs: support fast lab listing via `GET /populate_lab_tiles` (`Lab.LabsWithData`)
+- labs: support `node_staging` field on create/update requests
+- system: add external connectors support (`GET /system/external_connectors`)
+- system: add image definitions and simplified node definitions services
+
 ## Version 0.1.1
 
 - don't do auth at all when a token is provided

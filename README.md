@@ -2,7 +2,7 @@
 
 # gocmlclient
 
-A comprehensive Go client library for Cisco Modeling Labs (CML) 2.x, providing both modern service-based APIs and full backward compatibility with the legacy gocmlclient interface.
+A comprehensive Go client library for Cisco Modeling Labs (CML) 2.x, providing modern service-based APIs.
 
 ## Table of Contents
 
@@ -19,7 +19,9 @@ A comprehensive Go client library for Cisco Modeling Labs (CML) 2.x, providing b
   - [Interfaces](#interfaces)
   - [Annotations](#annotations)
   - [System](#system)
-- [Compatibility Layer](#compatibility-layer)
+  - [Image Definitions](#image-definitions)
+  - [Node Definitions](#node-definitions)
+  - [External Connectors](#external-connectors)
 - [Error Handling](#error-handling)
 - [Advanced Usage](#advanced-usage)
 - [Contributing](#contributing)
@@ -42,7 +44,7 @@ go get github.com/rschmied/gocmlclient
 ```
 
 **Requirements:**
-- Go 1.21 or later
+- Go 1.25 or later
 - Access to a CML 2.x controller (version 2.4.0+)
 
 ## Quick Start
@@ -66,7 +68,7 @@ func main() {
 
     ctx := context.Background()
 
-    // Get all labs
+    // List lab IDs (use show_all=true)
     labs, err := client.Lab.Labs(ctx, true)
     if err != nil {
         log.Fatal(err)
@@ -114,156 +116,22 @@ client, err := gocmlclient.New("https://cml-controller.example.com",
 // Combine options
 client, err := gocmlclient.New("https://cml-controller.example.com",
     gocmlclient.WithUsernamePassword("username", "password"),
+    gocmlclient.WithTokenStorageFile("/tmp/cml_tokens.json"),
     gocmlclient.WithInsecureTLS(),
     gocmlclient.SkipReadyCheck())
 ```
 
-### Advanced Authentication Features
+### Token Persistence
 
-The gocmlclient supports advanced authentication features through its internal auth system, including configurable token storage and custom providers for integration with external authentication systems.
-
-#### Token Storage Options
-
-By default, authentication tokens are stored in memory, which means they are lost when the application restarts. For production use cases requiring persistence across application restarts, you can configure file-based storage to save and restore tokens automatically.
-
-##### Memory Storage (Default)
-
-This example demonstrates the default behavior using in-memory storage. Tokens are cached during the session but not persisted.
+By default, tokens are cached in memory for the lifetime of the client. To reuse tokens across process restarts (e.g., Terraform runs), configure file-based token storage:
 
 ```go
-import (
-    "context"
-    "fmt"
-    "log"
-    "net/http"
-    "time"
-    "github.com/rschmied/gocmlclient/internal/auth"
-)
-
-func exampleMemoryStorage() {
-    // Create auth provider with your CML controller details
-    provider := &auth.AuthProvider{
-        BaseURL:  "https://cml-controller.example.com",
-        Username: "admin",
-        Password: "password",
-        Client:   &http.Client{Timeout: 30 * time.Second},
-    }
-
-    // Create manager with default memory storage
-    manager := auth.NewManager(provider, auth.DefaultConfig())
-
-    // Use the manager to get a token
-    ctx := context.Background()
-    token, err := manager.GetToken(ctx)
-    if err != nil {
-        log.Printf("Failed to get token: %v", err)
-        return
-    }
-
-    fmt.Printf("Got token: %s\n", token)
-    fmt.Printf("Storage type: %s\n", manager.Storage().Type())
-}
+client, err := gocmlclient.New("https://cml-controller.example.com",
+    gocmlclient.WithUsernamePassword("username", "password"),
+    gocmlclient.WithTokenStorageFile("/tmp/cml_tokens.json"))
 ```
 
-##### File Storage
-
-This example shows how to persist tokens to a file, allowing them to survive application restarts. The token will be saved to `/tmp/cml_tokens.json` and automatically loaded on subsequent runs.
-
-```go
-import (
-    "context"
-    "fmt"
-    "log"
-    "net/http"
-    "time"
-    "github.com/rschmied/gocmlclient/internal/auth"
-)
-
-func exampleFileStorage() {
-    // Create file storage for token persistence
-    storage, err := auth.NewFileStorage("/tmp/cml_tokens.json")
-    if err != nil {
-        log.Printf("Failed to create file storage: %v", err)
-        return
-    }
-
-    // Create auth provider
-    provider := &auth.AuthProvider{
-        BaseURL:  "https://cml-controller.example.com",
-        Username: "admin",
-        Password: "password",
-        Client:   &http.Client{Timeout: 30 * time.Second},
-    }
-
-    // Create manager with file storage
-    config := auth.DefaultConfig()
-    config.Storage = storage
-    manager := auth.NewManager(provider, config)
-
-    // Use the manager
-    ctx := context.Background()
-    token, err := manager.GetToken(ctx)
-    if err != nil {
-        log.Printf("Failed to get token: %v", err)
-        return
-    }
-
-    fmt.Printf("Got token: %s\n", token)
-    fmt.Printf("Storage type: %s\n", manager.Storage().Type())
-    // Token will be persisted to file and restored on next run
-}
-```
-
-#### Custom Token Providers
-
-If you need to integrate with a custom authentication system or third-party service, you can implement your own token provider by implementing the `TokenProvider` interface.
-
-This example demonstrates creating a custom provider that generates tokens based on an API key.
-
-```go
-import (
-    "context"
-    "fmt"
-    "log"
-    "time"
-    "github.com/rschmied/gocmlclient/internal/auth"
-)
-
-// CustomProvider demonstrates a custom token provider
-type CustomProvider struct {
-    apiKey string
-}
-
-func (p *CustomProvider) FetchToken(ctx context.Context) (string, time.Time, error) {
-    // Custom token fetching logic (e.g., call external API)
-    token := "custom-" + p.apiKey
-    expiry := time.Now().Add(1 * time.Hour)
-    return token, expiry, nil
-}
-
-func (p *CustomProvider) Type() string {
-    return "custom"
-}
-
-func exampleCustomProvider() {
-    // Create custom provider
-    provider := &CustomProvider{apiKey: "my-api-key"}
-
-    // Create manager with custom provider
-    manager := auth.NewManager(provider, auth.DefaultConfig())
-
-    // Use the manager
-    ctx := context.Background()
-    token, err := manager.GetToken(ctx)
-    if err != nil {
-        log.Printf("Failed to get token: %v", err)
-        return
-    }
-
-    fmt.Printf("Got token: %s\n", token)
-    fmt.Printf("Provider type: %s\n", provider.Type())
-}
-```
+Note: the token file can contain a valid bearer token; secure and clean it up per your environment.
 
 ## API Reference
 
@@ -275,7 +143,10 @@ Manage CML labs including creation, configuration, and lifecycle operations.
 
 ```go
 // Get all labs
-labs, err := client.Lab.Labs(ctx, true) // true for full data
+labs, err := client.Lab.Labs(ctx, true) // true sets show_all=true
+
+// Get labs with topology tile data (fast endpoint)
+tiles, err := client.Lab.LabsWithData(ctx) // GET /populate_lab_tiles
 
 // Get lab by ID
 lab, err := client.Lab.GetByID(ctx, "lab-uuid", true)
@@ -297,6 +168,11 @@ updateReq := models.LabUpdateRequest{
     Description: "Updated description",
 }
 updatedLab, err := client.Lab.Update(ctx, "lab-uuid", updateReq)
+
+// Node staging (CML 2.10+; same request shape as used by the UI)
+_, err = client.Lab.Update(ctx, "lab-uuid", models.LabUpdateRequest{
+    NodeStaging: &models.NodeStaging{Enabled: false, StartRemaining: true, AbortOnFailure: false},
+})
 
 // Control lab lifecycle
 err = client.Lab.Start(ctx, "lab-uuid")
@@ -323,12 +199,17 @@ nodes, err := client.Node.GetNodesForLab(ctx, "lab-uuid")
 node, err := client.Node.GetByID(ctx, "lab-uuid", "node-uuid")
 
 // Create a new node
+ram := 512
+img := "vios-adventerprisek9-m"
 newNode := models.Node{
-    Label:          "Router1",
-    NodeDefinition: "iosv",
-    ImageDefinition: stringPtr("vios-adventerprisek9-m"),
-    CPUs:           1,
-    RAM:            intPtr(512),
+    LabID:           "lab-uuid",
+    Label:           "Router1",
+    NodeDefinition:  "iosv",
+    ImageDefinition: &img,
+    CPUs:            1,
+    RAM:             &ram,
+    X:               100,
+    Y:               100,
 }
 createdNode, err := client.Node.Create(ctx, newNode)
 
@@ -436,6 +317,7 @@ link, err := client.Link.GetByID(ctx, "lab-uuid", "link-uuid")
 
 // Create a new link
 newLink := models.Link{
+    LabID:  "lab-uuid",
     SrcNode: "node1-uuid",
     DstNode: "node2-uuid",
     SrcSlot: 0,
@@ -531,43 +413,30 @@ err = client.System.Ready(ctx)
 client.System.UseNamedConfigs()
 ```
 
-## Compatibility Layer
+### Image Definitions
 
-The gocmlclient provides a full compatibility layer that allows existing code using the legacy gocmlclient API to work without changes. All the original methods are available with the same signatures.
-
-### Legacy API Usage
+Retrieve image definitions available on the controller.
 
 ```go
-// Legacy style usage (still works!)
-client, err := gocmlclient.New("https://cml-controller.example.com",
-    gocmlclient.WithUsernamePassword("admin", "password"))
-
-// All original methods are available
-lab, err := client.LabGet(ctx, "lab-id", true)
-node, err := client.NodeGet(ctx, "lab-id", "node-id")
-user, err := client.UserGet(ctx, "user-id")
-
-// Create operations
-newNode := &models.Node{
-    Label:          "Router1",
-    NodeDefinition: "iosv",
-    Password:       "securepassword", // Password support added
-}
-createdNode, err := client.NodeCreate(ctx, newNode)
-
-// Password updates
-err = client.UserUpdatePassword(ctx, "user-id", "oldpass", "newpass")
+images, err := client.ImageDefinition.ImageDefinitions(ctx) // GET /image_definitions
 ```
 
-### Available Compatibility Methods
+### Node Definitions
 
-- **Labs**: `LabGet`, `LabCreate`, `LabUpdate`, `LabGetByTitle`, `LabStart`, `LabStop`, `LabWipe`, `LabDestroy`, `LabImport`, `LabHasConverged`
-- **Nodes**: `NodeGet`, `NodeCreate`, `NodeUpdate`, `NodeSetConfig`, `NodeSetNamedConfigs`, `NodeStart`, `NodeStop`, `NodeWipe`, `NodeDestroy`
-- **Users**: `UserGet`, `UserByName`, `Users`, `UserCreate`, `UserUpdate`, `UserDestroy`, `UserGroups`, `UserUpdatePassword`
-- **Groups**: `GroupGet`, `Groups`, `GroupByName`, `GroupCreate`, `GroupUpdate`, `GroupDestroy`
-- **Links**: `LinkGet`, `LinkCreate`, `LinkDestroy`
-- **Interfaces**: `InterfaceGet`, `InterfaceCreate`
-- **System**: `Version`, `VersionCheck`, `Ready`, `UseNamedConfigs`
+Retrieve simplified node definitions available on the controller.
+
+```go
+defs, err := client.NodeDefinition.NodeDefinitions(ctx) // GET /simplified_node_definitions
+```
+
+### External Connectors
+
+List or fetch external connectors configured on the system.
+
+```go
+exts, err := client.ExtConn.List(ctx) // GET /system/external_connectors
+ext, err := client.ExtConn.Get(ctx, "extconn-uuid") // GET /system/external_connectors/{id}
+```
 
 ## Error Handling
 
