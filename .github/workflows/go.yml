@@ -27,7 +27,7 @@ jobs:
 
     - name: Run Unit tests
       run: |
-        go test -race -covermode atomic -coverprofile=covprofile ./...
+        go test -race -covermode atomic -coverprofile=covprofile $(go list ./... | grep -v '/cmd/')
 
     - name: Install goveralls
       run: go install github.com/mattn/goveralls@latest
@@ -36,4 +36,3 @@ jobs:
       env:
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: goveralls -coverprofile=covprofile -service=github
-

@@ -3,8 +3,9 @@ package auth
 import (
 	"bytes"
 	"io"
-	"log/slog"
 	"net/http"
+
+	"github.com/rschmied/gocmlclient/internal/logging"
 )
 
 // Transport wraps an HTTP RoundTripper to automatically add authentication
@@ -39,11 +40,11 @@ func NewTransport(base http.RoundTripper, manager *Manager, skip []string) *Tran
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Skip authentication for certain endpoints
 	if t.shouldSkipAuth(req) {
-		slog.Debug("skip auth", "url", req.URL.Path)
+		logging.Debug("skip auth", "url", req.URL.Path)
 		return t.base.RoundTrip(req)
 	}
 
-	slog.Debug("add auth", "method", req.Method, "url", req.URL.String())
+	logging.Debug("add auth", "method", req.Method, "url", req.URL.String())
 
 	// Store the request body in a buffer for potential retries
 	var reqBodyBuf []byte
@@ -69,7 +70,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Add authorization header
 	reqWithAuth.Header.Set("Authorization", "Bearer "+token)
 
-	slog.Debug("Adding authentication to request",
+	logging.Debug("Adding authentication to request",
 		"method", req.Method,
 		"path", req.URL.Path,
 		"has_token", token != "",
@@ -83,7 +84,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	// Handle authentication failures
 	if res.StatusCode == http.StatusUnauthorized {
-		slog.Warn("Received 401 Unauthorized, invalidating token and retrying")
+		logging.Warn("Received 401 Unauthorized, invalidating token and retrying")
 
 		// Close the current response body
 		_ = drainAndClose(res.Body)
@@ -94,7 +95,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		// Get a fresh token
 		newToken, err := t.manager.GetToken(req.Context())
 		if err != nil {
-			slog.Error("Failed to refresh token after 401", "error", err)
+			logging.Error("Failed to refresh token after 401", "error", err)
 			return nil, err
 		}
 
@@ -107,7 +108,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			retryReq.Body = io.NopCloser(bytes.NewReader(reqBodyBuf))
 		}
 
-		slog.Debug("Retrying request with fresh token")
+		logging.Debug("Retrying request with fresh token")
 		return t.base.RoundTrip(retryReq)
 	}
 
@@ -121,12 +122,12 @@ func (t *Transport) shouldSkipAuth(req *http.Request) bool {
 	for _, skipPath := range t.skipAuthEndpoints {
 		// exact match
 		if path == skipPath {
-			slog.Debug("shouldSkipAuth MATCH", "path", path, "skipPath", skipPath)
+			logging.Debug("shouldSkipAuth MATCH", "path", path, "skipPath", skipPath)
 			return true
 		}
 	}
 
-	slog.Debug("shouldSkipAuth NO MATCH, will add auth", "path", path)
+	logging.Debug("shouldSkipAuth NO MATCH, will add auth", "path", path)
 	return false
 }
 

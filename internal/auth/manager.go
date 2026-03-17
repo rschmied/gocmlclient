@@ -3,9 +3,10 @@ package auth
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/rschmied/gocmlclient/internal/logging"
 )
 
 // Manager handles authentication token lifecycle
@@ -82,13 +83,13 @@ func (m *Manager) InvalidateToken() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	slog.Debug("Invalidating current token")
+	logging.Debug("Invalidating current token")
 	m.token = ""
 	m.expiry = time.Time{}
 
 	// Clear token from storage
 	if err := m.storage.Clear(); err != nil {
-		slog.Warn("Failed to clear token from storage", "error", err)
+		logging.Warn("Failed to clear token from storage", "error", err)
 	}
 }
 
@@ -119,7 +120,7 @@ func (m *Manager) refreshToken(ctx context.Context) (string, error) {
 		return m.token, nil
 	}
 
-	slog.Debug("Refreshing authentication token")
+	logging.Debug("Refreshing authentication token")
 
 	token, expiry, err := m.provider.FetchToken(ctx)
 	if err != nil {
@@ -132,7 +133,7 @@ func (m *Manager) refreshToken(ctx context.Context) (string, error) {
 
 	// Validate expiry time
 	if expiry.Before(time.Now()) {
-		slog.Warn("Provider returned already-expired token", "expiry", expiry)
+		logging.Warn("Provider returned already-expired token", "expiry", expiry)
 	}
 
 	m.token = token
@@ -140,11 +141,11 @@ func (m *Manager) refreshToken(ctx context.Context) (string, error) {
 
 	// Persist token to storage
 	if err := m.storage.Store(token, expiry); err != nil {
-		slog.Warn("Failed to persist token to storage", "error", err)
+		logging.Warn("Failed to persist token to storage", "error", err)
 		// Don't fail the refresh, just log the error
 	}
 
-	slog.Debug("Token refreshed successfully",
+	logging.Debug("Token refreshed successfully",
 		"expiry", expiry,
 		"valid_for", time.Until(expiry),
 		"storage", m.storage.Type(),

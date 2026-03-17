@@ -88,6 +88,13 @@ func TestWithLogger(t *testing.T) {
 	assert.Equal(t, logger, c.logger)
 }
 
+func TestWithLogLevel(t *testing.T) {
+	c := &Config{}
+	opt := WithLogLevel(slog.LevelInfo)
+	opt(c)
+	assert.Equal(t, slog.LevelInfo, c.logLevel)
+}
+
 func TestWithoutNamedConfigs(t *testing.T) {
 	c := &Config{namedConfigs: true} // default might be true, but test setting to false
 	opt := WithoutNamedConfigs()

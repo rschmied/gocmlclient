@@ -193,3 +193,29 @@ func TestQueryBuilderMethodChaining(t *testing.T) {
 		}
 	}
 }
+
+func TestQueryBuilder_WithExcludeConfigurations(t *testing.T) {
+	trueVal := true
+	falseVal := false
+
+	got := NewQueryBuilder().WithExcludeConfigurations(nil).Build()
+	if len(got) != 0 {
+		t.Fatalf("expected empty map, got %v", got)
+	}
+
+	got = NewQueryBuilder().WithExcludeConfigurations(&trueVal).Build()
+	if got["exclude_configurations"] != "true" {
+		t.Fatalf("expected exclude_configurations=true, got %v", got)
+	}
+	if got["operational"] != "true" {
+		t.Fatalf("expected operational=true, got %v", got)
+	}
+
+	got = NewQueryBuilder().WithExcludeConfigurations(&falseVal).Build()
+	if got["exclude_configurations"] != "false" {
+		t.Fatalf("expected exclude_configurations=false, got %v", got)
+	}
+	if got["operational"] != "true" {
+		t.Fatalf("expected operational=true, got %v", got)
+	}
+}

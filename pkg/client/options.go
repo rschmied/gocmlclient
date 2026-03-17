@@ -28,6 +28,7 @@ type Config struct {
 	nodeExcludeConfigurations *bool
 	httpClient                *http.Client
 	logger                    *slog.Logger
+	logLevel                  slog.Level
 	skipReadyCheck            bool
 }
 
@@ -95,6 +96,16 @@ func WithHTTPClient(hc *http.Client) Option {
 func WithLogger(l *slog.Logger) Option {
 	return func(c *Config) {
 		c.logger = l
+	}
+}
+
+// WithLogLevel sets the log level for the default client logger.
+//
+// This only affects the internally-created default logger. If WithLogger is
+// provided, the supplied logger is used as-is.
+func WithLogLevel(level slog.Level) Option {
+	return func(c *Config) {
+		c.logLevel = level
 	}
 }
 

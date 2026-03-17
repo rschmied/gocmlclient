@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/rschmied/gocmlclient/internal/httputil"
+	"github.com/rschmied/gocmlclient/internal/logging"
 )
 
 // AuthProvider implements TokenProvider using username/password authentication
@@ -69,7 +69,7 @@ func NewAuthProvider(config AuthConfig) *AuthProvider {
 func (p *AuthProvider) FetchToken(ctx context.Context) (string, time.Time, error) {
 	// if we have a preset token, use it once, while it's valid
 	if p.presetToken != "" {
-		slog.Debug("Using preset token")
+		logging.Debug("Using preset token")
 		token := p.presetToken
 		p.presetToken = "" // Clear it so we don't reuse it
 
@@ -83,7 +83,7 @@ func (p *AuthProvider) FetchToken(ctx context.Context) (string, time.Time, error
 
 // authenticateWithPassword performs username/password authentication
 func (p *AuthProvider) authenticateWithPassword(ctx context.Context) (string, time.Time, error) {
-	slog.Debug("Authenticating with username/password", "username", p.username)
+	logging.Debug("Authenticating with username/password", "username", p.username)
 
 	// Prepare request body
 	reqBody := authRequest{
@@ -99,7 +99,7 @@ func (p *AuthProvider) authenticateWithPassword(ctx context.Context) (string, ti
 	httputil.ApplyClientIdentityHeaders(req.Header, p.clientID, p.clientUUID, p.version)
 
 	// Execute request
-	slog.Debug("Sending authentication request", "url", req.URL.String())
+	logging.Debug("Sending authentication request", "url", req.URL.String())
 	res, err := p.client.Do(req)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("auth request failed: %w", err)
@@ -109,7 +109,7 @@ func (p *AuthProvider) authenticateWithPassword(ctx context.Context) (string, ti
 	// Handle authentication failure
 	if res.StatusCode >= 300 {
 		body, _ := io.ReadAll(res.Body)
-		slog.Error("Authentication failed",
+		logging.Error("Authentication failed",
 			"status", res.StatusCode,
 			"body", string(body),
 			"username", p.username,
@@ -130,7 +130,7 @@ func (p *AuthProvider) authenticateWithPassword(ctx context.Context) (string, ti
 	// Default expiry if not provided by server
 	expiry := time.Now().Add(8 * time.Hour)
 
-	slog.Debug("Authentication successful",
+	logging.Debug("Authentication successful",
 		"username", authRes.Username,
 		"admin", authRes.Admin,
 		"expiry", expiry,
@@ -142,13 +142,13 @@ func (p *AuthProvider) authenticateWithPassword(ctx context.Context) (string, ti
 // SetPresetToken sets a token to use on the next FetchToken call
 // Useful for scenarios where you have a valid token but need to initialize the provider
 func (p *AuthProvider) SetPresetToken(token string) {
-	slog.Debug("Setting preset token")
+	logging.Debug("Setting preset token")
 	p.presetToken = token
 }
 
 // UpdateCredentials updates the username and password
 func (p *AuthProvider) UpdateCredentials(username, password string) {
-	slog.Debug("Updating credentials", "username", username)
+	logging.Debug("Updating credentials", "username", username)
 	p.username = username
 	p.password = password
 }

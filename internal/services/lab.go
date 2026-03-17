@@ -4,13 +4,13 @@ package services
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/httputil"
+	"github.com/rschmied/gocmlclient/internal/logging"
 	"github.com/rschmied/gocmlclient/pkg/errors"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
@@ -223,7 +223,7 @@ func (s *LabService) Import(ctx context.Context, topology string) (models.Lab, e
 	}
 
 	if len(importResponse.Warnings) > 0 {
-		slog.Warn("Lab import completed with warnings", "warnings", importResponse.Warnings)
+		logging.Warn("Lab import completed with warnings", "warnings", importResponse.Warnings)
 	}
 
 	// Fetch the imported lab with full data

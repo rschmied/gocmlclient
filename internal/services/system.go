@@ -4,11 +4,11 @@ package services
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/rschmied/gocmlclient/internal/api"
+	"github.com/rschmied/gocmlclient/internal/logging"
 	"github.com/rschmied/gocmlclient/pkg/errors"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
@@ -78,13 +78,13 @@ func (s *SystemService) versionCheck(ctx context.Context) error {
 	if !compatible {
 		return versionError(sv.Version)
 	}
-	slog.Info("client is compatible")
+	logging.Info("client is compatible")
 
 	// Handle named configs constraint check (no error possible as we've ready
 	// checked the version above, it would have returned with an error there)
 	namedConfigsSupported, _ := s.checkVersionConstraint(s.version, namedConfigsConstraint)
 	if namedConfigsSupported {
-		slog.Info("named configs supported")
+		logging.Info("named configs supported")
 	} else {
 		s.useNamedConfigs = false
 	}
@@ -105,9 +105,9 @@ func (s *SystemService) checkVersionConstraint(version, constraintStr string) (b
 		return false, fmt.Errorf("version %s doesn't match expected format", version)
 	}
 
-	slog.Info("checkVersion", "version", version, "constraint", constraintStr)
+	logging.Info("checkVersion", "version", version, "constraint", constraintStr)
 	if len(m[3]) > 0 {
-		slog.Warn("this is a DEV version", "version", version)
+		logging.Warn("this is a DEV version", "version", version)
 	}
 
 	stem := m[1]
@@ -132,7 +132,7 @@ func (s *SystemService) VersionCheck(ctx context.Context, constraintStr string) 
 	}
 
 	if s.version == "" {
-		slog.Error("version unknown")
+		logging.Error("version unknown")
 		return false, fmt.Errorf("version unknown")
 	}
 
@@ -142,7 +142,7 @@ func (s *SystemService) VersionCheck(ctx context.Context, constraintStr string) 
 // UseNamedConfigs turns on the use of named configs (only with 2.7.0 and
 // newer)
 func (s *SystemService) UseNamedConfigs() {
-	slog.Info("USE named configs")
+	logging.Info("USE named configs")
 	s.useNamedConfigs = true
 }
 

@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/auth"
 	"github.com/rschmied/gocmlclient/internal/httputil"
+	"github.com/rschmied/gocmlclient/internal/logging"
 	"github.com/rschmied/gocmlclient/internal/services"
 	"github.com/rschmied/gocmlclient/internal/version"
 	"github.com/rschmied/gocmlclient/pkg/models"
@@ -44,7 +46,7 @@ type Client struct {
 func New(baseURL string, opts ...Option) (*Client, error) {
 	// start with defaults
 	cfg := &Config{
-		logger:       slog.Default(),
+		logLevel:     slog.LevelWarn,
 		baseURL:      baseURL,
 		namedConfigs: true, // make this the default!
 	}
@@ -53,6 +55,11 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	for _, opt := range opts {
 		opt(cfg)
 	}
+
+	if cfg.logger == nil {
+		cfg.logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: cfg.logLevel}))
+	}
+	logging.SetDefault(cfg.logger)
 
 	apiClient, err := newAPIClient(cfg)
 	if err != nil {

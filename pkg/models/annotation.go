@@ -21,9 +21,9 @@ const (
 // Values observed in schema: "", "2,2", "4,2".
 type BorderStyle string
 
-// LineEnd matches OpenAPI `LineEnd`.
-// The OpenAPI schema defines this; keep as string for forward-compat.
-type LineEnd string
+// LineStyle matches OpenAPI `LineStyle`.
+// Values observed in schema: "arrow", "square", "circle".
+type LineStyle string
 
 // Annotation is a discriminated union wrapper.
 // Exactly one of Text/Rectangle/Ellipse/Line is set after unmarshaling.
@@ -299,8 +299,9 @@ type LineAnnotation struct {
 	X1          float64        `json:"x1"`
 	Y1          float64        `json:"y1"`
 	ZIndex      float64        `json:"z_index"`
-	LineStart   LineEnd        `json:"line_start"`
-	LineEnd     LineEnd        `json:"line_end"`
+	// line_start/line_end are required by the schema but may be null.
+	LineStart *LineStyle `json:"line_start"`
+	LineEnd   *LineStyle `json:"line_end"`
 }
 
 type LineAnnotationPartial struct {
@@ -314,8 +315,8 @@ type LineAnnotationPartial struct {
 	X1          *float64       `json:"x1,omitempty"`
 	Y1          *float64       `json:"y1,omitempty"`
 	ZIndex      *float64       `json:"z_index,omitempty"`
-	LineStart   *LineEnd       `json:"line_start,omitempty"`
-	LineEnd     *LineEnd       `json:"line_end,omitempty"`
+	LineStart   *LineStyle     `json:"line_start,omitempty"`
+	LineEnd     *LineStyle     `json:"line_end,omitempty"`
 }
 
 type LineAnnotationResponse struct {
