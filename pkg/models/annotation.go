@@ -11,10 +11,14 @@ import (
 type AnnotationType string
 
 const (
-	AnnotationTypeText      AnnotationType = "text"
+	// AnnotationTypeText represents a text annotation.
+	AnnotationTypeText AnnotationType = "text"
+	// AnnotationTypeRectangle represents a rectangle annotation.
 	AnnotationTypeRectangle AnnotationType = "rectangle"
-	AnnotationTypeEllipse   AnnotationType = "ellipse"
-	AnnotationTypeLine      AnnotationType = "line"
+	// AnnotationTypeEllipse represents an ellipse annotation.
+	AnnotationTypeEllipse AnnotationType = "ellipse"
+	// AnnotationTypeLine represents a line annotation.
+	AnnotationTypeLine AnnotationType = "line"
 )
 
 // BorderStyle matches OpenAPI `BorderStyle`.
@@ -35,6 +39,7 @@ type Annotation struct {
 	Line      *LineAnnotationResponse
 }
 
+// UnmarshalJSON implements custom JSON unmarshaling for Annotation.
 func (a *Annotation) UnmarshalJSON(data []byte) error {
 	if string(data) == "null" {
 		return nil
@@ -78,6 +83,7 @@ func (a *Annotation) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON implements custom JSON marshaling for Annotation.
 func (a Annotation) MarshalJSON() ([]byte, error) {
 	switch a.Type {
 	case AnnotationTypeText:
@@ -115,6 +121,7 @@ type AnnotationCreate struct {
 	Line      *LineAnnotation
 }
 
+// MarshalJSON implements custom JSON marshaling for AnnotationCreate.
 func (a AnnotationCreate) MarshalJSON() ([]byte, error) {
 	switch a.Type {
 	case AnnotationTypeText:
@@ -152,6 +159,7 @@ type AnnotationUpdate struct {
 	Line      *LineAnnotationPartial
 }
 
+// MarshalJSON implements custom JSON marshaling for AnnotationUpdate.
 func (a AnnotationUpdate) MarshalJSON() ([]byte, error) {
 	switch a.Type {
 	case AnnotationTypeText:
@@ -179,6 +187,7 @@ func (a AnnotationUpdate) MarshalJSON() ([]byte, error) {
 	}
 }
 
+// TextAnnotation represents a text annotation.
 type TextAnnotation struct {
 	Rotation    float64        `json:"rotation"`
 	Type        AnnotationType `json:"type"`
@@ -197,6 +206,7 @@ type TextAnnotation struct {
 	TextUnit    string         `json:"text_unit"`
 }
 
+// TextAnnotationPartial represents a partial text annotation for updates.
 type TextAnnotationPartial struct {
 	Rotation    *float64       `json:"rotation,omitempty"`
 	Type        AnnotationType `json:"type"`
@@ -215,11 +225,13 @@ type TextAnnotationPartial struct {
 	TextUnit    *string        `json:"text_unit,omitempty"`
 }
 
+// TextAnnotationResponse represents a text annotation with ID.
 type TextAnnotationResponse struct {
 	ID UUID `json:"id"`
 	TextAnnotation
 }
 
+// RectangleAnnotation represents a rectangle annotation.
 type RectangleAnnotation struct {
 	X2           float64        `json:"x2"`
 	Y2           float64        `json:"y2"`
@@ -235,6 +247,7 @@ type RectangleAnnotation struct {
 	BorderRadius float64        `json:"border_radius"`
 }
 
+// RectangleAnnotationPartial represents a partial rectangle annotation for updates.
 type RectangleAnnotationPartial struct {
 	X2           *float64       `json:"x2,omitempty"`
 	Y2           *float64       `json:"y2,omitempty"`
@@ -250,11 +263,13 @@ type RectangleAnnotationPartial struct {
 	BorderRadius *float64       `json:"border_radius,omitempty"`
 }
 
+// RectangleAnnotationResponse represents a rectangle annotation with ID.
 type RectangleAnnotationResponse struct {
 	ID UUID `json:"id"`
 	RectangleAnnotation
 }
 
+// EllipseAnnotation represents an ellipse annotation.
 type EllipseAnnotation struct {
 	X2          float64        `json:"x2"`
 	Y2          float64        `json:"y2"`
@@ -269,6 +284,7 @@ type EllipseAnnotation struct {
 	ZIndex      float64        `json:"z_index"`
 }
 
+// EllipseAnnotationPartial represents a partial ellipse annotation for updates.
 type EllipseAnnotationPartial struct {
 	X2          *float64       `json:"x2,omitempty"`
 	Y2          *float64       `json:"y2,omitempty"`
@@ -283,11 +299,13 @@ type EllipseAnnotationPartial struct {
 	ZIndex      *float64       `json:"z_index,omitempty"`
 }
 
+// EllipseAnnotationResponse represents an ellipse annotation with ID.
 type EllipseAnnotationResponse struct {
 	ID UUID `json:"id"`
 	EllipseAnnotation
 }
 
+// LineAnnotation represents a line annotation.
 type LineAnnotation struct {
 	X2          float64        `json:"x2"`
 	Y2          float64        `json:"y2"`
@@ -304,6 +322,7 @@ type LineAnnotation struct {
 	LineEnd   *LineStyle `json:"line_end"`
 }
 
+// LineAnnotationPartial represents a partial line annotation for updates.
 type LineAnnotationPartial struct {
 	X2          *float64       `json:"x2,omitempty"`
 	Y2          *float64       `json:"y2,omitempty"`
@@ -319,11 +338,13 @@ type LineAnnotationPartial struct {
 	LineEnd     *LineStyle     `json:"line_end,omitempty"`
 }
 
+// LineAnnotationResponse represents a line annotation with ID.
 type LineAnnotationResponse struct {
 	ID UUID `json:"id"`
 	LineAnnotation
 }
 
+// SmartAnnotation represents a smart annotation.
 type SmartAnnotation struct {
 	ID            UUID         `json:"id"`
 	BorderColor   *string      `json:"border_color,omitempty"`
@@ -341,6 +362,7 @@ type SmartAnnotation struct {
 	ZIndex        *int         `json:"z_index,omitempty"`
 }
 
+// SmartAnnotationUpdate represents a smart annotation update payload.
 type SmartAnnotationUpdate struct {
 	BorderColor   *string      `json:"border_color,omitempty"`
 	BorderStyle   *BorderStyle `json:"border_style,omitempty"`

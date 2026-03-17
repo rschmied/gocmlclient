@@ -1,0 +1,80 @@
+version: "2"
+linters:
+  enable:
+    - asciicheck
+    - bodyclose
+    - errorlint
+    - gocritic
+    - misspell
+    - nakedret
+    - revive
+    - unconvert
+    - whitespace
+  settings:
+
+    errcheck:
+      exclude-functions:
+        # fmt - covers the common print functions; Fprint* write to a Writer but
+        # errors there are also usually ignorable
+        - fmt.Print
+        - fmt.Println
+        - fmt.Printf
+        - fmt.Fprint
+        - fmt.Fprintln
+        - fmt.Fprintf
+        - os.Setenv
+        - os.Unsetenv
+
+        # io interface methods - (io.Writer).Write covers any type implementing
+        # the interface, so you don't need (net/http.ResponseWriter).Write or
+        # ResponseWriter.Write separately — they're redundant
+
+        - (io.Writer).Write
+        - (io.StringWriter).WriteString
+
+        # websocket - be specific about the package to avoid wildcarding too broadly
+        - github.com/gorilla/websocket.(*Conn).WriteMessage
+        # or if nhooyr/websocket:
+        # - nhooyr.io/websocket.(*Conn).Write
+
+    govet:
+      enable:
+        - nilness
+        - shadow
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+        - name: if-return
+        - name: increment-decrement
+        - name: range
+        - name: receiver-naming
+        - name: var-declaration
+        - name: var-naming
+        # var-naming is too noisy for this repo (e.g. flags package name "common").
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/rschmied/gocmlclient
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

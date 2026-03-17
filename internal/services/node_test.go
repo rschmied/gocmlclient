@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/testutil"
 	"github.com/rschmied/gocmlclient/pkg/models"
-	"github.com/stretchr/testify/assert"
 )
 
 func initNodeTest(t *testing.T) (*api.Client, func()) {
@@ -149,7 +150,6 @@ func TestNodeCRUD(t *testing.T) {
 		httpmock.RegisterResponder("GET", "https://mock/api/v0/labs/lab_uuid/nodes/test-node-id", getResponder)
 		httpmock.RegisterResponder("DELETE", "https://mock/api/v0/labs/lab_uuid/nodes/test-node-id",
 			httpmock.NewJsonResponderOrPanic(204, nil))
-
 	}
 
 	ctx := context.Background()
@@ -159,7 +159,7 @@ func TestNodeCRUD(t *testing.T) {
 	lab := models.LabCreateRequest{Title: "this"}
 	newLab, err := labService.Create(ctx, lab)
 	if err != nil {
-		testutil.PrettyPrintError(err)
+		_ = testutil.PrettyPrintError(err)
 	}
 	labID := newLab.ID
 

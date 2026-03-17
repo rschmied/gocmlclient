@@ -7,9 +7,10 @@ import (
 	"testing"
 
 	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSystemReady(t *testing.T) {
@@ -197,7 +198,7 @@ func TestSystemReadyErrors(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.statusCode)
 				if tt.responseBody != "" {
-					w.Write([]byte(tt.responseBody))
+					w.Write([]byte(tt.responseBody)) //nolint:errcheck
 				}
 			}))
 			defer server.Close()
@@ -226,7 +227,7 @@ func TestSystemServiceIntegration(t *testing.T) {
 		assert.Equal(t, "/api/v0/system_information", r.URL.Path)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"version": "2.5.0", "ready": true}`))
+		w.Write([]byte(`{"version": "2.5.0", "ready": true}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 

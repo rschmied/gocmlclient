@@ -11,10 +11,8 @@ func TestQueryBuilder(t *testing.T) {
 		expected map[string]string
 	}{
 		{
-			name: "empty builder",
-			builder: func() *QueryBuilder {
-				return NewQueryBuilder()
-			},
+			name:     "empty builder",
+			builder:  NewQueryBuilder,
 			expected: map[string]string{},
 		},
 		{

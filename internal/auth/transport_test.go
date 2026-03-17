@@ -109,14 +109,14 @@ func TestTransportRoundTripSkipAuth(t *testing.T) {
 				t.Errorf("unexpected Authorization header on auth endpoint: %s", auth)
 			}
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"token":"auth-token"}`))
+			w.Write([]byte(`{"token":"auth-token"}`)) //nolint:errcheck
 		} else {
 			// For regular endpoint, auth header should be present
 			if auth := r.Header.Get("Authorization"); auth == "" {
 				t.Errorf("missing Authorization header on regular endpoint")
 			}
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"data":"success"}`))
+			w.Write([]byte(`{"data":"success"}`)) //nolint:errcheck
 		}
 	}))
 	defer server.Close()
@@ -130,7 +130,7 @@ func TestTransportRoundTripSkipAuth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("auth request failed: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// Test regular endpoint (should add auth)
 	req, _ = http.NewRequest("GET", server.URL+"/api/data", nil)
@@ -138,7 +138,7 @@ func TestTransportRoundTripSkipAuth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("regular request failed: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func TestTransportRoundTripAddAuth(t *testing.T) {
@@ -153,7 +153,7 @@ func TestTransportRoundTripAddAuth(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result":"ok"}`))
+		w.Write([]byte(`{"result":"ok"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -166,7 +166,7 @@ func TestTransportRoundTripAddAuth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func TestTransportRoundTrip401Retry(t *testing.T) {
@@ -177,11 +177,11 @@ func TestTransportRoundTrip401Retry(t *testing.T) {
 		if callCount == 1 {
 			// First call returns 401
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized"))
+			w.Write([]byte("Unauthorized")) //nolint:errcheck
 		} else {
 			// Second call succeeds
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"result":"ok"}`))
+			w.Write([]byte(`{"result":"ok"}`)) //nolint:errcheck
 		}
 	}))
 	defer server.Close()
@@ -194,7 +194,7 @@ func TestTransportRoundTrip401Retry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if callCount != 2 {
 		t.Errorf("expected 2 calls (initial + retry), got %d", callCount)
@@ -206,7 +206,7 @@ func TestTransportRoundTripManagerError(t *testing.T) {
 	transport := NewTransport(http.DefaultTransport, manager, nil)
 
 	req, _ := http.NewRequest("GET", "http://example.com/api/data", nil)
-	_, err := transport.RoundTrip(req)
+	_, err := transport.RoundTrip(req) //nolint:bodyclose
 	if err == nil {
 		t.Fatal("expected error from manager")
 	}
@@ -259,7 +259,7 @@ func TestTransportRoundTripWithBody(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result":"ok"}`))
+		w.Write([]byte(`{"result":"ok"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -271,14 +271,14 @@ func TestTransportRoundTripWithBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func TestTransportRoundTripConcurrent(t *testing.T) {
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result":"ok"}`))
+		w.Write([]byte(`{"result":"ok"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -292,9 +292,7 @@ func TestTransportRoundTripConcurrent(t *testing.T) {
 	errChan := make(chan error, numGoroutines*numRequests)
 
 	for range numGoroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range numRequests {
 				req, _ := http.NewRequest("GET", server.URL+"/api/data", nil)
 				resp, err := transport.RoundTrip(req)
@@ -302,9 +300,9 @@ func TestTransportRoundTripConcurrent(t *testing.T) {
 					errChan <- err
 					continue
 				}
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -333,13 +331,13 @@ func TestTransportConcurrent401Race(t *testing.T) {
 		// Return 200 if Authorization header is present (token refreshed)
 		if auth := r.Header.Get("Authorization"); auth != "" {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"result":"ok"}`))
+			w.Write([]byte(`{"result":"ok"}`)) //nolint:errcheck
 			return
 		}
 
 		// Return 401 for requests without auth header
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("Unauthorized"))
+		w.Write([]byte("Unauthorized")) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -356,15 +354,13 @@ func TestTransportConcurrent401Race(t *testing.T) {
 	errChan := make(chan error, numGoroutines)
 
 	for range numGoroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			req, _ := http.NewRequest("GET", server.URL+"/api/data", nil)
-			_, err := transport.RoundTrip(req)
+			_, err := transport.RoundTrip(req) //nolint:bodyclose
 			if err != nil {
 				errChan <- err
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -398,7 +394,7 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 	// Create a fast test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result":"ok"}`))
+		w.Write([]byte(`{"result":"ok"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -411,7 +407,7 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 		if err != nil {
 			b.Fatalf("request failed: %v", err)
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -428,7 +424,7 @@ func TestTransportRoundTripWithLargeBody(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result":"ok"}`))
+		w.Write([]byte(`{"result":"ok"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -442,7 +438,7 @@ func TestTransportRoundTripWithLargeBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request with large body failed: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func TestTransportRoundTripWithStreamingBody(t *testing.T) {
@@ -460,7 +456,7 @@ func TestTransportRoundTripWithStreamingBody(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result":"ok"}`))
+		w.Write([]byte(`{"result":"ok"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -474,7 +470,7 @@ func TestTransportRoundTripWithStreamingBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request with streaming body failed: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func TestTransportRoundTripCustomSkipPatterns(t *testing.T) {
@@ -490,7 +486,7 @@ func TestTransportRoundTripCustomSkipPatterns(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result":"ok"}`))
+		w.Write([]byte(`{"result":"ok"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -511,7 +507,7 @@ func TestTransportRoundTripCustomSkipPatterns(t *testing.T) {
 	if err != nil {
 		t.Fatalf("public request failed: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// Test private endpoint (should add auth)
 	req, _ = http.NewRequest("GET", server.URL+"/api/private", nil)
@@ -519,7 +515,7 @@ func TestTransportRoundTripCustomSkipPatterns(t *testing.T) {
 	if err != nil {
 		t.Fatalf("private request failed: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func TestTransportRoundTripContextCancellation(t *testing.T) {
@@ -527,7 +523,7 @@ func TestTransportRoundTripContextCancellation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(2 * time.Second) // Slow response
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result":"ok"}`))
+		w.Write([]byte(`{"result":"ok"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -539,7 +535,7 @@ func TestTransportRoundTripContextCancellation(t *testing.T) {
 	defer cancel()
 
 	req, _ := http.NewRequestWithContext(ctx, "GET", server.URL+"/api/data", nil)
-	_, err := transport.RoundTrip(req)
+	_, err := transport.RoundTrip(req) //nolint:bodyclose
 	if err == nil {
 		t.Fatal("expected context cancellation error")
 	}
@@ -564,7 +560,7 @@ func TestTransportRoundTripNilBody(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result":"ok"}`))
+		w.Write([]byte(`{"result":"ok"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -577,7 +573,7 @@ func TestTransportRoundTripNilBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request with nil body failed: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func TestTransportRoundTripEmptyBody(t *testing.T) {
@@ -594,7 +590,7 @@ func TestTransportRoundTripEmptyBody(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result":"ok"}`))
+		w.Write([]byte(`{"result":"ok"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -607,7 +603,7 @@ func TestTransportRoundTripEmptyBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request with empty body failed: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func TestNewTransportNilBase(t *testing.T) {
@@ -658,7 +654,7 @@ func TestTransportRoundTripBodyReadError(t *testing.T) {
 	// Create a request with a body that will fail to read
 	req, _ := http.NewRequest("POST", "http://example.com/api/data", &failingReader{})
 
-	_, err := transport.RoundTrip(req)
+	_, err := transport.RoundTrip(req) //nolint:bodyclose
 	if err == nil {
 		t.Fatal("expected error from failing body read")
 	}
@@ -683,7 +679,7 @@ func BenchmarkTransportRoundTripSkipAuth(b *testing.B) {
 	// Create a fast test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"token":"auth-token"}`))
+		w.Write([]byte(`{"token":"auth-token"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -696,6 +692,6 @@ func BenchmarkTransportRoundTripSkipAuth(b *testing.B) {
 		if err != nil {
 			b.Fatalf("request failed: %v", err)
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }

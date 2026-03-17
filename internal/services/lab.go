@@ -78,6 +78,7 @@ func labActionURL(labID models.UUID, action string) string {
 	return fmt.Sprintf("%s/%s", labURL(labID), action)
 }
 
+// Labs returns a list of labs.
 func (s *LabService) Labs(ctx context.Context, showAll bool) (labs models.LabList, err error) {
 	labs = models.LabList{}
 	qb := httputil.NewQueryBuilder()

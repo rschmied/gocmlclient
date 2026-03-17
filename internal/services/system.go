@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
+
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/logging"
 	"github.com/rschmied/gocmlclient/pkg/errors"

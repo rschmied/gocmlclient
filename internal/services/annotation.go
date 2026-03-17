@@ -28,6 +28,7 @@ type AnnotationService struct {
 	apiClient *api.Client
 }
 
+// NewAnnotationService creates a new annotation service.
 func NewAnnotationService(apiClient *api.Client) *AnnotationService {
 	return &AnnotationService{apiClient: apiClient}
 }
@@ -40,6 +41,7 @@ func annotationURL(labID, annotationID models.UUID) string {
 	return fmt.Sprintf("%s/%s", annotationsURL(labID), annotationID)
 }
 
+// List returns all annotations for a lab.
 func (s *AnnotationService) List(ctx context.Context, labID models.UUID) ([]models.Annotation, error) {
 	apiPath := annotationsURL(labID)
 	var out []models.Annotation
@@ -49,6 +51,7 @@ func (s *AnnotationService) List(ctx context.Context, labID models.UUID) ([]mode
 	return out, nil
 }
 
+// Create creates a new annotation in a lab.
 func (s *AnnotationService) Create(ctx context.Context, labID models.UUID, in models.AnnotationCreate) (models.Annotation, error) {
 	apiPath := annotationsURL(labID)
 	var out models.Annotation
@@ -58,6 +61,7 @@ func (s *AnnotationService) Create(ctx context.Context, labID models.UUID, in mo
 	return out, nil
 }
 
+// Get returns a single annotation by ID.
 func (s *AnnotationService) Get(ctx context.Context, labID, annotationID models.UUID) (models.Annotation, error) {
 	apiPath := annotationURL(labID, annotationID)
 	var out models.Annotation
@@ -67,6 +71,7 @@ func (s *AnnotationService) Get(ctx context.Context, labID, annotationID models.
 	return out, nil
 }
 
+// Update updates an existing annotation.
 func (s *AnnotationService) Update(ctx context.Context, labID, annotationID models.UUID, in models.AnnotationUpdate) (models.Annotation, error) {
 	apiPath := annotationURL(labID, annotationID)
 	var out models.Annotation
@@ -76,6 +81,7 @@ func (s *AnnotationService) Update(ctx context.Context, labID, annotationID mode
 	return out, nil
 }
 
+// Delete removes an annotation.
 func (s *AnnotationService) Delete(ctx context.Context, labID, annotationID models.UUID) error {
 	apiPath := annotationURL(labID, annotationID)
 	return s.apiClient.DeleteJSON(ctx, apiPath, nil)

@@ -133,7 +133,7 @@ func TestFetchTokenAuthentication(t *testing.T) {
 
 		w.Header().Set("Content-Type", httputil.ContentTypeJSON)
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(response) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -169,7 +169,7 @@ func TestFetchTokenAuthenticationFailure(t *testing.T) {
 	// Create a test server that returns authentication failure
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("Invalid credentials"))
+		w.Write([]byte("Invalid credentials")) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -197,7 +197,7 @@ func TestFetchTokenServerError(t *testing.T) {
 	// Create a test server that returns server error
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		w.Write([]byte("Internal server error")) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -226,7 +226,7 @@ func TestFetchTokenInvalidResponse(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", httputil.ContentTypeJSON)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("invalid json"))
+		w.Write([]byte("invalid json")) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -261,7 +261,7 @@ func TestFetchTokenEmptyToken(t *testing.T) {
 
 		w.Header().Set("Content-Type", httputil.ContentTypeJSON)
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(response) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -386,7 +386,7 @@ func BenchmarkFetchToken(b *testing.B) {
 
 		w.Header().Set("Content-Type", httputil.ContentTypeJSON)
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(response) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -412,7 +412,7 @@ func TestFetchTokenNetworkTimeout(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond) // Delay longer than client timeout
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"token":"delayed-token"}`))
+		w.Write([]byte(`{"token":"delayed-token"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 

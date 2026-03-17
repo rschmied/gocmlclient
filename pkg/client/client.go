@@ -225,6 +225,7 @@ func newAPIClient(c *Config) (*api.Client, error) {
 	return apiClient, nil
 }
 
+// Stats returns API client statistics.
 func (c *Client) Stats() *models.Stats {
 	return c.apiClient.Stats()
 }

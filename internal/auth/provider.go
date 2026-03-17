@@ -104,7 +104,7 @@ func (p *AuthProvider) authenticateWithPassword(ctx context.Context) (string, ti
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("auth request failed: %w", err)
 	}
-	defer res.Body.Close()
+	defer res.Body.Close() //nolint:errcheck
 
 	// Handle authentication failure
 	if res.StatusCode >= 300 {

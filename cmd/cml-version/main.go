@@ -57,7 +57,7 @@ func main() {
 	// Force a system_information call so version is populated.
 	if err := c.System.Ready(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "ready check failed: %v\n", err)
-		os.Exit(1)
+		return
 	}
 
 	fmt.Println(c.System.Version())

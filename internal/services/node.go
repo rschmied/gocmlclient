@@ -146,6 +146,7 @@ func (node nodePatchPostAlias) MarshalJSON() ([]byte, error) {
 	return json.Marshal((alias)(node))
 }
 
+// GetNodesForLab returns all nodes for a lab.
 func (s *NodeService) GetNodesForLab(ctx context.Context, labID models.UUID) (models.NodeMap, error) {
 	api := nodesURL(labID)
 
@@ -175,7 +176,7 @@ func (s *NodeService) setConfigData(ctx context.Context, node *models.Node, data
 	api := nodeURL(node.LabID, node.ID)
 
 	// API returns the node ID of the updated node
-	var nodeID models.UUID = ""
+	var nodeID models.UUID
 	err := s.apiClient.PatchJSON(ctx, api, nil, data, &nodeID)
 	if err != nil {
 		return err
@@ -218,7 +219,7 @@ func (s *NodeService) Update(ctx context.Context, node models.Node) (models.Node
 	postAlias := newNodeAlias(&node, true)
 
 	// API returns "just" the node ID of the updated node
-	var nodeID models.UUID = ""
+	var nodeID models.UUID
 	err := s.apiClient.PatchJSON(ctx, api, nil, postAlias, &nodeID)
 	if err != nil {
 		return models.Node{}, err
@@ -277,7 +278,7 @@ func (s *NodeService) Create(ctx context.Context, node models.Node) (models.Node
 		// of e.g. a connectivity issue between the initial create and the
 		// attempted removal.
 		node.ID = newNode.ID
-		s.Delete(ctx, node.LabID, node.ID)
+		_ = s.Delete(ctx, node.LabID, node.ID)
 		return models.Node{}, err
 	}
 

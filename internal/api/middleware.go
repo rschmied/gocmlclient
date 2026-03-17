@@ -3,7 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
-	stdErrors "errors"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -177,12 +177,13 @@ func isRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
-	if stdErrors.Is(err, context.Canceled) || stdErrors.Is(err, context.DeadlineExceeded) {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return false
 	}
 
 	// Check for HTTP errors
-	if httpErr, ok := err.(*HTTPError); ok {
+	httpErr := &HTTPError{}
+	if errors.As(err, &httpErr) {
 		return isRetryableStatus(httpErr.StatusCode)
 	}
 
@@ -223,7 +224,7 @@ func drainAndClose(r io.ReadCloser) error {
 	if r == nil {
 		return nil
 	}
-	_, _ = io.Copy(io.Discard, r)
+	io.Copy(io.Discard, r) //nolint:errcheck
 	return r.Close()
 }
 
@@ -242,7 +243,7 @@ func makeGetBody(req *http.Request) (func() (io.ReadCloser, error), error) {
 	if err != nil {
 		return nil, err
 	}
-	_ = req.Body.Close()
+	req.Body.Close() //nolint:errcheck
 
 	// Restore the body so other middleware/callers aren't surprised.
 	req.Body = io.NopCloser(bytes.NewReader(bodyBytes))

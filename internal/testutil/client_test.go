@@ -6,8 +6,9 @@ import (
 	"testing"
 
 	"github.com/jarcoal/httpmock"
-	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/rschmied/gocmlclient/internal/api"
 )
 
 func TestGetEnvOrDefault(t *testing.T) {
@@ -220,7 +221,7 @@ func TestNewAPIClientWithConfig(t *testing.T) {
 	}()
 	// This will attempt to create a live client and fail due to missing credentials
 	// but it will exercise the newLiveClient code path for coverage
-	_, _ = NewAPIClientWithConfig(t, config)
+	NewAPIClientWithConfig(t, config) //nolint:errcheck
 }
 
 func TestSetupCommonMocks(t *testing.T) {
@@ -232,12 +233,12 @@ func TestSetupCommonMocks(t *testing.T) {
 	SetupCommonMocks()
 
 	// Test auth_extended endpoint (POST)
-	resp, err := http.DefaultClient.Post("https://mock/api/v0/auth_extended", "application/json", nil)
+	resp, err := http.DefaultClient.Post("https://mock/api/v0/auth_extended", "application/json", nil) //nolint:bodyclose
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
 	// Test system_information endpoint (GET)
-	resp, err = http.DefaultClient.Get("https://mock/api/v0/system_information")
+	resp, err = http.DefaultClient.Get("https://mock/api/v0/system_information") //nolint:bodyclose
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 }

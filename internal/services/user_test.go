@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/testutil"
 	"github.com/rschmied/gocmlclient/pkg/models"
-	"github.com/stretchr/testify/assert"
 )
 
 // mockGroupService implements GroupServiceInterface for testing
@@ -116,7 +117,7 @@ func TestUserCRUD(t *testing.T) {
 	request := models.NewUserCreateRequest("bla", "süpersücret")
 	user, err := service.Create(ctx, request)
 	if err != nil {
-		testutil.PrettyPrintError(err)
+		_ = testutil.PrettyPrintError(err)
 	}
 	assert.NoError(t, err)
 

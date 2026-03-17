@@ -30,7 +30,14 @@ func L() *slog.Logger {
 	return slog.Default()
 }
 
+// Debug logs a debug message.
 func Debug(msg string, args ...any) { L().Debug(msg, args...) }
-func Info(msg string, args ...any)  { L().Info(msg, args...) }
-func Warn(msg string, args ...any)  { L().Warn(msg, args...) }
+
+// Info logs an info message.
+func Info(msg string, args ...any) { L().Info(msg, args...) }
+
+// Warn logs a warning message.
+func Warn(msg string, args ...any) { L().Warn(msg, args...) }
+
+// Error logs an error message.
 func Error(msg string, args ...any) { L().Error(msg, args...) }

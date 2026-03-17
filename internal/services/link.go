@@ -69,6 +69,7 @@ func (llist linkList) MarshalJSON() ([]byte, error) {
 	return json.Marshal(newlist)
 }
 
+// GetLinksForLab returns all links for a lab.
 func (s *LinkService) GetLinksForLab(ctx context.Context, labID models.UUID) ([]models.Link, error) {
 	api := linksURL(labID)
 

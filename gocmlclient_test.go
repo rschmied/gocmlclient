@@ -3,8 +3,9 @@ package gocmlclient
 import (
 	"testing"
 
-	"github.com/rschmied/gocmlclient/pkg/client"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/rschmied/gocmlclient/pkg/client"
 )
 
 func TestNew(t *testing.T) {

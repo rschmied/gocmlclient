@@ -244,7 +244,7 @@ func (n *Node) SameConfig(other *Node) bool {
 	}
 
 	// Handle nil configurations
-	if n.Configuration == nil && other.Configuration == nil {
+	if n.Configuration == nil && other.Configuration == nil { //nolint:gocritic
 		// Both are nil, check named configurations
 	} else if n.Configuration != nil && other.Configuration != nil {
 		// Both are non-nil but not strings, they should be equal

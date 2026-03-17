@@ -115,14 +115,14 @@ func (s *Stats) String() string {
 	var builder strings.Builder
 	builder.WriteString("API Statistics\n")
 	builder.WriteString("==============\n")
-	builder.WriteString(fmt.Sprintf("Total Calls: %d\n\n", s.TotalCalls()))
+	fmt.Fprintf(&builder, "Total Calls: %d\n\n", s.TotalCalls())
 
 	// Calls by method
 	methods := s.CallsByMethod()
 	if len(methods) > 0 {
 		builder.WriteString("Calls by Method:\n")
 		for method, count := range methods {
-			builder.WriteString(fmt.Sprintf("  %s: %d\n", method, count))
+			fmt.Fprintf(&builder, "  %s: %d\n", method, count)
 		}
 		builder.WriteString("\n")
 	}
@@ -130,15 +130,15 @@ func (s *Stats) String() string {
 	// Endpoint details
 	builder.WriteString("Endpoint Details:\n")
 	for endpoint, stats := range s.EndpointGroups {
-		builder.WriteString(fmt.Sprintf("  %s:\n", endpoint))
-		builder.WriteString(fmt.Sprintf("    Calls: %d\n", stats.CallCount))
-		builder.WriteString(fmt.Sprintf("    Response Times: Min=%v, Max=%v, Avg=%v\n",
-			stats.MinTime, stats.MaxTime, stats.AvgTime))
+		fmt.Fprintf(&builder, "  %s:\n", endpoint)
+		fmt.Fprintf(&builder, "    Calls: %d\n", stats.CallCount)
+		fmt.Fprintf(&builder, "    Response Times: Min=%v, Max=%v, Avg=%v\n",
+			stats.MinTime, stats.MaxTime, stats.AvgTime)
 
 		if len(stats.StatusCounts) > 0 {
 			builder.WriteString("    Status Codes:\n")
 			for status, count := range stats.StatusCounts {
-				builder.WriteString(fmt.Sprintf("      %d: %d\n", status, count))
+				fmt.Fprintf(&builder, "      %d: %d\n", status, count)
 			}
 		}
 		builder.WriteString("\n")

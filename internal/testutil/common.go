@@ -7,6 +7,7 @@ import (
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
+// PrettyPrintError prints a formatted error response.
 func PrettyPrintError(err error) error {
 	var outer models.ErrorResponse
 	if json.Unmarshal([]byte(err.Error()), &outer) == nil {
@@ -16,9 +17,9 @@ func PrettyPrintError(err error) error {
 		if json.Unmarshal(outer.Description, &rawDescription) == nil {
 			var innerData map[string]any
 			if json.Unmarshal([]byte(rawDescription), &innerData) == nil {
-				prettyJSON, err := json.MarshalIndent(innerData, "", "  ")
-				if err != nil {
-					return fmt.Errorf("failed to pretty-print inner JSON: %w", err)
+				prettyJSON, marshalErr := json.MarshalIndent(innerData, "", "  ")
+				if marshalErr != nil {
+					return fmt.Errorf("failed to pretty-print inner JSON: %w", marshalErr)
 				}
 				fmt.Printf("desc:\n%s\n", string(prettyJSON))
 			} else {

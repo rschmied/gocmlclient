@@ -70,7 +70,7 @@ func TestRequest(t *testing.T) {
 		// Send response
 		w.Header().Set("Content-Type", httputil.ContentTypeJSON)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result":"success"}`))
+		w.Write([]byte(`{"result":"success"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -84,7 +84,7 @@ func TestRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected status 200, got %d", resp.StatusCode)
@@ -151,7 +151,7 @@ func TestDoJSON(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.statusCode)
 				if tt.responseBody != "" {
-					w.Write([]byte(tt.responseBody))
+					w.Write([]byte(tt.responseBody)) //nolint:errcheck
 				}
 			}))
 			defer server.Close()
@@ -191,7 +191,7 @@ func TestGetJSON(t *testing.T) {
 			t.Errorf("expected GET method, got %s", r.Method)
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"data":"test"}`))
+		w.Write([]byte(`{"data":"test"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -230,7 +230,7 @@ func TestPostJSON(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(`{"id":123,"name":"test"}`))
+		w.Write([]byte(`{"id":123,"name":"test"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -271,7 +271,7 @@ func TestPatchJSON(t *testing.T) {
 			t.Errorf("expected PATCH method, got %s", r.Method)
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"updated":true}`))
+		w.Write([]byte(`{"updated":true}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -337,7 +337,7 @@ func TestHandleHTTPError(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.statusCode)
 				if tt.responseBody != "" {
-					w.Write([]byte(tt.responseBody))
+					w.Write([]byte(tt.responseBody)) //nolint:errcheck
 				}
 			}))
 			defer server.Close()
@@ -355,7 +355,8 @@ func TestHandleHTTPError(t *testing.T) {
 			}
 
 			// Check if it's our APIError type
-			if apiErr, ok := err.(*gocmlerrors.APIError); ok {
+			apiErr := &gocmlerrors.APIError{}
+			if errors.As(err, &apiErr) {
 				if apiErr.StatusCode != tt.statusCode {
 					t.Errorf("expected status code %d, got %d", tt.statusCode, apiErr.StatusCode)
 				}
@@ -367,7 +368,10 @@ func TestHandleHTTPError(t *testing.T) {
 func TestWrapConnectionError(t *testing.T) {
 	client := New("https://invalid-url", WithHTTPClient(&http.Client{Timeout: 10 * time.Nanosecond}))
 
-	_, err := client.Request(context.Background(), "GET", "/test", nil, nil)
+	resp, err := client.Request(context.Background(), "GET", "/test", nil, nil)
+	if resp != nil {
+		resp.Body.Close() //nolint:errcheck
+	}
 	if err == nil {
 		t.Fatal("expected connection error but got none")
 	}
@@ -426,7 +430,10 @@ func TestRequestError(t *testing.T) {
 	// Test with invalid body that should cause httputil.BuildRequest to fail
 	// We'll use a channel as body which should cause an error
 	ctx := context.Background()
-	_, err := client.Request(ctx, "POST", "/test", nil, make(chan int))
+	resp, err := client.Request(ctx, "POST", "/test", nil, make(chan int))
+	if resp != nil {
+		resp.Body.Close() //nolint:errcheck
+	}
 	if err == nil {
 		t.Error("expected error when using invalid body type, got nil")
 	}
@@ -452,7 +459,7 @@ func TestDoJSONMalformedResponse(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		// Send malformed JSON that will fail to decode
-		w.Write([]byte(`{"invalid": json}`))
+		w.Write([]byte(`{"invalid": json}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -512,7 +519,8 @@ func TestHandleHTTPErrorBodyReadError(t *testing.T) {
 	}
 
 	// Check that it's an APIError with the expected message
-	if apiErr, ok := err.(*gocmlerrors.APIError); ok {
+	apiErr := &gocmlerrors.APIError{}
+	if errors.As(err, &apiErr) {
 		if apiErr.StatusCode != 500 {
 			t.Errorf("expected status code 500, got %d", apiErr.StatusCode)
 		}
@@ -527,7 +535,7 @@ func TestHandleHTTPErrorBodyReadError(t *testing.T) {
 func BenchmarkRequest(b *testing.B) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"ok":true}`))
+		w.Write([]byte(`{"ok":true}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -540,14 +548,14 @@ func BenchmarkRequest(b *testing.B) {
 		if err != nil {
 			b.Fatalf("request failed: %v", err)
 		}
-		resp.Body.Close()
+		resp.Body.Close() //nolint:errcheck
 	}
 }
 
 func BenchmarkGetJSON(b *testing.B) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"data":"benchmark"}`))
+		w.Write([]byte(`{"data":"benchmark"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -572,16 +580,16 @@ func TestStats(t *testing.T) {
 		switch r.URL.Path {
 		case "/api/v0/ok":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"ok"}`))
+			w.Write([]byte(`{"status":"ok"}`)) //nolint:errcheck
 		case "/api/v0/notfound":
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"error":"not found"}`))
+			w.Write([]byte(`{"error":"not found"}`)) //nolint:errcheck
 		case "/api/v0/error":
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"server error"}`))
+			w.Write([]byte(`{"error":"server error"}`)) //nolint:errcheck
 		default:
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"default"}`))
+			w.Write([]byte(`{"status":"default"}`)) //nolint:errcheck
 		}
 	}))
 	defer server.Close()
@@ -595,10 +603,10 @@ func TestStats(t *testing.T) {
 	ctx := context.Background()
 
 	// Make some requests
-	client.GetJSON(ctx, "/ok", nil, nil)
-	client.GetJSON(ctx, "/notfound", nil, nil)
-	client.GetJSON(ctx, "/ok", nil, nil)
-	client.GetJSON(ctx, "/error", nil, nil)
+	client.GetJSON(ctx, "/ok", nil, nil)       //nolint:errcheck
+	client.GetJSON(ctx, "/notfound", nil, nil) //nolint:errcheck
+	client.GetJSON(ctx, "/ok", nil, nil)       //nolint:errcheck
+	client.GetJSON(ctx, "/error", nil, nil)    //nolint:errcheck
 
 	// Get stats
 	stats := client.Stats()
@@ -630,7 +638,7 @@ func TestStats(t *testing.T) {
 
 	// Test with stats disabled
 	clientNoStats := New(server.URL, WithHTTPClient(&http.Client{Timeout: 10 * time.Second}))
-	clientNoStats.GetJSON(ctx, "/ok", nil, nil)
+	clientNoStats.GetJSON(ctx, "/ok", nil, nil) //nolint:errcheck
 	statsEmpty := clientNoStats.Stats()
 
 	if statsEmpty.TotalCalls() != 0 {
@@ -660,7 +668,7 @@ func TestNewWithOptions(t *testing.T) {
 			t.Errorf("expected User-Agent header 'test-agent', got %s", r.Header.Get("User-Agent"))
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"ok":true}`))
+		w.Write([]byte(`{"ok":true}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -669,7 +677,7 @@ func TestNewWithOptions(t *testing.T) {
 		WithMiddlewares(UserAgentMiddleware("test-agent")),
 	)
 	ctx := context.Background()
-	clientWithServer.GetJSON(ctx, "/test", nil, nil)
+	clientWithServer.GetJSON(ctx, "/test", nil, nil) //nolint:errcheck
 
 	stats := clientWithServer.Stats()
 	if stats.TotalCalls() != 1 {

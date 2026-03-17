@@ -12,6 +12,7 @@ import (
 	"path"
 )
 
+// ClientID is the identifier used for the HTTP User-Agent header.
 const (
 	ClientID        = "gocmlclient"
 	ContentTypeJSON = "application/json"
@@ -37,9 +38,9 @@ func BuildRequest(ctx context.Context, baseURL, method, endpoint string, query m
 	// prepare request body
 	var bodyReader io.Reader
 	if body != nil {
-		bodyBytes, err := marshalBody(body)
-		if err != nil {
-			return nil, fmt.Errorf("marshal body: %w", err)
+		bodyBytes, marshalErr := marshalBody(body)
+		if marshalErr != nil {
+			return nil, fmt.Errorf("marshal body: %w", marshalErr)
 		}
 		bodyReader = bytes.NewReader(bodyBytes)
 	}

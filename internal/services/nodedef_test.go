@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/testutil"
 	"github.com/rschmied/gocmlclient/pkg/models"
-	"github.com/stretchr/testify/assert"
 )
 
 func initNodeDefTest(t *testing.T) (*api.Client, func()) {

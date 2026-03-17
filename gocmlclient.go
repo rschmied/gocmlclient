@@ -14,8 +14,11 @@ func New(baseURL string, opts ...client.Option) (*client.Client, error) {
 
 // Re-export common types for convenience
 type (
-	Lab   = models.Lab
-	Node  = models.Node
+	// Lab is a CML lab.
+	Lab = models.Lab
+	// Node is a CML node.
+	Node = models.Node
+	// Stats represents API client statistics.
 	Stats = api.Stats
 )
 

@@ -64,7 +64,7 @@ func TestFileStorage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 
 	filePath := filepath.Join(tempDir, "token.json")
 	storage, err := NewFileStorage(filePath)
@@ -123,7 +123,7 @@ func TestFileStoragePersistence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 
 	filePath := filepath.Join(tempDir, "persistent_token.json")
 
@@ -173,7 +173,7 @@ func TestFileStorageInvalidFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 
 	// Create a file and make directory read-only
 	filePath := filepath.Join(tempDir, "readonly", "token.json")
@@ -200,8 +200,8 @@ func BenchmarkMemoryStorage(b *testing.B) {
 	expiry := time.Now().Add(time.Hour)
 
 	for b.Loop() {
-		storage.Store(token, expiry)
-		storage.Retrieve()
+		_ = storage.Store(token, expiry)
+		_, _, _ = storage.Retrieve()
 	}
 }
 
@@ -211,7 +211,7 @@ func TestFileStoragePermissionDenied(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 
 	// Create a subdirectory and make it read-only
 	readonlyDir := filepath.Join(tempDir, "readonly")
@@ -248,7 +248,7 @@ func TestFileStorageCorruptedJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 
 	filePath := filepath.Join(tempDir, "corrupt_token.json")
 
@@ -275,7 +275,7 @@ func TestFileStorageEmptyFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 
 	filePath := filepath.Join(tempDir, "empty_token.json")
 
@@ -302,7 +302,7 @@ func TestFileStorageInvalidJSONStructure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 
 	filePath := filepath.Join(tempDir, "invalid_structure.json")
 
@@ -330,7 +330,7 @@ func TestFileStorageConcurrentAccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 
 	filePath := filepath.Join(tempDir, "concurrent_token.json")
 
@@ -359,13 +359,13 @@ func TestFileStorageConcurrentAccess(t *testing.T) {
 				if j%2 == 0 {
 					err := storage.Store(token, expiry)
 					if err != nil {
-						errChan <- fmt.Errorf("store error: %v", err)
+						errChan <- fmt.Errorf("store error: %w", err)
 						return
 					}
 				} else {
 					_, _, err := storage.Retrieve()
 					if err != nil {
-						errChan <- fmt.Errorf("retrieve error: %v", err)
+						errChan <- fmt.Errorf("retrieve error: %w", err)
 						return
 					}
 				}
@@ -393,7 +393,7 @@ func TestFileStorageLargeToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 
 	filePath := filepath.Join(tempDir, "large_token.json")
 	storage, err := NewFileStorage(filePath)
@@ -429,7 +429,7 @@ func TestFileStorageLargeToken(t *testing.T) {
 
 func BenchmarkFileStorage(b *testing.B) {
 	tempDir, _ := os.MkdirTemp("", "bench_file_test")
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 
 	filePath := filepath.Join(tempDir, "bench_token.json")
 	storage, _ := NewFileStorage(filePath)
@@ -438,7 +438,7 @@ func BenchmarkFileStorage(b *testing.B) {
 	expiry := time.Now().Add(time.Hour)
 
 	for b.Loop() {
-		storage.Store(token, expiry)
-		storage.Retrieve()
+		_ = storage.Store(token, expiry)
+		_, _, _ = storage.Retrieve()
 	}
 }

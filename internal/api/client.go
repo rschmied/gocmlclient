@@ -4,6 +4,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -11,11 +12,12 @@ import (
 	"syscall"
 
 	"github.com/rschmied/gocmlclient/internal/httputil"
-	"github.com/rschmied/gocmlclient/pkg/errors"
+	cmlerrors "github.com/rschmied/gocmlclient/pkg/errors"
 	"github.com/rschmied/gocmlclient/pkg/models"
 )
 
 const (
+	// APIBasePath is the entry point of the API
 	APIBasePath = "/api/v0/"
 )
 
@@ -157,7 +159,7 @@ func (c *Client) doJSON(ctx context.Context, method, endpoint string, query map[
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer res.Body.Close() //nolint:errcheck
 
 	// Handle HTTP errors
 	if res.StatusCode >= 300 {
@@ -167,7 +169,7 @@ func (c *Client) doJSON(ctx context.Context, method, endpoint string, query map[
 	// Decode response if output is expected
 	if resBody != nil {
 		if err := json.NewDecoder(res.Body).Decode(resBody); err != nil {
-			return errors.Wrap(err, "decode response")
+			return cmlerrors.Wrap(err, "decode response")
 		}
 	}
 
@@ -201,15 +203,16 @@ func (c *Client) DeleteJSON(ctx context.Context, endpoint string, out any) error
 
 // wrapConnectionError converts syscall errors to domain errors
 func (c *Client) wrapConnectionError(err error) error {
-	if urlError, ok := err.(*url.Error); ok {
+	urlError := &url.Error{}
+	if errors.As(err, &urlError) {
 		if urlError.Timeout() || urlError.Temporary() {
-			return errors.ErrSystemNotReady
+			return cmlerrors.ErrSystemNotReady
 		}
 	}
 
-	switch err {
-	case syscall.ECONNREFUSED, syscall.EHOSTUNREACH, syscall.ENETUNREACH:
-		return errors.ErrSystemNotReady
+	switch {
+	case errors.Is(err, syscall.ECONNREFUSED), errors.Is(err, syscall.EHOSTUNREACH), errors.Is(err, syscall.ENETUNREACH):
+		return cmlerrors.ErrSystemNotReady
 	}
 
 	return err
@@ -220,7 +223,7 @@ func (c *Client) handleHTTPError(res *http.Response) error {
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		// Create APIError for body read errors too
-		return &errors.APIError{
+		return &cmlerrors.APIError{
 			Operation:  "request",
 			StatusCode: res.StatusCode,
 			Message:    "failed to read error response",
@@ -231,7 +234,7 @@ func (c *Client) handleHTTPError(res *http.Response) error {
 	bodyStr := string(body)
 
 	// Try to parse as JSON error response
-	var apiErr errors.APIError
+	var apiErr cmlerrors.APIError
 	if err := json.Unmarshal(body, &apiErr); err == nil && apiErr.Message != "" {
 		// Successfully parsed JSON error
 		apiErr.Operation = "request"
@@ -242,14 +245,14 @@ func (c *Client) handleHTTPError(res *http.Response) error {
 	// Create structured error based on status code
 	switch res.StatusCode {
 	case 401, 403:
-		return errors.NewAPIError("request", res.StatusCode, bodyStr, errors.ErrAPIUnauthorized)
+		return cmlerrors.NewAPIError("request", res.StatusCode, bodyStr, cmlerrors.ErrAPIUnauthorized)
 	case 404:
-		return errors.NewAPIError("request", res.StatusCode, bodyStr, errors.ErrAPINotFound)
+		return cmlerrors.NewAPIError("request", res.StatusCode, bodyStr, cmlerrors.ErrAPINotFound)
 	case 409:
-		return errors.NewAPIError("request", res.StatusCode, bodyStr, errors.ErrAPIConflict)
+		return cmlerrors.NewAPIError("request", res.StatusCode, bodyStr, cmlerrors.ErrAPIConflict)
 	case 500, 502, 503, 504:
-		return errors.NewAPIError("request", res.StatusCode, bodyStr, errors.ErrAPIServerError)
+		return cmlerrors.NewAPIError("request", res.StatusCode, bodyStr, cmlerrors.ErrAPIServerError)
 	default:
-		return errors.NewAPIError("request", res.StatusCode, bodyStr, errors.ErrAPIRequestFailed)
+		return cmlerrors.NewAPIError("request", res.StatusCode, bodyStr, cmlerrors.ErrAPIRequestFailed)
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/lmittmann/tint"
+
 	gocml "github.com/rschmied/gocmlclient"
 	"github.com/rschmied/gocmlclient/pkg/client"
 	"github.com/rschmied/gocmlclient/pkg/errors"
@@ -145,6 +146,6 @@ func main() {
 	}
 
 	slog.Info("Successfully retrieved lab")
-	json.NewEncoder(os.Stdout).Encode(lab)
+	_ = json.NewEncoder(os.Stdout).Encode(lab)
 	fmt.Fprintf(os.Stderr, "Stats:%s", c.Stats())
 }

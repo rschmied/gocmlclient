@@ -3,10 +3,11 @@
 package models
 
 // IfaceState represents the state of an interface.
-// IfaceType represents the type of an interface.
+// IfaceType is the type of an interface.
 type (
 	IfaceState string
-	IfaceType  string
+	// IfaceType is the type of an interface.
+	IfaceType string
 )
 
 const (

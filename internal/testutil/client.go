@@ -11,6 +11,7 @@ import (
 
 	"github.com/jarcoal/httpmock"
 	"github.com/lmittmann/tint"
+
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/auth"
 )

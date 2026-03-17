@@ -26,6 +26,7 @@ type SmartAnnotationService struct {
 	apiClient *api.Client
 }
 
+// NewSmartAnnotationService creates a new smart annotation service.
 func NewSmartAnnotationService(apiClient *api.Client) *SmartAnnotationService {
 	return &SmartAnnotationService{apiClient: apiClient}
 }
@@ -38,6 +39,7 @@ func smartAnnotationURL(labID, id models.UUID) string {
 	return fmt.Sprintf("%s/%s", smartAnnotationsURL(labID), id)
 }
 
+// List returns all smart annotations for a lab.
 func (s *SmartAnnotationService) List(ctx context.Context, labID models.UUID) ([]models.SmartAnnotation, error) {
 	apiPath := smartAnnotationsURL(labID)
 	var out []models.SmartAnnotation
@@ -47,6 +49,7 @@ func (s *SmartAnnotationService) List(ctx context.Context, labID models.UUID) ([
 	return out, nil
 }
 
+// Get returns a single smart annotation by ID.
 func (s *SmartAnnotationService) Get(ctx context.Context, labID, id models.UUID) (models.SmartAnnotation, error) {
 	apiPath := smartAnnotationURL(labID, id)
 	var out models.SmartAnnotation
@@ -56,6 +59,7 @@ func (s *SmartAnnotationService) Get(ctx context.Context, labID, id models.UUID)
 	return out, nil
 }
 
+// Update updates an existing smart annotation.
 func (s *SmartAnnotationService) Update(ctx context.Context, labID, id models.UUID, in models.SmartAnnotationUpdate) (models.SmartAnnotation, error) {
 	apiPath := smartAnnotationURL(labID, id)
 	var out models.SmartAnnotation

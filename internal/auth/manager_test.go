@@ -385,16 +385,14 @@ func TestConcurrentAccess(t *testing.T) {
 	errChan := make(chan error, numGoroutines*numCalls)
 
 	for range numGoroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range numCalls {
 				_, err := manager.GetToken(context.Background())
 				if err != nil {
 					errChan <- err
 				}
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -427,7 +425,7 @@ func TestRefreshTokenDoubleCheck(t *testing.T) {
 
 	// First call starts refresh
 	go func() {
-		manager.refreshToken(context.Background())
+		manager.refreshToken(context.Background()) //nolint:errcheck
 	}()
 
 	// Small delay to ensure first refresh starts
@@ -465,16 +463,14 @@ func TestConcurrentRefreshRace(t *testing.T) {
 	errors := make(chan error, numGoroutines)
 
 	for range numGoroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			token, err := manager.GetToken(context.Background())
 			if err != nil {
 				errors <- err
 				return
 			}
 			results <- token
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -524,9 +520,7 @@ func TestConcurrent401RefreshRace(t *testing.T) {
 	errors := make(chan error, numGoroutines)
 
 	for range numGoroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			// Simulate concurrent requests trying to refresh after 401
 			token, err := manager.GetToken(context.Background())
 			if err != nil {
@@ -534,7 +528,7 @@ func TestConcurrent401RefreshRace(t *testing.T) {
 				return
 			}
 			results <- token
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -1112,9 +1106,7 @@ func TestConcurrentInvalidateAndGet(t *testing.T) {
 
 	// Start goroutines that alternate between GetToken and InvalidateToken
 	for range numGoroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for j := range 10 {
 				// Alternate between operations
 				if j%2 == 0 {
@@ -1126,7 +1118,7 @@ func TestConcurrentInvalidateAndGet(t *testing.T) {
 					manager.InvalidateToken()
 				}
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -1201,7 +1193,7 @@ func TestIntegrationFileStorage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck
 
 	filePath := filepath.Join(tempDir, "integration_token.json")
 	fileStorage, err := NewFileStorage(filePath)
@@ -1272,19 +1264,19 @@ func TestIntegrationTransportWithServer(t *testing.T) {
 		auth := r.Header.Get("Authorization")
 		if auth == "" {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Missing authorization"))
+			w.Write([]byte("Missing authorization")) //nolint:errcheck
 			return
 		}
 
 		if auth != "Bearer test-token" {
 			w.WriteHeader(http.StatusForbidden)
-			w.Write([]byte("Invalid token"))
+			w.Write([]byte("Invalid token")) //nolint:errcheck
 			return
 		}
 
 		// Return success for authorized requests
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"data":"protected content","user":"test"}`))
+		w.Write([]byte(`{"data":"protected content","user":"test"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -1303,7 +1295,7 @@ func TestIntegrationTransportWithServer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("authorized request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected 200 for authorized request, got %d", resp.StatusCode)
@@ -1337,7 +1329,7 @@ func TestIntegration401Retry(t *testing.T) {
 		if callCount == 1 {
 			// First call: return 401 to trigger retry
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized"))
+			w.Write([]byte("Unauthorized")) //nolint:errcheck
 			return
 		}
 
@@ -1347,7 +1339,7 @@ func TestIntegration401Retry(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result":"success"}`))
+		w.Write([]byte(`{"result":"success"}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -1366,7 +1358,7 @@ func TestIntegration401Retry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected 200 after retry, got %d", resp.StatusCode)
@@ -1414,7 +1406,7 @@ func TestStressConcurrentOperations(t *testing.T) {
 					// Get token
 					_, err := manager.GetToken(context.Background())
 					if err != nil {
-						errChan <- fmt.Errorf("GetToken error: %v", err)
+						errChan <- fmt.Errorf("GetToken error: %w", err)
 					}
 				case 1:
 					// Check validity

@@ -22,12 +22,16 @@ type UserBase struct {
 	PubkeyInfo   string          `json:"pubkey_info,omitempty"`
 }
 
+// OptInState represents the user's opt-in state.
 type OptInState string
 
 const (
+	// OptInAccepted indicates the user has accepted opt-in.
 	OptInAccepted OptInState = "accepted"
+	// OptInDeclined indicates the user has declined opt-in.
 	OptInDeclined OptInState = "declined"
-	OptInUnset    OptInState = "unset"
+	// OptInUnset indicates the opt-in state is not set.
+	OptInUnset OptInState = "unset"
 )
 
 // UserCreateRequest represents the data required to create a new user.

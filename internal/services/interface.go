@@ -32,6 +32,7 @@ func NewInterfaceService(apiClient *api.Client) *InterfaceService {
 	}
 }
 
+// GetInterfacesForNode returns all interfaces for a specific node.
 func (s *InterfaceService) GetInterfacesForNode(ctx context.Context, labID, id models.UUID) (models.InterfaceList, error) {
 	// with the data=true option, we get not only the list of IDs but the
 	// interfaces themselves as well!

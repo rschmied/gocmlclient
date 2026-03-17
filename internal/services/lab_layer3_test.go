@@ -5,9 +5,10 @@ import (
 	"testing"
 
 	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 func addL3InfoResponders() {

@@ -6,9 +6,10 @@ import (
 	"testing"
 
 	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/rschmied/gocmlclient/internal/testutil"
 	"github.com/rschmied/gocmlclient/pkg/models"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestInterfaceGetInterfacesForNode(t *testing.T) {

@@ -7,10 +7,11 @@ import (
 	"testing"
 
 	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/testutil"
 	"github.com/rschmied/gocmlclient/pkg/models"
-	"github.com/stretchr/testify/assert"
 )
 
 func addLabsGetResponders() {
@@ -65,7 +66,7 @@ func TestLabs(t *testing.T) {
 
 	labs, err := service.Labs(ctx, true)
 	if err != nil {
-		testutil.PrettyPrintError(err)
+		_ = testutil.PrettyPrintError(err)
 	}
 	assert.NoError(t, err)
 	assert.Len(t, labs, 3)
@@ -205,7 +206,7 @@ func TestLabCreate(t *testing.T) {
 	lab := models.LabCreateRequest{Title: "this"}
 	newLab, err := service.Create(ctx, lab)
 	if err != nil {
-		testutil.PrettyPrintError(err)
+		_ = testutil.PrettyPrintError(err)
 	}
 	assert.NoError(t, err)
 

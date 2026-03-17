@@ -110,7 +110,7 @@ func TestUserAgentMiddleware(t *testing.T) {
 			var capturedReq *http.Request
 			next := func(req *http.Request) (*http.Response, error) {
 				capturedReq = req
-				return &http.Response{StatusCode: 200}, nil
+				return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 
 			// Create the middleware
@@ -121,7 +121,10 @@ func TestUserAgentMiddleware(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 
 			// Execute the middleware
-			_, err := wrappedNext(req)
+			resp, err := wrappedNext(req)
+			if resp != nil && resp.Body != nil {
+				defer resp.Body.Close() //nolint:errcheck
+			}
 			if err != nil {
 				t.Fatalf("middleware execution failed: %v", err)
 			}
@@ -195,6 +198,7 @@ func TestLoggingMiddleware(t *testing.T) {
 				return &http.Response{
 					StatusCode: tt.responseStatus,
 					Header:     make(http.Header),
+					Body:       io.NopCloser(strings.NewReader("")),
 				}, nil
 			}
 
@@ -207,7 +211,10 @@ func TestLoggingMiddleware(t *testing.T) {
 			req.Header.Set("Content-Type", httputil.ContentTypeJSON)
 
 			// Execute the middleware
-			_, err := wrappedNext(req)
+			resp, err := wrappedNext(req)
+			if resp != nil && resp.Body != nil {
+				defer resp.Body.Close() //nolint:errcheck
+			}
 
 			// Verify error expectation
 			if tt.expectError && err == nil {
@@ -305,7 +312,7 @@ func TestLogRequestBodyMiddleware(t *testing.T) {
 			req, _ := http.NewRequest("POST", "http://example.com", body)
 
 			// Execute the middleware
-			_, err := wrappedNext(req)
+			_, err := wrappedNext(req) //nolint:bodyclose
 			if tt.expectError {
 				if err == nil {
 					t.Error("expected error but got none")
@@ -351,10 +358,8 @@ func TestLogRequestBodyMiddleware(t *testing.T) {
 						t.Errorf("expected logged body %q, got %v", tt.requestBody, bodyLog.attrs["body"])
 					}
 				}
-			} else {
-				if mockLog.hasEntry(slog.LevelDebug, "Request body") {
-					t.Error("did not expect request body to be logged")
-				}
+			} else if mockLog.hasEntry(slog.LevelDebug, "Request body") {
+				t.Error("did not expect request body to be logged")
 			}
 		})
 	}
@@ -468,7 +473,7 @@ func TestRetryMiddleware(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 
 			// Execute the middleware
-			_, err := wrappedNext(req)
+			_, err := wrappedNext(req) //nolint:bodyclose
 
 			// Verify call count
 			if callCount != tt.expectedCalls {
@@ -539,7 +544,7 @@ func TestRetryMiddlewareWithBody(t *testing.T) {
 	req, _ := http.NewRequest("POST", "http://example.com", strings.NewReader(originalBody))
 
 	// Execute the middleware
-	_, err := wrappedNext(req)
+	_, err := wrappedNext(req) //nolint:bodyclose
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -588,7 +593,7 @@ func TestRetryMiddlewareBodyError(t *testing.T) {
 	req, _ := http.NewRequest("POST", "http://example.com", &errorReader{})
 
 	// Execute the middleware
-	_, err := wrappedNext(req)
+	_, err := wrappedNext(req) //nolint:bodyclose
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -724,7 +729,7 @@ func TestMiddlewareIntegration(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://example.com", strings.NewReader(`{"test": true}`))
 
 	// Execute the middleware chain
-	_, err := next(req)
+	_, err := next(req) //nolint:bodyclose
 	if err != nil {
 		t.Fatalf("middleware chain execution failed: %v", err)
 	}
@@ -744,7 +749,7 @@ func TestMiddlewareIntegration(t *testing.T) {
 // BenchmarkUserAgentMiddleware benchmarks the UserAgentMiddleware
 func BenchmarkUserAgentMiddleware(b *testing.B) {
 	next := func(req *http.Request) (*http.Response, error) {
-		return &http.Response{StatusCode: 200}, nil
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(""))}, nil
 	}
 
 	middleware := UserAgentMiddleware("benchmark-agent")
@@ -753,7 +758,13 @@ func BenchmarkUserAgentMiddleware(b *testing.B) {
 	req, _ := http.NewRequest("GET", "http://example.com", nil)
 
 	for b.Loop() {
-		wrappedNext(req)
+		resp, err := wrappedNext(req)
+		if err != nil {
+			b.Fatalf("middleware execution failed: %v", err)
+		}
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close() //nolint:errcheck
+		}
 	}
 }
 
@@ -763,7 +774,7 @@ func BenchmarkLoggingMiddleware(b *testing.B) {
 	logger := slog.New(mockLog)
 
 	next := func(req *http.Request) (*http.Response, error) {
-		return &http.Response{StatusCode: 200, Header: make(http.Header)}, nil
+		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(""))}, nil
 	}
 
 	middleware := LoggingMiddleware(logger)
@@ -772,7 +783,13 @@ func BenchmarkLoggingMiddleware(b *testing.B) {
 	req, _ := http.NewRequest("GET", "http://example.com", nil)
 
 	for b.Loop() {
-		wrappedNext(req)
+		resp, err := wrappedNext(req)
+		if err != nil {
+			b.Fatalf("middleware execution failed: %v", err)
+		}
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close() //nolint:errcheck
+		}
 	}
 }
 
@@ -782,7 +799,7 @@ func BenchmarkLogRequestBodyMiddleware(b *testing.B) {
 	logger := slog.New(mockLog)
 
 	next := func(req *http.Request) (*http.Response, error) {
-		return &http.Response{StatusCode: 200}, nil
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(""))}, nil
 	}
 
 	middleware := LogRequestBodyMiddleware(logger)
@@ -794,6 +811,12 @@ func BenchmarkLogRequestBodyMiddleware(b *testing.B) {
 	for b.Loop() {
 		// Reset body for each iteration
 		req.Body = io.NopCloser(strings.NewReader(`{"benchmark": "data", "size": 100}`))
-		wrappedNext(req)
+		resp, err := wrappedNext(req)
+		if err != nil {
+			b.Fatalf("middleware execution failed: %v", err)
+		}
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close() //nolint:errcheck
+		}
 	}
 }

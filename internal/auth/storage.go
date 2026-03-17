@@ -113,7 +113,7 @@ func (s *FileStorage) Store(token string, expiry time.Time) error {
 	if err != nil {
 		return fmt.Errorf("open token file: %w", err)
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	encoder := json.NewEncoder(file)
 	if err := encoder.Encode(data); err != nil {
@@ -135,7 +135,7 @@ func (s *FileStorage) Retrieve() (string, time.Time, error) {
 		}
 		return "", time.Time{}, fmt.Errorf("open token file: %w", err)
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	var data tokenData
 	decoder := json.NewDecoder(file)

@@ -63,6 +63,6 @@ func TestUUID_Type(t *testing.T) {
 	assert.Equal(t, "123e4567-e89b-12d3-a456-426614174000", string(uuid))
 
 	// Test empty UUID
-	var emptyUUID UUID = ""
+	var emptyUUID UUID
 	assert.Equal(t, "", string(emptyUUID))
 }

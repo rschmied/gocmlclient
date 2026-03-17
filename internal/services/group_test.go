@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/rschmied/gocmlclient/internal/api"
 	"github.com/rschmied/gocmlclient/internal/testutil"
 	"github.com/rschmied/gocmlclient/pkg/models"
-	"github.com/stretchr/testify/assert"
 )
 
 func initGroupTest(t *testing.T) (*api.Client, func()) {
@@ -71,7 +72,7 @@ func TestGroupCRUD(t *testing.T) {
 
 	createdGroup, err := service.Create(ctx, group)
 	if err != nil {
-		testutil.PrettyPrintError(err)
+		testutil.PrettyPrintError(err) //nolint:errcheck
 	}
 	assert.NoError(t, err)
 

@@ -41,7 +41,7 @@ func testContext(t *testing.T, cfg Config) (context.Context, context.CancelFunc)
 
 func randSuffix(nBytes int) string {
 	b := make([]byte, nBytes)
-	_, _ = rand.Read(b)
+	rand.Read(b) //nolint:errcheck
 	return hex.EncodeToString(b)
 }
 
