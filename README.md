@@ -44,6 +44,7 @@ go get github.com/rschmied/gocmlclient
 ```
 
 **Requirements:**
+
 - Go 1.25 or later
 - Access to a CML 2.x controller (version 2.4.0+)
 
@@ -356,24 +357,24 @@ Manage classic annotations (text/rectangle/ellipse/line) and smart annotations.
 ```go
 // Create a text annotation
 create := models.AnnotationCreate{
-	Type: models.AnnotationTypeText,
-	Text: &models.TextAnnotation{
-		Type:        models.AnnotationTypeText,
-		BorderColor: "#000000",
-		BorderStyle: "",
-		Color:       "#ffffff",
-		Thickness:   1,
-		X1:          10,
-		Y1:          10,
-		ZIndex:      0,
-		Rotation:    0,
-		TextBold:    false,
-		TextContent: "hello",
-		TextFont:    "sans",
-		TextItalic:  false,
-		TextSize:    12,
-		TextUnit:    "px",
-	},
+ Type: models.AnnotationTypeText,
+ Text: &models.TextAnnotation{
+  Type:        models.AnnotationTypeText,
+  BorderColor: "#000000",
+  BorderStyle: "",
+  Color:       "#ffffff",
+  Thickness:   1,
+  X1:          10,
+  Y1:          10,
+  ZIndex:      0,
+  Rotation:    0,
+  TextBold:    false,
+  TextContent: "hello",
+  TextFont:    "sans",
+  TextItalic:  false,
+  TextSize:    12,
+  TextUnit:    "px",
+ },
 }
 ann, err := client.Annotation.Create(ctx, "lab-uuid", create)
 
@@ -391,7 +392,7 @@ err = client.Annotation.Delete(ctx, "lab-uuid", ann.Text.ID)
 // Smart annotations
 smart, err := client.SmartAnnotation.List(ctx, "lab-uuid")
 if len(smart) > 0 {
-	_, _ = client.SmartAnnotation.Get(ctx, "lab-uuid", smart[0].ID)
+ _, _ = client.SmartAnnotation.Get(ctx, "lab-uuid", smart[0].ID)
 }
 ```
 
@@ -564,6 +565,6 @@ go vet ./...
 
 ## License
 
-Copyright (c) Ralph Schmieder 2022-2025
+Copyright (c) Ralph Schmieder 2022-2026
 
 Licensed under the MIT License. See [LICENSE](LICENSE) for details.
