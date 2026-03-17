@@ -1,0 +1,199 @@
+package auth
+
+import (
+	"context"
+	"fmt"
+	"sync"
+	"time"
+
+	"github.com/rschmied/gocmlclient/internal/logging"
+)
+
+// Manager handles authentication token lifecycle
+type Manager struct {
+	provider TokenProvider
+	storage  TokenStorage
+
+	// in-memory cache for performance (backed by storage)
+	mu     sync.RWMutex
+	token  string
+	expiry time.Time
+
+	// provider configuration
+	refreshBuffer time.Duration // how early to refresh before expiry
+}
+
+// Config configures the auth manager
+type Config struct {
+	RefreshBuffer time.Duration
+	Storage       TokenStorage // If nil, uses MemoryStorage
+}
+
+// DefaultConfig returns sensible defaults
+func DefaultConfig() Config {
+	return Config{
+		RefreshBuffer: 30 * time.Second,
+		Storage:       NewMemoryStorage(),
+	}
+}
+
+// NewManager creates a new authentication manager
+func NewManager(provider TokenProvider, config Config) *Manager {
+	if config.RefreshBuffer <= 0 {
+		config.RefreshBuffer = DefaultConfig().RefreshBuffer
+	}
+
+	if config.Storage == nil {
+		config.Storage = NewMemoryStorage()
+	}
+
+	// Load existing token from storage if available
+	manager := &Manager{
+		provider:      provider,
+		storage:       config.Storage,
+		refreshBuffer: config.RefreshBuffer,
+	}
+
+	// Try to load existing token from storage
+	if token, expiry, err := config.Storage.Retrieve(); err == nil {
+		manager.mu.Lock()
+		manager.token = token
+		manager.expiry = expiry
+		manager.mu.Unlock()
+	}
+
+	return manager
+}
+
+// GetToken returns a valid authentication token. if the current token is
+// expired or about to expire, it will automatically refresh
+func (m *Manager) GetToken(ctx context.Context) (string, error) {
+	m.mu.RLock()
+	if m.token != "" && m.isTokenValid() {
+		token := m.token
+		m.mu.RUnlock()
+		return token, nil
+	}
+	m.mu.RUnlock()
+	return m.refreshToken(ctx)
+}
+
+// InvalidateToken marks the current token as invalid (e.g. 401)
+func (m *Manager) InvalidateToken() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	logging.Debug("Invalidating current token")
+	m.token = ""
+	m.expiry = time.Time{}
+
+	// Clear token from storage
+	if err := m.storage.Clear(); err != nil {
+		logging.Warn("Failed to clear token from storage", "error", err)
+	}
+}
+
+// HasValidToken returns true if the manager has a valid token
+func (m *Manager) HasValidToken() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.token != "" && m.isTokenValid()
+}
+
+// TokenExpiry returns the current token's expiry time
+func (m *Manager) TokenExpiry() time.Time {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.expiry
+}
+
+// refreshToken acquires a new token from the provider
+func (m *Manager) refreshToken(ctx context.Context) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Double-check pattern: another goroutine might have refreshed while we waited
+	// Always check if token is valid to avoid unnecessary refreshes
+	if m.token != "" && m.isTokenValid() {
+		return m.token, nil
+	}
+
+	logging.Debug("Refreshing authentication token")
+
+	token, expiry, err := m.provider.FetchToken(ctx)
+	if err != nil {
+		return "", fmt.Errorf("fetch token: %w", err)
+	}
+
+	if token == "" {
+		return "", fmt.Errorf("provider returned empty token")
+	}
+
+	// Validate expiry time
+	if expiry.Before(time.Now()) {
+		logging.Warn("Provider returned already-expired token", "expiry", expiry)
+	}
+
+	m.token = token
+	m.expiry = expiry
+
+	// Persist token to storage
+	if err := m.storage.Store(token, expiry); err != nil {
+		logging.Warn("Failed to persist token to storage", "error", err)
+		// Don't fail the refresh, just log the error
+	}
+
+	logging.Debug("Token refreshed successfully",
+		"expiry", expiry,
+		"valid_for", time.Until(expiry),
+		"storage", m.storage.Type(),
+	)
+
+	return token, nil
+}
+
+// isTokenValid checks if the current token is still valid
+// Must be called with at least a read lock held
+func (m *Manager) isTokenValid() bool {
+	if m.token == "" {
+		return false
+	}
+
+	// Consider token invalid if it expires within the refresh buffer
+	refreshTime := m.expiry.Add(-m.refreshBuffer)
+	return time.Now().Before(refreshTime)
+}
+
+// Stats returns authentication statistics
+func (m *Manager) Stats() Stats {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return Stats{
+		HasToken:    m.token != "",
+		TokenExpiry: m.expiry,
+		IsValid:     m.isTokenValid(),
+		StorageType: m.storage.Type(),
+		TimeUntilRefresh: func() time.Duration {
+			if m.token == "" {
+				return 0
+			}
+			refreshTime := m.expiry.Add(-m.refreshBuffer)
+			if time.Now().After(refreshTime) {
+				return 0
+			}
+			return time.Until(refreshTime)
+		}(),
+	}
+}
+
+// Stats contains authentication manager statistics
+type Stats struct {
+	HasToken         bool
+	TokenExpiry      time.Time
+	IsValid          bool
+	TimeUntilRefresh time.Duration
+	StorageType      string
+}

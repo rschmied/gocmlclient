@@ -2,18 +2,23 @@
 
 Lists the changes in the gocmlclient package.
 
-## Version 0.1.3
+## Version 0.2.0 (bravenewworld) (Unreleased)
 
-- use go 1.25
-- update dependencies
-- allow multi-digit version strings like 2.10 by modifying regex
-- adapt test case "too new" from using 2.35 to 3.0 to make it pass with new regex
+BREAKING:
 
-## Version 0.1.2
+- Complete rewrite vs 0.1.x
+- No backward compatibility with the 0.1.x public API (method names, package layout, and types changed)
+- Different semantics in multiple areas (e.g. service boundaries and request/response shapes); existing callers must be migrated
+- Compatibility layer removed (no legacy `Client.LabGet`, `Client.NodeGet`, etc.)
 
-- rollback the token insertion / no auth from 0.1.1 -- it doesn't work. This
-needs a much more radical approach (e.g. a fundamental re-design)
-- added comprehensive auth tests using httpmock (which is the de-facto standard)
+Changes:
+
+- README: fix examples for required IDs (e.g. node/link creation) and remove use of `internal/...` packages from public docs
+- docs: add coverage for additional endpoints/services (lab tiles, image defs, node defs, external connectors)
+- labs: support fast lab listing via `GET /populate_lab_tiles` (`Lab.LabsWithData`)
+- labs: support `node_staging` field on create/update requests
+- system: add external connectors support (`GET /system/external_connectors`)
+- system: add image definitions and simplified node definitions services
 
 ## Version 0.1.1
 
@@ -22,9 +27,6 @@ needs a much more radical approach (e.g. a fundamental re-design)
 - updated some tests
 - added VersionCheck function, can provide a SemVer constraint to check if
 controller version is within expected version
-- removed cmd/ctest
-- changed some names from snake case to camel case (golang "compliant")
-- a bit of re-formatting on all files (white space, casing, linting)
 
 ## Version 0.1.0
 
