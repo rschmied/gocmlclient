@@ -37,3 +37,39 @@ func TestImageDefinition_Unmarshal_Schema210Fields(t *testing.T) {
 	assert.Equal(t, "IOSv", id.Label)
 	assert.Equal(t, "d1.qcow2", id.DiskImage1())
 }
+
+func TestImageDefinition_DiskImage1_EmptyWhenNil(t *testing.T) {
+	id := ImageDefinition{ID: "img1"}
+	assert.Equal(t, "", id.DiskImage1())
+}
+
+func TestImageDefinition_Unmarshal_MissingDiskImage(t *testing.T) {
+	var id ImageDefinition
+	err := json.Unmarshal([]byte(`{"id":"img1","node_definition_id":"iosv","label":"IOSv","read_only":false}`), &id)
+	assert.NoError(t, err)
+	assert.Nil(t, id.DiskImage)
+	assert.Equal(t, "", id.DiskImage1())
+}
+
+func TestImageDefinition_Unmarshal_NullDiskImage(t *testing.T) {
+	var id ImageDefinition
+	err := json.Unmarshal([]byte(`{"id":"img1","node_definition_id":"iosv","label":"IOSv","disk_image":null,"read_only":false}`), &id)
+	assert.NoError(t, err)
+	assert.Nil(t, id.DiskImage)
+	assert.Equal(t, "", id.DiskImage1())
+}
+
+func TestImageDefinition_Unmarshal_OmitsOptionalFields(t *testing.T) {
+	var id ImageDefinition
+	err := json.Unmarshal([]byte(`{
+		"id":"img1",
+		"node_definition_id":"iosv",
+		"label":"IOSv",
+		"disk_image":"d1.qcow2",
+		"read_only":false
+	}`), &id)
+	assert.NoError(t, err)
+	assert.Equal(t, "d1.qcow2", id.DiskImage1())
+	assert.Equal(t, "", id.SchemaVersion)
+	assert.Equal(t, "", id.Description)
+}
