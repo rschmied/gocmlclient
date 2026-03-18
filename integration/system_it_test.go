@@ -16,5 +16,5 @@ func TestIntegration_System(t *testing.T) {
 	}
 
 	_ = c.System.Version()
-	_, _ = c.System.VersionCheck(ctx, ">=2.4.0")
+	_, _ = c.System.VersionCheck(ctx, ">=2.9.0")
 }

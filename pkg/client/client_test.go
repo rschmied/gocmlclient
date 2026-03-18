@@ -156,7 +156,7 @@ func TestReadyCheckIntegration(t *testing.T) {
 		switch r.URL.Path {
 		case "/api/v0/system_information":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"version": "2.5.0", "ready": true}`)) //nolint:errcheck
+			w.Write([]byte(`{"version": "2.10.0", "ready": true}`)) //nolint:errcheck
 		case "/api/v0/auth_extended":
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"id":"user-123","username":"testuser","token":"mock-token-12345","admin":false}`)) //nolint:errcheck
@@ -170,7 +170,7 @@ func TestReadyCheckIntegration(t *testing.T) {
 	client, err := New(server.URL, WithToken("test-token"))
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
-	assert.Equal(t, "2.5.0", client.System.Version())
+	assert.Equal(t, "2.10.0", client.System.Version())
 }
 
 func TestNewAPIClient(t *testing.T) {

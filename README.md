@@ -30,7 +30,7 @@ A comprehensive Go client library for Cisco Modeling Labs (CML) 2.x, providing m
 ## Features
 
 - 🚀 **Modern Service Architecture**: Clean, modular design with dedicated services for each resource type
-- 🔄 **Full Backward Compatibility**: Drop-in replacement for existing gocmlclient code
+- 🔄 **Focused API**: Modern, service-based client (not a drop-in replacement for older gocmlclient versions)
 - 🔐 **Flexible Authentication**: Support for username/password, tokens, and custom providers
 - 🛡️ **Production Ready**: Comprehensive error handling, retries, and connection management
 - 📊 **Built-in Monitoring**: Request/response statistics and health checks
@@ -46,7 +46,7 @@ go get github.com/rschmied/gocmlclient
 **Requirements:**
 
 - Go 1.25 or later
-- Access to a CML 2.x controller (version 2.4.0+)
+- Access to a CML 2.x controller (version 2.9.0+ recommended; 2.9/2.10 tested)
 
 ## Quick Start
 
@@ -86,11 +86,11 @@ func main() {
 By default, the client automatically performs a system readiness check during initialization to ensure the CML server is compatible and ready. This check:
 
 - Verifies the server is running and accessible
-- Validates version compatibility (>=2.4.0, <3.0.0)
+- Validates version compatibility (>=2.9.0, <3.0.0)
 - Caches version information for subsequent operations
 - Checks for named configuration support (>=2.7.0)
 
-If you need to skip this check (e.g., for testing or when working with servers that don't support the system_information endpoint):
+If you need to skip this check (e.g., for testing or when working with servers that don't support the system_information endpoint) or when working with older versions (might or might not work, untested):
 
 ```go
 client, err := gocmlclient.New("https://cml-controller.example.com",
@@ -378,16 +378,26 @@ create := models.AnnotationCreate{
 }
 ann, err := client.Annotation.Create(ctx, "lab-uuid", create)
 
-// List annotations
-anns, err := client.Annotation.List(ctx, "lab-uuid")
+ // List annotations
+ anns, err := client.Annotation.List(ctx, "lab-uuid")
 
-// Patch an annotation (OpenAPI requires `type`)
-updated := "hello-updated"
-upd := models.AnnotationUpdate{Type: models.AnnotationTypeText, Text: &models.TextAnnotationPartial{Type: models.AnnotationTypeText, TextContent: &updated}}
-ann, err = client.Annotation.Update(ctx, "lab-uuid", ann.Text.ID, upd)
+ // Patch an annotation (OpenAPI requires `type`)
+ updated := "hello-updated"
+ upd := models.AnnotationUpdate{Type: models.AnnotationTypeText, Text: &models.TextAnnotationPartial{Type: models.AnnotationTypeText, TextContent: &updated}}
+ ann, err = client.Annotation.Update(ctx, "lab-uuid", ann.Text.ID, upd)
 
-// Delete
-err = client.Annotation.Delete(ctx, "lab-uuid", ann.Text.ID)
+ // Line annotations: line_start/line_end are required but may be null.
+ // On PATCH, gocmlclient always includes these keys so callers can send explicit nulls.
+ arrow := models.LineStyleArrow
+ lineCreate := models.AnnotationCreate{Type: models.AnnotationTypeLine, Line: &models.LineAnnotation{Type: models.AnnotationTypeLine, BorderColor: "#000000", BorderStyle: "", Color: "#ffffff", Thickness: 1, X1: 10, Y1: 10, X2: 100, Y2: 10, ZIndex: 0, LineStart: &arrow, LineEnd: &arrow}}
+ line, err := client.Annotation.Create(ctx, "lab-uuid", lineCreate)
+ if line.Line != nil {
+  // Clear both line ends (explicit JSON null)
+  _, err = client.Annotation.Update(ctx, "lab-uuid", line.Line.ID, models.AnnotationUpdate{Type: models.AnnotationTypeLine, Line: &models.LineAnnotationPartial{Type: models.AnnotationTypeLine, LineStart: nil, LineEnd: nil}})
+ }
+
+ // Delete
+ err = client.Annotation.Delete(ctx, "lab-uuid", ann.Text.ID)
 
 // Smart annotations
 smart, err := client.SmartAnnotation.List(ctx, "lab-uuid")
@@ -405,7 +415,7 @@ Access system-level information and configuration.
 version := client.System.Version()
 
 // Check version compatibility
-compatible, err := client.System.VersionCheck(ctx, ">=2.4.0")
+compatible, err := client.System.VersionCheck(ctx, ">=2.9.0")
 
 // Check system readiness
 err = client.System.Ready(ctx)

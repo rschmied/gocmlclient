@@ -66,15 +66,15 @@ func TestVersionCheck(t *testing.T) {
 	})
 
 	t.Run("unknown version", func(t *testing.T) {
-		compatible, err := service.VersionCheck(ctx, ">=2.4.0")
+		compatible, err := service.VersionCheck(ctx, ">=2.9.0")
 		assert.False(t, compatible)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "version unknown")
 	})
 
 	t.Run("valid version and constraint", func(t *testing.T) {
-		service.version = "2.5.0"
-		compatible, err := service.VersionCheck(ctx, ">=2.4.0")
+		service.version = "2.10.0"
+		compatible, err := service.VersionCheck(ctx, ">=2.9.0")
 		assert.NoError(t, err)
 		assert.True(t, compatible)
 	})
@@ -99,35 +99,35 @@ func TestCheckVersionConstraint(t *testing.T) {
 	}{
 		{
 			name:        "valid version satisfies constraint",
-			version:     "2.5.0",
-			constraint:  ">=2.4.0",
+			version:     "2.10.0",
+			constraint:  ">=2.9.0",
 			expectError: false,
 			expected:    true,
 		},
 		{
 			name:        "valid version does not satisfy constraint",
-			version:     "2.3.0",
-			constraint:  ">=2.4.0",
+			version:     "2.8.0",
+			constraint:  ">=2.9.0",
 			expectError: false,
 			expected:    false,
 		},
 		{
 			name:        "dev version",
-			version:     "2.5.0-dev0+build.abc123",
-			constraint:  ">=2.4.0",
+			version:     "2.10.0-dev0+build.abc123",
+			constraint:  ">=2.9.0",
 			expectError: false,
 			expected:    true,
 		},
 		{
 			name:        "invalid version format",
 			version:     "invalid",
-			constraint:  ">=2.4.0",
+			constraint:  ">=2.9.0",
 			expectError: true,
 			expected:    false,
 		},
 		{
 			name:        "invalid constraint",
-			version:     "2.5.0",
+			version:     "2.10.0",
 			constraint:  "invalid",
 			expectError: true,
 			expected:    false,
@@ -151,7 +151,7 @@ func TestVersionError(t *testing.T) {
 	err := versionError("1.0.0")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "server not compatible")
-	assert.Contains(t, err.Error(), ">=2.4.0,<3.0.0")
+	assert.Contains(t, err.Error(), ">=2.9.0,<3.0.0")
 	assert.Contains(t, err.Error(), "1.0.0")
 }
 
@@ -227,7 +227,7 @@ func TestSystemServiceIntegration(t *testing.T) {
 		assert.Equal(t, "/api/v0/system_information", r.URL.Path)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"version": "2.5.0", "ready": true}`)) //nolint:errcheck
+		w.Write([]byte(`{"version": "2.10.0", "ready": true}`)) //nolint:errcheck
 	}))
 	defer server.Close()
 
@@ -240,10 +240,10 @@ func TestSystemServiceIntegration(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify version is set
-	assert.Equal(t, "2.5.0", service.Version())
+	assert.Equal(t, "2.10.0", service.Version())
 
 	// Test VersionCheck
-	compatible, err := service.VersionCheck(ctx, ">=2.4.0")
+	compatible, err := service.VersionCheck(ctx, ">=2.9.0")
 	assert.NoError(t, err)
 	assert.True(t, compatible)
 
@@ -264,18 +264,18 @@ func TestSystemService_VersionConstraints(t *testing.T) {
 	service := NewSystemService(client)
 
 	// Set version manually for testing
-	service.version = "2.5.0"
+	service.version = "2.10.0"
 
 	// Test valid version constraints
-	compatible, err := service.VersionCheck(context.Background(), ">=2.4.0")
+	compatible, err := service.VersionCheck(context.Background(), ">=2.9.0")
 	assert.NoError(t, err)
 	assert.True(t, compatible)
 
-	compatible, err = service.VersionCheck(context.Background(), ">=2.6.0")
+	compatible, err = service.VersionCheck(context.Background(), ">=2.11.0")
 	assert.NoError(t, err)
 	assert.False(t, compatible)
 
-	compatible, err = service.VersionCheck(context.Background(), ">=2.4.0,<3.0.0")
+	compatible, err = service.VersionCheck(context.Background(), ">=2.9.0,<3.0.0")
 	assert.NoError(t, err)
 	assert.True(t, compatible)
 
@@ -299,7 +299,7 @@ func TestSystemService_Ready_Success(t *testing.T) {
 	// Mock successful system info response
 	httpmock.RegisterResponder("GET", "https://mock/api/v0/system_information",
 		httpmock.NewStringResponder(200, `{
-			"version": "2.5.0",
+			"version": "2.10.0",
 			"ready": true
 		}`))
 
@@ -309,7 +309,7 @@ func TestSystemService_Ready_Success(t *testing.T) {
 	err := service.Ready(ctx)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "2.5.0", service.Version())
+	assert.Equal(t, "2.10.0", service.Version())
 }
 
 func TestSystemService_Ready_SystemNotReady(t *testing.T) {
@@ -323,7 +323,7 @@ func TestSystemService_Ready_SystemNotReady(t *testing.T) {
 	// Mock system not ready response
 	httpmock.RegisterResponder("GET", "https://mock/api/v0/system_information",
 		httpmock.NewStringResponder(200, `{
-			"version": "2.5.0",
+			"version": "2.10.0",
 			"ready": false
 		}`))
 

@@ -49,7 +49,7 @@ func NewSystemService(apiClient *api.Client) *SystemService {
 // 2.5.0-dev0+build.3.2f7875762
 
 const (
-	versionConstraint      = ">=2.4.0,<3.0.0"
+	versionConstraint      = ">=2.9.0,<3.0.0"
 	namedConfigsConstraint = ">=2.7.0"
 	versionRegexPattern    = `^(\d+\.\d+\.\d+)((-dev0)?\+build.*)?$`
 )
