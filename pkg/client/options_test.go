@@ -65,6 +65,13 @@ func TestWithToken(t *testing.T) {
 	assert.Equal(t, "testtoken", c.token)
 }
 
+func TestWithStaticToken(t *testing.T) {
+	c := &Config{}
+	opt := WithStaticToken("statictoken")
+	opt(c)
+	assert.Equal(t, "statictoken", c.staticToken)
+}
+
 func TestWithTokenStorageFile(t *testing.T) {
 	c := &Config{}
 	opt := WithTokenStorageFile("/path/to/file")

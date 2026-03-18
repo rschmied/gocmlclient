@@ -39,6 +39,26 @@ jobs:
       - run: go mod download
       - run: go build -v ./...
 
+  lint:
+    name: Lint
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go mod download
+      - name: go vet
+        run: go vet ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.11.3
+          args: --timeout=5m
+
   tidy:
     name: go mod tidy
     runs-on: ubuntu-latest

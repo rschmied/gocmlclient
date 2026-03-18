@@ -182,3 +182,71 @@ func TestAnnotationUpdate_Marshal_Errors(t *testing.T) {
 	_, err = json.Marshal(AnnotationUpdate{Type: "nope"})
 	assert.Error(t, err)
 }
+
+func TestAnnotation_Unmarshal_Null(t *testing.T) {
+	var a Annotation
+	err := json.Unmarshal([]byte(`null`), &a)
+	assert.NoError(t, err)
+	assert.Equal(t, AnnotationType(""), a.Type)
+	assert.Nil(t, a.Text)
+	assert.Nil(t, a.Rectangle)
+	assert.Nil(t, a.Ellipse)
+	assert.Nil(t, a.Line)
+}
+
+func TestAnnotation_Unmarshal_UnknownType(t *testing.T) {
+	var a Annotation
+	err := json.Unmarshal([]byte(`{"id":"x","type":"nope"}`), &a)
+	assert.Error(t, err)
+}
+
+func TestAnnotation_Unmarshal_MissingType(t *testing.T) {
+	var a Annotation
+	err := json.Unmarshal([]byte(`{"id":"x"}`), &a)
+	assert.Error(t, err)
+}
+
+func TestAnnotationCreate_Marshal_Errors(t *testing.T) {
+	_, err := json.Marshal(AnnotationCreate{Type: AnnotationTypeText})
+	assert.Error(t, err)
+	_, err = json.Marshal(AnnotationCreate{Type: AnnotationTypeLine})
+	assert.Error(t, err)
+	_, err = json.Marshal(AnnotationCreate{Type: "nope"})
+	assert.Error(t, err)
+}
+
+func TestLineAnnotationCreate_Marshal_EmitsNullLineEnds(t *testing.T) {
+	in := AnnotationCreate{Type: AnnotationTypeLine, Line: &LineAnnotation{Type: AnnotationTypeLine, BorderColor: "#000", BorderStyle: "", Color: "#fff", Thickness: 1, X1: 1, Y1: 2, X2: 3, Y2: 4, ZIndex: 0, LineStart: nil, LineEnd: nil}}
+	b, err := json.Marshal(in)
+	assert.NoError(t, err)
+	var m map[string]any
+	assert.NoError(t, json.Unmarshal(b, &m))
+	assert.Contains(t, m, "line_start")
+	assert.Contains(t, m, "line_end")
+	assert.Nil(t, m["line_start"])
+	assert.Nil(t, m["line_end"])
+}
+
+func TestAnnotation_Unmarshal_ClearsOtherUnionFields(t *testing.T) {
+	// Start with a non-empty Annotation value.
+	a := Annotation{
+		Type: AnnotationTypeText,
+		Text: &TextAnnotationResponse{ID: "a1", TextAnnotation: TextAnnotation{Type: AnnotationTypeText, BorderColor: "#000", BorderStyle: "", Color: "#fff", Thickness: 1, X1: 1, Y1: 2, ZIndex: 0, Rotation: 0, TextBold: false, TextContent: "hi", TextFont: "sans", TextItalic: false, TextSize: 12, TextUnit: "px"}},
+	}
+	assert.NotNil(t, a.Text)
+
+	// Unmarshal a rectangle over it; ensure old fields are cleared.
+	err := json.Unmarshal([]byte(`{"id":"r1","type":"rectangle","border_color":"#000","border_style":"","color":"#fff","thickness":1,"x1":1,"y1":2,"x2":3,"y2":4,"z_index":0,"rotation":0,"border_radius":1}`), &a)
+	assert.NoError(t, err)
+	assert.Equal(t, AnnotationTypeRectangle, a.Type)
+	assert.Nil(t, a.Text)
+	assert.NotNil(t, a.Rectangle)
+	assert.Nil(t, a.Ellipse)
+	assert.Nil(t, a.Line)
+}
+
+func TestAnnotation_Unmarshal_NonObjectJSON(t *testing.T) {
+	var a Annotation
+	err := json.Unmarshal([]byte(`123`), &a)
+	assert.Error(t, err)
+}
