@@ -3,6 +3,17 @@ VERSION ?=
 
 .PHONY: cover clean covero coversum
 
+.PHONY: test lint vet
+
+test:
+	go test ./...
+
+vet:
+	go vet ./...
+
+lint:
+	golangci-lint run --timeout=5m
+
 cover:
 	# TEST_LIVE=1 go test -v -cover -coverprofile $(NAME).out -coverpkg=./internal/...,./pkg/... ./...
 	# go test -v -cover -coverprofile $(NAME).out -covermode=atomic -coverpkg=./internal/...,./pkg/... ./...

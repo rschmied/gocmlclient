@@ -553,7 +553,11 @@ go test ./...
 go test -race ./...
 
 # Run linting
+make lint
+
+# Or, without make:
 go vet ./...
+golangci-lint run
 ```
 
 ### Code Style
