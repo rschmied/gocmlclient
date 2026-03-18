@@ -227,6 +227,37 @@ func TestLineAnnotationCreate_Marshal_EmitsNullLineEnds(t *testing.T) {
 	assert.Nil(t, m["line_end"])
 }
 
+func TestLineAnnotationUpdate_Marshal_EmitsNullLineEnds(t *testing.T) {
+	in := AnnotationUpdate{Type: AnnotationTypeLine, Line: &LineAnnotationPartial{Type: AnnotationTypeLine, LineStart: nil, LineEnd: nil}}
+	b, err := json.Marshal(in)
+	assert.NoError(t, err)
+	var m map[string]any
+	assert.NoError(t, json.Unmarshal(b, &m))
+	assert.Contains(t, m, "line_start")
+	assert.Contains(t, m, "line_end")
+	assert.Nil(t, m["line_start"])
+	assert.Nil(t, m["line_end"])
+}
+
+func TestLineAnnotationUpdate_Marshal_LineEndsWithValues(t *testing.T) {
+	start := LineStyleArrow
+	end := LineStyleCircle
+	in := AnnotationUpdate{Type: AnnotationTypeLine, Line: &LineAnnotationPartial{Type: AnnotationTypeLine, LineStart: &start, LineEnd: &end}}
+	b, err := json.Marshal(in)
+	assert.NoError(t, err)
+	var m map[string]any
+	assert.NoError(t, json.Unmarshal(b, &m))
+	assert.Equal(t, "arrow", m["line_start"])
+	assert.Equal(t, "circle", m["line_end"])
+}
+
+func TestLineStyle_MarshalJSON_RejectsEmptyOrUnknown(t *testing.T) {
+	_, err := json.Marshal(LineStyle(""))
+	assert.Error(t, err)
+	_, err = json.Marshal(LineStyle("bogus"))
+	assert.Error(t, err)
+}
+
 func TestAnnotation_Unmarshal_ClearsOtherUnionFields(t *testing.T) {
 	// Start with a non-empty Annotation value.
 	a := Annotation{

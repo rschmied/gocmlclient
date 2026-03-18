@@ -29,6 +29,31 @@ type BorderStyle string
 // Values observed in schema: "arrow", "square", "circle".
 type LineStyle string
 
+const (
+	// LineStyleArrow represents the Arrow line end
+	LineStyleArrow LineStyle = "arrow"
+	// LineStyleSquare represents the Square line end
+	LineStyleSquare LineStyle = "square"
+	// LineStyleCircle represents the Circle line end
+	LineStyleCircle LineStyle = "circle"
+)
+
+// MarshalJSON validates LineStyle values during marshaling.
+//
+// The server treats line markers as an enum and rejects empty strings.
+// Enforcing this client-side prevents accidentally emitting invalid payloads.
+func (s LineStyle) MarshalJSON() ([]byte, error) {
+	if s == "" {
+		return nil, fmt.Errorf("line style cannot be empty")
+	}
+	switch s {
+	case LineStyleArrow, LineStyleSquare, LineStyleCircle:
+		return json.Marshal(string(s))
+	default:
+		return nil, fmt.Errorf("invalid line style %q", s)
+	}
+}
+
 // Annotation is a discriminated union wrapper.
 // Exactly one of Text/Rectangle/Ellipse/Line is set after unmarshaling.
 type Annotation struct {
@@ -334,8 +359,10 @@ type LineAnnotationPartial struct {
 	X1          *float64       `json:"x1,omitempty"`
 	Y1          *float64       `json:"y1,omitempty"`
 	ZIndex      *float64       `json:"z_index,omitempty"`
-	LineStart   *LineStyle     `json:"line_start,omitempty"`
-	LineEnd     *LineStyle     `json:"line_end,omitempty"`
+	// line_start/line_end are required by the schema but may be null.
+	// For updates, we always include these keys so callers can send explicit null.
+	LineStart *LineStyle `json:"line_start"`
+	LineEnd   *LineStyle `json:"line_end"`
 }
 
 // LineAnnotationResponse represents a line annotation with ID.
