@@ -148,5 +148,5 @@ func SetupCommonMocks() {
 		httpmock.NewStringResponder(200, `{"id":"user-123","username":"testuser","token":"mock-token-12345","admin":false}`))
 
 	httpmock.RegisterResponder("GET", "https://mock/api/v0/system_information",
-		httpmock.NewStringResponder(200, `{"ready":true,"version":"2.8.1","build":"123"}`))
+		httpmock.NewStringResponder(200, `{"ready":true,"version":"2.10.0","build":"123"}`))
 }

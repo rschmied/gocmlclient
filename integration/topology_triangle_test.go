@@ -186,13 +186,27 @@ func TestIntegration_TriangleWithExtConnAndUnmanagedSwitch(t *testing.T) {
 		requireNoErrorOrSkipStatus(t, err, 400, 403, 404)
 	}
 
-	arrow := models.LineStyle("arrow")
-	_, err = annSvc.Create(ctx, lab.ID, models.AnnotationCreate{Type: models.AnnotationTypeLine, Line: &models.LineAnnotation{Type: models.AnnotationTypeLine, BorderColor: "#0b132bff", BorderStyle: "", Color: "#5bc0becc", Thickness: 1, X1: 100, Y1: 250, X2: 300, Y2: 250, ZIndex: 7, LineStart: &arrow, LineEnd: &arrow}})
+	arrow := models.LineStyleArrow
+	circle := models.LineStyleCircle
+	square := models.LineStyleSquare
+	createdLine, err := annSvc.Create(ctx, lab.ID, models.AnnotationCreate{Type: models.AnnotationTypeLine, Line: &models.LineAnnotation{Type: models.AnnotationTypeLine, BorderColor: "#0b132bff", BorderStyle: "", Color: "#5bc0becc", Thickness: 1, X1: 100, Y1: 250, X2: 300, Y2: 250, ZIndex: 7, LineStart: &arrow, LineEnd: &circle}})
+	if err != nil {
+		requireNoErrorOrSkipStatus(t, err, 400, 403, 404)
+	}
+	if createdLine.Line != nil {
+		// Exercise update semantics: explicit null line_start/line_end clears markers.
+		_, err = annSvc.Update(ctx, lab.ID, createdLine.Line.ID, models.AnnotationUpdate{Type: models.AnnotationTypeLine, Line: &models.LineAnnotationPartial{Type: models.AnnotationTypeLine, LineStart: nil, LineEnd: nil}})
+		if err != nil {
+			requireNoErrorOrSkipStatus(t, err, 400, 403, 404)
+		}
+	}
+
+	_, err = annSvc.Create(ctx, lab.ID, models.AnnotationCreate{Type: models.AnnotationTypeLine, Line: &models.LineAnnotation{Type: models.AnnotationTypeLine, BorderColor: "#0b132bff", BorderStyle: "", Color: "#6fffe9cc", Thickness: 1, X1: 100, Y1: 270, X2: 300, Y2: 270, ZIndex: 6, LineStart: nil, LineEnd: nil}})
 	if err != nil {
 		requireNoErrorOrSkipStatus(t, err, 400, 403, 404)
 	}
 
-	_, err = annSvc.Create(ctx, lab.ID, models.AnnotationCreate{Type: models.AnnotationTypeLine, Line: &models.LineAnnotation{Type: models.AnnotationTypeLine, BorderColor: "#0b132bff", BorderStyle: "", Color: "#6fffe9cc", Thickness: 1, X1: 100, Y1: 270, X2: 300, Y2: 270, ZIndex: 6, LineStart: nil, LineEnd: nil}})
+	_, err = annSvc.Create(ctx, lab.ID, models.AnnotationCreate{Type: models.AnnotationTypeLine, Line: &models.LineAnnotation{Type: models.AnnotationTypeLine, BorderColor: "#0b132bff", BorderStyle: "", Color: "#ffd166cc", Thickness: 1, X1: 100, Y1: 290, X2: 300, Y2: 290, ZIndex: 5, LineStart: &square, LineEnd: nil}})
 	if err != nil {
 		requireNoErrorOrSkipStatus(t, err, 400, 403, 404)
 	}
