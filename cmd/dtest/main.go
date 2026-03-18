@@ -14,7 +14,7 @@ import (
 
 	gocml "github.com/rschmied/gocmlclient"
 	"github.com/rschmied/gocmlclient/pkg/client"
-	"github.com/rschmied/gocmlclient/pkg/errors"
+	cmlerror "github.com/rschmied/gocmlclient/pkg/errors"
 )
 
 // handleError centrally processes and logs errors with appropriate context
@@ -24,7 +24,7 @@ func handleError(operation string, err error) {
 	}
 
 	// Handle TLS certificate errors with user-friendly messaging
-	if errors.IsTLSCertificateError(err) {
+	if cmlerror.IsTLSCertificateError(err) {
 		slog.Error("TLS certificate verification failed",
 			"operation", operation,
 			"error", err.Error(),
