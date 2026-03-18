@@ -18,6 +18,9 @@ type TokenProvider interface {
 // Ensure AuthProvider implements TokenProvider
 var _ TokenProvider = (*AuthProvider)(nil)
 
+// Ensure StaticTokenProvider implements TokenProvider
+var _ TokenProvider = (*StaticTokenProvider)(nil)
+
 // Type implements TokenProvider for AuthProvider
 func (p *AuthProvider) Type() string {
 	return "password"

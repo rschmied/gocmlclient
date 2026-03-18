@@ -201,6 +201,54 @@ func TestTransportRoundTrip401Retry(t *testing.T) {
 	}
 }
 
+func TestTransportStaticTokenNoAuthExtended(t *testing.T) {
+	var apiCalls int
+	var authCalls int
+	callCount := 0
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v0/auth_extended":
+			authCalls++
+			w.WriteHeader(http.StatusOK)
+			return
+		case "/api/data":
+			apiCalls++
+			callCount++
+			if callCount == 1 {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			return
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+	}))
+	defer server.Close()
+
+	manager := NewManager(NewStaticTokenProvider("t"), DefaultConfig())
+	transport := NewTransport(http.DefaultTransport, manager, nil)
+
+	req, _ := http.NewRequest("GET", server.URL+"/api/data", nil)
+	resp, err := transport.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("RoundTrip: %v", err)
+	}
+	_ = resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	if authCalls != 0 {
+		t.Fatalf("expected no /api/v0/auth_extended calls, got %d", authCalls)
+	}
+	if apiCalls != 2 {
+		t.Fatalf("expected 2 /api/data calls (initial + retry), got %d", apiCalls)
+	}
+}
+
 func TestTransportRoundTripManagerError(t *testing.T) {
 	manager := createFailingManager()
 	transport := NewTransport(http.DefaultTransport, manager, nil)

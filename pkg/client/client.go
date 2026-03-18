@@ -183,16 +183,21 @@ func newAPIClient(c *Config) (*api.Client, error) {
 
 	// 4. create token provider - it will use the SAME http client but the auth
 	//    transport will skip auth endpoints
-	provider := auth.NewAuthProvider(auth.AuthConfig{
-		BaseURL:     c.baseURL,
-		Username:    c.username,
-		Password:    c.password,
-		PresetToken: c.token,
-		Client:      c.httpClient,
-		ClientID:    httputil.ClientID,
-		ClientUUID:  clientUUID,
-		Version:     clientVersion,
-	})
+	var provider auth.TokenProvider
+	if c.staticToken != "" {
+		provider = auth.NewStaticTokenProvider(c.staticToken)
+	} else {
+		provider = auth.NewAuthProvider(auth.AuthConfig{
+			BaseURL:     c.baseURL,
+			Username:    c.username,
+			Password:    c.password,
+			PresetToken: c.token,
+			Client:      c.httpClient,
+			ClientID:    httputil.ClientID,
+			ClientUUID:  clientUUID,
+			Version:     clientVersion,
+		})
+	}
 
 	// 5. create manager with token storage (default is memory storage)
 	config := auth.DefaultConfig()

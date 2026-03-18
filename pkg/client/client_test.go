@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -61,6 +62,18 @@ func TestNew(t *testing.T) {
 			wantErr: false,
 			validate: func(t *testing.T, client *Client) {
 				assert.Equal(t, "test-token", client.config.token)
+			},
+		},
+		{
+			name:    "with static token",
+			baseURL: "https://api.example.com",
+			opts: []Option{
+				WithStaticToken("test-token"),
+				SkipReadyCheck(),
+			},
+			wantErr: false,
+			validate: func(t *testing.T, client *Client) {
+				assert.Equal(t, "test-token", client.config.staticToken)
 			},
 		},
 		{
@@ -310,4 +323,39 @@ func TestClient_Stats(t *testing.T) {
 	assert.NotNil(t, stats.CallsByEndpoint())
 	assert.NotNil(t, stats.StatusCounts())
 	assert.Equal(t, 0, stats.TotalCalls()) // Should be 0 since no calls made yet
+}
+
+func TestClient_StaticToken401ThenSuccess_NoAuthExtended(t *testing.T) {
+	var authCalls int
+	var dataCalls int
+	dataCount := 0
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v0/auth_extended":
+			authCalls++
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"id":"user-123","username":"testuser","token":"mock-token-12345","admin":false}`)) //nolint:errcheck
+		case "/api/v0/users":
+			dataCalls++
+			dataCount++
+			if dataCount == 1 {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`[]`)) //nolint:errcheck
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	c, err := New(server.URL, WithStaticToken("t"), SkipReadyCheck())
+	assert.NoError(t, err)
+
+	_, err = c.User.Users(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, 0, authCalls)
+	assert.Equal(t, 2, dataCalls)
 }

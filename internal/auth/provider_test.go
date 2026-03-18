@@ -165,6 +165,32 @@ func TestFetchTokenAuthentication(t *testing.T) {
 	}
 }
 
+func TestFetchTokenMissingCredentials(t *testing.T) {
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	config := AuthConfig{
+		BaseURL: server.URL,
+		Client:  &http.Client{Timeout: 10 * time.Second},
+	}
+
+	provider := NewAuthProvider(config)
+	_, _, err := provider.FetchToken(context.Background())
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if err.Error() != "authentication requires username/password but none configured" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if called {
+		t.Fatal("expected no server call")
+	}
+}
+
 func TestFetchTokenAuthenticationFailure(t *testing.T) {
 	// Create a test server that returns authentication failure
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

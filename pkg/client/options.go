@@ -15,6 +15,7 @@ type Config struct {
 	username           string
 	password           string
 	token              string
+	staticToken        string
 	tokenStorageFile   string
 	insecureSkipVerify bool
 	caCertPEM          []byte
@@ -61,6 +62,17 @@ func WithInsecureTLS() Option {
 func WithToken(token string) Option {
 	return func(c *Config) {
 		c.token = token
+	}
+}
+
+// WithStaticToken sets a static bearer token for authentication.
+//
+// Unlike WithToken, this token is not treated as a one-shot bootstrap token.
+// The client will never attempt username/password authentication when this is
+// configured.
+func WithStaticToken(token string) Option {
+	return func(c *Config) {
+		c.staticToken = token
 	}
 }
 

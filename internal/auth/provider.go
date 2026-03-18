@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/rschmied/gocmlclient/internal/httputil"
@@ -76,6 +77,10 @@ func (p *AuthProvider) FetchToken(ctx context.Context) (string, time.Time, error
 		// Preset tokens typically have a default expiry
 		expiry := time.Now().Add(8 * time.Hour)
 		return token, expiry, nil
+	}
+
+	if strings.TrimSpace(p.username) == "" || strings.TrimSpace(p.password) == "" {
+		return "", time.Time{}, fmt.Errorf("authentication requires username/password but none configured")
 	}
 
 	return p.authenticateWithPassword(ctx)
