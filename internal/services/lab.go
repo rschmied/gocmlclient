@@ -114,7 +114,7 @@ func (s *LabService) LabsWithData(ctx context.Context) ([]models.LabResponse, er
 			OwnerFullname:        tile.OwnerFullname,
 			NodeCount:            tile.NodeCount,
 			LinkCount:            tile.LinkCount,
-			Groups:               tile.Groups,
+			Groups:               tile.Groups, //nolint:staticcheck
 			EffectivePermissions: tile.EffectivePermissions,
 		}
 		labs = append(labs, lab)
