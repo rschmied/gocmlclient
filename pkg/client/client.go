@@ -170,6 +170,14 @@ func newAPIClient(c *Config) (*api.Client, error) {
 	if baseTransport == nil {
 		baseTransport = http.DefaultTransport
 	}
+	if len(c.requestHeaders) > 0 {
+		for name := range c.requestHeaders {
+			if !httputil.ValidHeaderName(name) {
+				return nil, fmt.Errorf("invalid request header name %q", name)
+			}
+		}
+		baseTransport = httputil.NewHeaderTransport(baseTransport, c.requestHeaders)
+	}
 
 	// Create file storage
 	var storage auth.TokenStorage

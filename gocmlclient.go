@@ -35,6 +35,8 @@ var (
 	WithLogLevel                  = client.WithLogLevel
 	WithLogger                    = client.WithLogger
 	WithNodeExcludeConfigurations = client.WithNodeExcludeConfigurations
+	WithRequestHeader             = client.WithRequestHeader
+	WithRequestHeaders            = client.WithRequestHeaders
 	WithStaticToken               = client.WithStaticToken
 	WithToken                     = client.WithToken
 	WithTokenStorageFile          = client.WithTokenStorageFile

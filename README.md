@@ -125,7 +125,27 @@ client, err := gocmlclient.New("https://cml-controller.example.com",
     gocmlclient.WithTokenStorageFile("/tmp/cml_tokens.json"),
     gocmlclient.WithInsecureTLS(),
     gocmlclient.SkipReadyCheck())
+
+// Add a static proxy/auth header to every outbound request
+client, err := gocmlclient.New("https://cml-controller.example.com",
+    gocmlclient.WithStaticToken("your-token"),
+    gocmlclient.WithRequestHeader("X-Proxy-Token", os.Getenv("CML_PROXY_TOKEN")))
+
+// Add a Bearer token in Proxy-Authorization, similar to IAP-style proxy auth
+proxyToken := os.Getenv("CML_PROXY_TOKEN")
+client, err := gocmlclient.New("https://cml-controller.example.com",
+    gocmlclient.WithStaticToken("your-token"),
+    gocmlclient.WithRequestHeader("Proxy-Authorization", "Bearer "+proxyToken))
 ```
+
+`WithRequestHeader` and `WithRequestHeaders` apply to all outbound HTTP calls,
+including authentication bootstrap requests such as `/api/v0/auth_extended`.
+This makes them suitable for proxies or gateways that require additional static
+headers. Empty header values are ignored.
+
+If your proxy expects an IAP-style bearer token in `Proxy-Authorization`, load
+the token in caller code and pass `"Bearer "+token` as the header value. See
+`examples/auth-proxy-header/main.go` for a runnable example.
 
 ### Token Persistence
 
