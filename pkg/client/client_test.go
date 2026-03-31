@@ -359,3 +359,47 @@ func TestClient_StaticToken401ThenSuccess_NoAuthExtended(t *testing.T) {
 	assert.Equal(t, 0, authCalls)
 	assert.Equal(t, 2, dataCalls)
 }
+
+func TestClient_RequestHeaders_AreSentToAuthAndAPI(t *testing.T) {
+	var authHeader string
+	var usersHeader string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v0/auth_extended":
+			authHeader = r.Header.Get("X-Proxy-Token")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"id":"user-123","username":"testuser","token":"mock-token-12345","admin":false}`)) //nolint:errcheck
+		case "/api/v0/users":
+			usersHeader = r.Header.Get("X-Proxy-Token")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`[]`)) //nolint:errcheck
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	c, err := New(
+		server.URL,
+		WithUsernamePassword("user", "pass"),
+		WithRequestHeader("X-Proxy-Token", "proxy-secret"),
+		SkipReadyCheck(),
+	)
+	assert.NoError(t, err)
+
+	_, err = c.User.Users(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, "proxy-secret", authHeader)
+	assert.Equal(t, "proxy-secret", usersHeader)
+}
+
+func TestNew_WithInvalidRequestHeaderName_ReturnsError(t *testing.T) {
+	client, err := New(
+		"https://api.example.com",
+		WithRequestHeader("", "proxy-secret"),
+		SkipReadyCheck(),
+	)
+	assert.Error(t, err)
+	assert.Nil(t, client)
+}
