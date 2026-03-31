@@ -12,6 +12,9 @@ func New(baseURL string, opts ...client.Option) (*client.Client, error) {
 	return client.New(baseURL, opts...)
 }
 
+// Option is re-exported for convenience.
+type Option = client.Option
+
 // Re-export common types for convenience
 type (
 	// Lab is a CML lab.
@@ -22,10 +25,21 @@ type (
 	Stats = api.Stats
 )
 
-// // Re-export common options for convenience
-// var (
-// 	SkipReadyCheck       = client.SkipReadyCheck
-// 	WithUsernamePassword = client.WithUsernamePassword
-// 	WithToken            = client.WithToken
-// 	WithInsecureTLS      = client.WithInsecureTLS
-// )
+// Re-export common options for convenience.
+var (
+	Conditional                   = client.Conditional
+	SkipReadyCheck                = client.SkipReadyCheck
+	WithCACertPEM                 = client.WithCACertPEM
+	WithHTTPClient                = client.WithHTTPClient
+	WithInsecureTLS               = client.WithInsecureTLS
+	WithLogLevel                  = client.WithLogLevel
+	WithLogger                    = client.WithLogger
+	WithNodeExcludeConfigurations = client.WithNodeExcludeConfigurations
+	WithRequestHeader             = client.WithRequestHeader
+	WithRequestHeaders            = client.WithRequestHeaders
+	WithStaticToken               = client.WithStaticToken
+	WithToken                     = client.WithToken
+	WithTokenStorageFile          = client.WithTokenStorageFile
+	WithUsernamePassword          = client.WithUsernamePassword
+	WithoutNamedConfigs           = client.WithoutNamedConfigs
+)

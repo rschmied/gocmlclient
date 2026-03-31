@@ -31,6 +31,7 @@ type Config struct {
 	logger                    *slog.Logger
 	logLevel                  slog.Level
 	skipReadyCheck            bool
+	requestHeaders            map[string]string
 }
 
 // Conditional applies an option only if the condition is true.
@@ -73,6 +74,27 @@ func WithToken(token string) Option {
 func WithStaticToken(token string) Option {
 	return func(c *Config) {
 		c.staticToken = token
+	}
+}
+
+// WithRequestHeader configures a static header to be sent with every outbound
+// request. This includes authentication bootstrap requests.
+func WithRequestHeader(name, value string) Option {
+	return func(c *Config) {
+		if c.requestHeaders == nil {
+			c.requestHeaders = make(map[string]string)
+		}
+		c.requestHeaders[name] = value
+	}
+}
+
+// WithRequestHeaders configures static headers to be sent with every outbound
+// request. This includes authentication bootstrap requests.
+func WithRequestHeaders(headers map[string]string) Option {
+	return func(c *Config) {
+		for name, value := range headers {
+			WithRequestHeader(name, value)(c)
+		}
 	}
 }
 

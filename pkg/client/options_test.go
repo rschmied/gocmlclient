@@ -132,3 +132,27 @@ func TestWithCACertPEM(t *testing.T) {
 	opt(c)
 	assert.NotEmpty(t, c.caCertPEM)
 }
+
+func TestWithRequestHeader(t *testing.T) {
+	c := &Config{}
+	opt := WithRequestHeader("X-Proxy-Token", "proxy-secret")
+	opt(c)
+	assert.Equal(t, map[string]string{"X-Proxy-Token": "proxy-secret"}, c.requestHeaders)
+}
+
+func TestWithRequestHeaders(t *testing.T) {
+	c := &Config{}
+	headers := map[string]string{
+		"X-Proxy-Token": "proxy-secret",
+		"X-Trace-ID":    "trace-123",
+	}
+	opt := WithRequestHeaders(headers)
+	opt(c)
+
+	headers["X-Trace-ID"] = "mutated"
+
+	assert.Equal(t, map[string]string{
+		"X-Proxy-Token": "proxy-secret",
+		"X-Trace-ID":    "trace-123",
+	}, c.requestHeaders)
+}

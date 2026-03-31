@@ -2,7 +2,36 @@
 
 Lists the changes in the gocmlclient package.
 
-## Version 0.2.0 (bravenewworld) (Unreleased)
+## Unreleased
+
+- Nothing yet.
+
+## Version 0.2.3
+
+Changes:
+
+- client: add generic static outbound request-header support via `WithRequestHeader` and `WithRequestHeaders`
+- client: apply configured headers to all outbound requests, including auth bootstrap, via HTTP transport wrapping
+- client: validate request header names and document proxy-style `Proxy-Authorization: Bearer ...` usage
+- examples: add runnable examples for token auth, username/password auth, lab listing, proxy-header auth, and error handling
+- tests: add coverage for request-header options, header transport behavior, and new package examples
+- docs: refresh README examples and fix broken links
+
+## Version 0.2.2
+
+Changes:
+
+- annotations: introduce `LineStyle` constants and improve JSON handling for annotation line styles
+
+## Version 0.2.1
+
+Changes:
+
+- auth: skip login/bootstrap auth completely when a static token is provided
+- tests: expand regression coverage for static-token authentication flows
+- ci: add lint workflow alongside existing test coverage
+
+## Version 0.2.0 (bravenewworld)
 
 BREAKING:
 

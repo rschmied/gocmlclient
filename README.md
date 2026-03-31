@@ -1,4 +1,4 @@
-[![Go Reference](https://pkg.go.dev/badge/github.com/rschmied/gocmlclient.svg)](https://pkg.go.dev/badge/github.com/rschmied/gocmlclient.svg) [![CodeQL](https://github.com/rschmied/gocmlclient/actions/workflows/codeql.yml/badge.svg)](https://github.com/rschmied/gocmlclient/actions/workflows/codeql.yml) [![Go](https://github.com/rschmied/gocmlclient/actions/workflows/go.yml/badge.svg)](https://github.com/rschmied/gocmlclient/actions/workflows/go.yml) [![Coverage Status](https://coveralls.io/repos/github/rschmied/gocmlclient/badge.svg?branch=main)](https://coveralls.io/github/rschmied/gocmlclient?branch=main) [![Go Report Card](https://goreportcard.com/badge/github.com/rschmied/gocmlclient)](https://goreportcard.com/report/github.com/rschmied/gocmlclient)
+[![Go Reference](https://pkg.go.dev/badge/github.com/rschmied/gocmlclient.svg)](https://pkg.go.dev/github.com/rschmied/gocmlclient?tab=doc) [![CodeQL](https://github.com/rschmied/gocmlclient/actions/workflows/codeql.yml/badge.svg)](https://github.com/rschmied/gocmlclient/actions/workflows/codeql.yml) [![Go](https://github.com/rschmied/gocmlclient/actions/workflows/go.yml/badge.svg)](https://github.com/rschmied/gocmlclient/actions/workflows/go.yml) [![Coverage Status](https://coveralls.io/repos/github/rschmied/gocmlclient/badge.svg?branch=main)](https://coveralls.io/github/rschmied/gocmlclient?branch=main) [![Go Report Card](https://goreportcard.com/badge/github.com/rschmied/gocmlclient)](https://goreportcard.com/report/github.com/rschmied/gocmlclient)
 
 # gocmlclient
 
@@ -49,6 +49,11 @@ go get github.com/rschmied/gocmlclient
 - Access to a CML 2.x controller (version 2.9.0+ recommended; 2.9/2.10 tested)
 
 ## Quick Start
+
+More examples:
+
+- Runnable programs: `examples/`
+- API docs and examples: pkg.go.dev (click the Go Reference badge)
 
 ```go
 package main
@@ -120,7 +125,27 @@ client, err := gocmlclient.New("https://cml-controller.example.com",
     gocmlclient.WithTokenStorageFile("/tmp/cml_tokens.json"),
     gocmlclient.WithInsecureTLS(),
     gocmlclient.SkipReadyCheck())
+
+// Add a static proxy/auth header to every outbound request
+client, err := gocmlclient.New("https://cml-controller.example.com",
+    gocmlclient.WithStaticToken("your-token"),
+    gocmlclient.WithRequestHeader("X-Proxy-Token", os.Getenv("CML_PROXY_TOKEN")))
+
+// Add a Bearer token in Proxy-Authorization, similar to IAP-style proxy auth
+proxyToken := os.Getenv("CML_PROXY_TOKEN")
+client, err := gocmlclient.New("https://cml-controller.example.com",
+    gocmlclient.WithStaticToken("your-token"),
+    gocmlclient.WithRequestHeader("Proxy-Authorization", "Bearer "+proxyToken))
 ```
+
+`WithRequestHeader` and `WithRequestHeaders` apply to all outbound HTTP calls,
+including authentication bootstrap requests such as `/api/v0/auth_extended`.
+This makes them suitable for proxies or gateways that require additional static
+headers. Empty header values are ignored.
+
+If your proxy expects an IAP-style bearer token in `Proxy-Authorization`, load
+the token in caller code and pass `"Bearer "+token` as the header value. See
+`examples/auth-proxy-header/main.go` for a runnable example.
 
 ### Token Persistence
 
@@ -136,7 +161,7 @@ Note: the token file can contain a valid bearer token; secure and clean it up pe
 
 ## API Reference
 
-**Note:** In the examples below, UUIDs are represented as short strings like "lab-uuid" for brevity. In production, these would be actual UUIDs (e.g., "123e4567-e89b-12d3-a456-426614174000").
+**Note:** In the examples below, UUIDs are represented as short strings like `models.UUID("lab-uuid")` for brevity. In production, these would be actual UUIDs (e.g., `models.UUID("123e4567-e89b-12d3-a456-426614174000")`).
 
 ### Labs
 
@@ -150,7 +175,7 @@ labs, err := client.Lab.Labs(ctx, true) // true sets show_all=true
 tiles, err := client.Lab.LabsWithData(ctx) // GET /populate_lab_tiles
 
 // Get lab by ID
-lab, err := client.Lab.GetByID(ctx, "lab-uuid", true)
+lab, err := client.Lab.GetByID(ctx, models.UUID("lab-uuid"), true)
 
 // Get lab by title
 lab, err := client.Lab.GetByTitle(ctx, "My Lab", true)
@@ -168,24 +193,24 @@ updateReq := models.LabUpdateRequest{
     Title:       "Updated Title",
     Description: "Updated description",
 }
-updatedLab, err := client.Lab.Update(ctx, "lab-uuid", updateReq)
+updatedLab, err := client.Lab.Update(ctx, models.UUID("lab-uuid"), updateReq)
 
 // Node staging (CML 2.10+; same request shape as used by the UI)
-_, err = client.Lab.Update(ctx, "lab-uuid", models.LabUpdateRequest{
-    NodeStaging: &models.NodeStaging{Enabled: false, StartRemaining: true, AbortOnFailure: false},
+_, err = client.Lab.Update(ctx, models.UUID("lab-uuid"), models.LabUpdateRequest{
+     NodeStaging: &models.NodeStaging{Enabled: false, StartRemaining: true, AbortOnFailure: false},
 })
 
 // Control lab lifecycle
-err = client.Lab.Start(ctx, "lab-uuid")
-err = client.Lab.Stop(ctx, "lab-uuid")
-err = client.Lab.Wipe(ctx, "lab-uuid")
-err = client.Lab.Delete(ctx, "lab-uuid")
+err = client.Lab.Start(ctx, models.UUID("lab-uuid"))
+err = client.Lab.Stop(ctx, models.UUID("lab-uuid"))
+err = client.Lab.Wipe(ctx, models.UUID("lab-uuid"))
+err = client.Lab.Delete(ctx, models.UUID("lab-uuid"))
 
 // Import lab from topology
 lab, err := client.Lab.Import(ctx, topologyYAML)
 
 // Check convergence
-converged, err := client.Lab.HasConverged(ctx, "lab-uuid")
+converged, err := client.Lab.HasConverged(ctx, models.UUID("lab-uuid"))
 ```
 
 ### Nodes
@@ -194,16 +219,16 @@ Manage individual nodes within labs.
 
 ```go
 // Get nodes for a lab
-nodes, err := client.Node.GetNodesForLab(ctx, "lab-uuid")
+nodes, err := client.Node.GetNodesForLab(ctx, models.UUID("lab-uuid"))
 
 // Get specific node
-node, err := client.Node.GetByID(ctx, "lab-uuid", "node-uuid")
+node, err := client.Node.GetByID(ctx, models.UUID("lab-uuid"), models.UUID("node-uuid"))
 
 // Create a new node
 ram := 512
 img := "vios-adventerprisek9-m"
 newNode := models.Node{
-    LabID:           "lab-uuid",
+    LabID:           models.UUID("lab-uuid"),
     Label:           "Router1",
     NodeDefinition:  "iosv",
     ImageDefinition: &img,
@@ -227,10 +252,10 @@ configs := []models.NodeConfig{
 err = client.Node.SetNamedConfigs(ctx, &node, configs)
 
 // Control node lifecycle
-err = client.Node.Start(ctx, "lab-uuid", "node-uuid")
-err = client.Node.Stop(ctx, "lab-uuid", "node-uuid")
-err = client.Node.Wipe(ctx, "lab-uuid", "node-uuid")
-err = client.Node.Delete(ctx, "lab-uuid", "node-uuid")
+err = client.Node.Start(ctx, models.UUID("lab-uuid"), models.UUID("node-uuid"))
+err = client.Node.Stop(ctx, models.UUID("lab-uuid"), models.UUID("node-uuid"))
+err = client.Node.Wipe(ctx, models.UUID("lab-uuid"), models.UUID("node-uuid"))
+err = client.Node.Delete(ctx, models.UUID("lab-uuid"), models.UUID("node-uuid"))
 ```
 
 ### Users
@@ -242,7 +267,7 @@ Manage CML user accounts and authentication.
 users, err := client.User.Users(ctx)
 
 // Get user by ID
-user, err := client.User.GetByID(ctx, "user-uuid")
+user, err := client.User.GetByID(ctx, models.UUID("user-uuid"))
 
 // Get user by name
 user, err := client.User.GetByName(ctx, "username")
@@ -267,13 +292,13 @@ updateReq := models.UserUpdateRequest{
         Email:    "updated@example.com",
     },
 }
-updatedUser, err := client.User.Update(ctx, "user-uuid", updateReq)
+updatedUser, err := client.User.Update(ctx, models.UUID("user-uuid"), updateReq)
 
 // Delete user
-err = client.User.Delete(ctx, "user-uuid")
+err = client.User.Delete(ctx, models.UUID("user-uuid"))
 
 // Get user's groups
-groups, err := client.User.Groups(ctx, "user-uuid")
+groups, err := client.User.Groups(ctx, models.UUID("user-uuid"))
 ```
 
 ### Groups
@@ -285,7 +310,7 @@ Manage user groups and permissions.
 groups, err := client.Group.Groups(ctx)
 
 // Get group by ID
-group, err := client.Group.GetByID(ctx, "group-uuid")
+group, err := client.Group.GetByID(ctx, models.UUID("group-uuid"))
 
 // Get group by name
 group, err := client.Group.ByName(ctx, "groupname")
@@ -302,7 +327,7 @@ createdGroup, err := client.Group.Create(ctx, newGroup)
 updatedGroup, err := client.Group.Update(ctx, existingGroup)
 
 // Delete group
-err = client.Group.Delete(ctx, "group-uuid")
+err = client.Group.Delete(ctx, models.UUID("group-uuid"))
 ```
 
 ### Links
@@ -311,28 +336,28 @@ Manage network links between nodes.
 
 ```go
 // Get links for a lab
-links, err := client.Link.GetLinksForLab(ctx, "lab-uuid")
+links, err := client.Link.GetLinksForLab(ctx, models.UUID("lab-uuid"))
 
 // Get specific link
-link, err := client.Link.GetByID(ctx, "lab-uuid", "link-uuid")
+link, err := client.Link.GetByID(ctx, models.UUID("lab-uuid"), models.UUID("link-uuid"))
 
 // Create a new link
 newLink := models.Link{
-    LabID:  "lab-uuid",
-    SrcNode: "node1-uuid",
-    DstNode: "node2-uuid",
+    LabID:  models.UUID("lab-uuid"),
+    SrcNode: models.UUID("node1-uuid"),
+    DstNode: models.UUID("node2-uuid"),
     SrcSlot: 0,
     DstSlot: 1,
 }
 createdLink, err := client.Link.Create(ctx, newLink)
 
 // Delete link
-err = client.Link.Delete(ctx, "lab-uuid", "link-uuid")
+err = client.Link.Delete(ctx, models.UUID("lab-uuid"), models.UUID("link-uuid"))
 
 // Link conditions (if supported)
-condition, err := client.Link.GetCondition(ctx, "lab-uuid", "link-uuid")
-err = client.Link.SetCondition(ctx, "lab-uuid", "link-uuid", conditionConfig)
-err = client.Link.DeleteCondition(ctx, "lab-uuid", "link-uuid")
+condition, err := client.Link.GetCondition(ctx, models.UUID("lab-uuid"), models.UUID("link-uuid"))
+err = client.Link.SetCondition(ctx, models.UUID("lab-uuid"), models.UUID("link-uuid"), conditionConfig)
+err = client.Link.DeleteCondition(ctx, models.UUID("lab-uuid"), models.UUID("link-uuid"))
 ```
 
 ### Interfaces
@@ -341,13 +366,13 @@ Manage network interfaces on nodes.
 
 ```go
 // Get interfaces for a node
-interfaces, err := client.Interface.GetInterfacesForNode(ctx, "lab-uuid", "node-uuid")
+interfaces, err := client.Interface.GetInterfacesForNode(ctx, models.UUID("lab-uuid"), models.UUID("node-uuid"))
 
 // Get specific interface
-iface, err := client.Interface.GetByID(ctx, "lab-uuid", "interface-uuid")
+iface, err := client.Interface.GetByID(ctx, models.UUID("lab-uuid"), models.UUID("interface-uuid"))
 
 // Create a new interface
-newInterface, err := client.Interface.Create(ctx, "lab-uuid", "node-uuid", 0) // slot 0
+newInterface, err := client.Interface.Create(ctx, models.UUID("lab-uuid"), models.UUID("node-uuid"), 0) // slot 0
 ```
 
 ### Annotations
@@ -376,33 +401,33 @@ create := models.AnnotationCreate{
   TextUnit:    "px",
  },
 }
-ann, err := client.Annotation.Create(ctx, "lab-uuid", create)
+ann, err := client.Annotation.Create(ctx, models.UUID("lab-uuid"), create)
 
  // List annotations
- anns, err := client.Annotation.List(ctx, "lab-uuid")
+anns, err := client.Annotation.List(ctx, models.UUID("lab-uuid"))
 
  // Patch an annotation (OpenAPI requires `type`)
  updated := "hello-updated"
  upd := models.AnnotationUpdate{Type: models.AnnotationTypeText, Text: &models.TextAnnotationPartial{Type: models.AnnotationTypeText, TextContent: &updated}}
- ann, err = client.Annotation.Update(ctx, "lab-uuid", ann.Text.ID, upd)
+ann, err = client.Annotation.Update(ctx, models.UUID("lab-uuid"), ann.Text.ID, upd)
 
  // Line annotations: line_start/line_end are required but may be null.
  // On PATCH, gocmlclient always includes these keys so callers can send explicit nulls.
  arrow := models.LineStyleArrow
  lineCreate := models.AnnotationCreate{Type: models.AnnotationTypeLine, Line: &models.LineAnnotation{Type: models.AnnotationTypeLine, BorderColor: "#000000", BorderStyle: "", Color: "#ffffff", Thickness: 1, X1: 10, Y1: 10, X2: 100, Y2: 10, ZIndex: 0, LineStart: &arrow, LineEnd: &arrow}}
- line, err := client.Annotation.Create(ctx, "lab-uuid", lineCreate)
+line, err := client.Annotation.Create(ctx, models.UUID("lab-uuid"), lineCreate)
  if line.Line != nil {
   // Clear both line ends (explicit JSON null)
-  _, err = client.Annotation.Update(ctx, "lab-uuid", line.Line.ID, models.AnnotationUpdate{Type: models.AnnotationTypeLine, Line: &models.LineAnnotationPartial{Type: models.AnnotationTypeLine, LineStart: nil, LineEnd: nil}})
+		_, err = client.Annotation.Update(ctx, models.UUID("lab-uuid"), line.Line.ID, models.AnnotationUpdate{Type: models.AnnotationTypeLine, Line: &models.LineAnnotationPartial{Type: models.AnnotationTypeLine, LineStart: nil, LineEnd: nil}})
  }
 
  // Delete
- err = client.Annotation.Delete(ctx, "lab-uuid", ann.Text.ID)
+err = client.Annotation.Delete(ctx, models.UUID("lab-uuid"), ann.Text.ID)
 
 // Smart annotations
-smart, err := client.SmartAnnotation.List(ctx, "lab-uuid")
+smart, err := client.SmartAnnotation.List(ctx, models.UUID("lab-uuid"))
 if len(smart) > 0 {
- _, _ = client.SmartAnnotation.Get(ctx, "lab-uuid", smart[0].ID)
+	_, _ = client.SmartAnnotation.Get(ctx, models.UUID("lab-uuid"), smart[0].ID)
 }
 ```
 
@@ -446,7 +471,7 @@ List or fetch external connectors configured on the system.
 
 ```go
 exts, err := client.ExtConn.List(ctx) // GET /system/external_connectors
-ext, err := client.ExtConn.Get(ctx, "extconn-uuid") // GET /system/external_connectors/{id}
+ext, err := client.ExtConn.Get(ctx, models.UUID("extconn-uuid")) // GET /system/external_connectors/{id}
 ```
 
 ## Error Handling
@@ -456,14 +481,15 @@ The gocmlclient provides comprehensive error handling with specific error types 
 ```go
 import (
     "errors"
-    "github.com/rschmied/gocmlclient/pkg/errors"
+    cmlerror "github.com/rschmied/gocmlclient/pkg/errors"
+    "github.com/rschmied/gocmlclient/pkg/models"
 )
 
-lab, err := client.Lab.GetByID(ctx, "nonexistent-id", false)
+lab, err := client.Lab.GetByID(ctx, models.UUID("nonexistent-id"), false)
 if err != nil {
-    if errors.Is(err, errors.ErrElementNotFound) {
+    if errors.Is(err, cmlerror.ErrElementNotFound) {
         log.Println("Lab not found")
-    } else if errors.Is(err, errors.ErrSystemNotReady) {
+    } else if errors.Is(err, cmlerror.ErrSystemNotReady) {
         log.Println("CML system is not ready")
     } else {
         log.Printf("Unexpected error: %v", err)
