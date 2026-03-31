@@ -6,6 +6,12 @@ Lists the changes in the gocmlclient package.
 
 - Nothing yet.
 
+## Version 0.2.4
+
+- system: accept array-of-strings `system_information.features` responses from the newer schema
+- system: accept decorated controller versions such as `2.11.0+sso` and legacy dotted dev builds in compatibility checks
+- docs: mark user-group and lab-group surfaces as compatibility-only for older backends because newer schemas dropped them
+
 ## Version 0.2.3
 
 Changes:

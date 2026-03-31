@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"io"
+	"net/http"
 	"sort"
 	"strings"
 	"testing"
@@ -421,6 +423,49 @@ func TestLabUpdate(t *testing.T) {
 		assert.True(t, updatedLab.NodeStaging.StartRemaining)
 		assert.False(t, updatedLab.NodeStaging.AbortOnFailure)
 	}
+}
+
+func TestLabUpdate_SendsGroupsField(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - test inspects mock request body")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	var requestBody string
+	httpmock.RegisterResponder("PATCH", "https://mock/api/v0/labs/lab-groups",
+		func(req *http.Request) (*http.Response, error) {
+			body, err := io.ReadAll(req.Body)
+			if err != nil {
+				return nil, err
+			}
+			requestBody = string(body)
+			return httpmock.NewStringResponse(200, `{
+				"id": "lab-groups",
+				"lab_title": "Grouped Lab",
+				"state": "DEFINED_ON_CORE",
+				"owner": "owner-uuid",
+				"owner_username": "admin",
+				"effective_permissions": ["lab_admin"]
+			}`), nil
+		})
+
+	service := NewLabService(client, nil, nil, nil, nil)
+	ctx := context.Background()
+
+	updateData := models.LabUpdateRequest{
+		Groups: []models.LabGroup{{ //nolint:staticcheck
+			ID:         "group-1",
+			Permission: models.OldPermissionReadOnly,
+		}},
+	}
+
+	_, err := service.Update(ctx, "lab-groups", updateData)
+	assert.NoError(t, err)
+	assert.Contains(t, requestBody, `"groups"`)
+	assert.Contains(t, requestBody, `"group-1"`)
+	assert.Contains(t, requestBody, `"read_only"`)
 }
 
 func TestLabUpdate_Error(t *testing.T) {

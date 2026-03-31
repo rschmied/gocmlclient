@@ -438,6 +438,25 @@ func TestUserGroups_FetchError(t *testing.T) {
 	assert.Contains(t, err.Error(), "Internal server error")
 }
 
+func TestUserGroups_EndpointNotFound(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - can't force endpoint mismatch")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	httpmock.RegisterResponder("GET", "https://mock/api/v0/users/user_id/groups",
+		httpmock.NewStringResponder(404, `{"description": "Not Found","code":404}`))
+
+	service := NewUserService(client, &mockGroupService{client: client})
+	ctx := context.Background()
+
+	_, err := service.Groups(ctx, "user_id")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "404")
+}
+
 func TestUserGetByID_Success(t *testing.T) {
 	if testutil.IsLiveTesting() {
 		t.Skip("Skipping on live server - requires valid UUID user ID")

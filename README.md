@@ -195,6 +195,13 @@ updateReq := models.LabUpdateRequest{
 }
 updatedLab, err := client.Lab.Update(ctx, models.UUID("lab-uuid"), updateReq)
 
+// Compatibility-only on older backends: newer schemas no longer document
+// lab groups on /labs payloads, but the client still supports them.
+updateReq.Groups = []models.LabGroup{{
+    ID:         models.UUID("group-uuid"),
+    Permission: models.OldPermissionReadOnly,
+}}
+
 // Node staging (CML 2.10+; same request shape as used by the UI)
 _, err = client.Lab.Update(ctx, models.UUID("lab-uuid"), models.LabUpdateRequest{
      NodeStaging: &models.NodeStaging{Enabled: false, StartRemaining: true, AbortOnFailure: false},
@@ -297,7 +304,8 @@ updatedUser, err := client.User.Update(ctx, models.UUID("user-uuid"), updateReq)
 // Delete user
 err = client.User.Delete(ctx, models.UUID("user-uuid"))
 
-// Get user's groups
+// Compatibility-only on older backends: newer schemas no longer document this
+// endpoint, so it may return 404 on newer controllers.
 groups, err := client.User.Groups(ctx, models.UUID("user-uuid"))
 ```
 

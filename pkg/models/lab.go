@@ -45,7 +45,11 @@ const (
 // LabList is a list of lab IDs
 type LabList []UUID
 
-// OldPermission represents the old permission system for lab groups
+// OldPermission represents the old permission system for lab groups.
+//
+// Deprecated: newer CML schemas removed lab-group permission payloads from the
+// documented lab request/response shapes. Keep using this only when you need
+// compatibility with older backends.
 type OldPermission string
 
 const (
@@ -55,7 +59,11 @@ const (
 	OldPermissionReadWrite OldPermission = "read_write"
 )
 
-// LabGroup represents a group with permissions for a lab
+// LabGroup represents a group with permissions for a lab.
+//
+// Deprecated: newer CML schemas removed lab-group payloads from the documented
+// `/labs` request/response models. This type remains for compatibility with
+// older controllers.
 type LabGroup struct {
 	ID         UUID          `json:"id"`
 	Permission OldPermission `json:"permission"`
@@ -72,18 +80,20 @@ type NodeStaging struct {
 
 // LabResponse represents the response from /labs/{lab_id} endpoint
 type LabResponse struct {
-	ID                   UUID         `json:"id"`
-	Created              string       `json:"created,omitempty"`
-	Modified             string       `json:"modified,omitempty"`
-	Title                string       `json:"lab_title"`
-	Description          string       `json:"lab_description,omitempty"`
-	Notes                string       `json:"lab_notes,omitempty"`
-	OwnerID              UUID         `json:"owner"`
-	OwnerUsername        string       `json:"owner_username"`
-	OwnerFullname        string       `json:"owner_fullname"`
-	State                LabState     `json:"state"`
-	NodeCount            int          `json:"node_count"`
-	LinkCount            int          `json:"link_count"`
+	ID            UUID     `json:"id"`
+	Created       string   `json:"created,omitempty"`
+	Modified      string   `json:"modified,omitempty"`
+	Title         string   `json:"lab_title"`
+	Description   string   `json:"lab_description,omitempty"`
+	Notes         string   `json:"lab_notes,omitempty"`
+	OwnerID       UUID     `json:"owner"`
+	OwnerUsername string   `json:"owner_username"`
+	OwnerFullname string   `json:"owner_fullname"`
+	State         LabState `json:"state"`
+	NodeCount     int      `json:"node_count"`
+	LinkCount     int      `json:"link_count"`
+	// Deprecated: newer CML schemas no longer document lab groups on lab
+	// responses. This field remains for compatibility with older controllers.
 	Groups               []LabGroup   `json:"groups,omitempty"`
 	EffectivePermissions Permissions  `json:"effective_permissions"`
 	NodeStaging          *NodeStaging `json:"node_staging,omitempty"`
@@ -128,10 +138,13 @@ func (li *LabImport) UnmarshalJSON(data []byte) error {
 // Only certain fields from the full Lab model are accepted during creation.
 // This ensures API safety by preventing misuse of unsupported fields.
 type LabCreateRequest struct {
-	Title        string                 `json:"title,omitempty"`
-	Description  string                 `json:"description,omitempty"`
-	Notes        string                 `json:"notes,omitempty"`
-	Owner        UUID                   `json:"owner,omitempty"`
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+	Notes       string `json:"notes,omitempty"`
+	Owner       UUID   `json:"owner,omitempty"`
+	// Deprecated: newer CML schemas no longer document lab groups on lab create
+	// or update payloads. This field remains for compatibility with older
+	// controllers.
 	Groups       []LabGroup             `json:"groups,omitzero"`
 	Associations AssociationUsersGroups `json:"associations,omitzero"`
 	NodeStaging  *NodeStaging           `json:"node_staging,omitempty"`
@@ -148,21 +161,23 @@ type LabRequest = LabCreateRequest
 
 // Lab represents a CML lab with its nodes, links, and metadata.
 type Lab struct {
-	ID                   UUID         `json:"id"`
-	State                LabState     `json:"state,omitempty"`
-	Created              string       `json:"created,omitempty"`
-	Modified             string       `json:"modified,omitempty"`
-	Title                string       `json:"lab_title,omitempty"`
-	Description          string       `json:"lab_description,omitempty"`
-	Notes                string       `json:"lab_notes,omitempty"`
-	OwnerID              UUID         `json:"owner,omitempty"`
-	OwnerUsername        string       `json:"owner_username,omitempty"`
-	OwnerFullname        string       `json:"owner_fullname,omitempty"`
-	NodeCount            int          `json:"node_count,omitempty"`
-	LinkCount            int          `json:"link_count,omitempty"`
-	EffectivePermissions Permissions  `json:"effective_permissions,omitempty"`
-	Groups               []LabGroup   `json:"groups,omitempty"`
-	NodeStaging          *NodeStaging `json:"node_staging,omitempty"`
+	ID                   UUID        `json:"id"`
+	State                LabState    `json:"state,omitempty"`
+	Created              string      `json:"created,omitempty"`
+	Modified             string      `json:"modified,omitempty"`
+	Title                string      `json:"lab_title,omitempty"`
+	Description          string      `json:"lab_description,omitempty"`
+	Notes                string      `json:"lab_notes,omitempty"`
+	OwnerID              UUID        `json:"owner,omitempty"`
+	OwnerUsername        string      `json:"owner_username,omitempty"`
+	OwnerFullname        string      `json:"owner_fullname,omitempty"`
+	NodeCount            int         `json:"node_count,omitempty"`
+	LinkCount            int         `json:"link_count,omitempty"`
+	EffectivePermissions Permissions `json:"effective_permissions,omitempty"`
+	// Deprecated: newer CML schemas no longer document lab groups on lab
+	// responses. This field remains for compatibility with older controllers.
+	Groups      []LabGroup   `json:"groups,omitempty"`
+	NodeStaging *NodeStaging `json:"node_staging,omitempty"`
 
 	// non-schema helpers
 	Owner *User    `json:"-"` // Full user object (not serialized)
@@ -221,18 +236,20 @@ type LabTilesResponse struct {
 
 // LabTile represents a lab tile with topology data
 type LabTile struct {
-	ID                   UUID        `json:"id"`
-	State                LabState    `json:"state"`
-	Created              string      `json:"created"`
-	Modified             string      `json:"modified"`
-	Title                string      `json:"lab_title"`
-	Description          string      `json:"lab_description"`
-	Notes                string      `json:"lab_notes"`
-	OwnerID              UUID        `json:"owner"`
-	OwnerUsername        string      `json:"owner_username"`
-	OwnerFullname        string      `json:"owner_fullname"`
-	NodeCount            int         `json:"node_count"`
-	LinkCount            int         `json:"link_count"`
+	ID            UUID     `json:"id"`
+	State         LabState `json:"state"`
+	Created       string   `json:"created"`
+	Modified      string   `json:"modified"`
+	Title         string   `json:"lab_title"`
+	Description   string   `json:"lab_description"`
+	Notes         string   `json:"lab_notes"`
+	OwnerID       UUID     `json:"owner"`
+	OwnerUsername string   `json:"owner_username"`
+	OwnerFullname string   `json:"owner_fullname"`
+	NodeCount     int      `json:"node_count"`
+	LinkCount     int      `json:"link_count"`
+	// Deprecated: newer CML schemas no longer document lab groups on lab tile
+	// payloads. This field remains for compatibility with older controllers.
 	Groups               []LabGroup  `json:"groups"`
 	Topology             Topology    `json:"topology"`
 	EffectivePermissions Permissions `json:"effective_permissions"`

@@ -93,6 +93,10 @@ func (s *UserService) Update(ctx context.Context, id models.UUID, user models.Us
 }
 
 // Groups retrieves the list of all groups the user belongs to.
+//
+// Deprecated: newer CML schemas no longer document `GET /users/{user_id}/groups`.
+// This method is kept as a compatibility surface for older backends and may
+// return 404 on newer controllers.
 func (s *UserService) Groups(ctx context.Context, id models.UUID) (models.GroupList, error) {
 	api := fmt.Sprintf("users/%s/groups", id)
 	idList := []models.UUID{}
