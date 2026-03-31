@@ -45,7 +45,10 @@ func TestIntegration_User(t *testing.T) {
 		if err != nil {
 			requireNoErrorOrSkipStatus(t, err, 404)
 		}
-		_, _ = c.User.Groups(ctx, created.ID)
+		_, err = c.User.Groups(ctx, created.ID)
+		if err != nil {
+			requireNoErrorOrSkipStatus(t, err, 404)
+		}
 
 		// Update
 		upd := models.UserUpdateRequest{UserBase: created.UserBase}
@@ -80,7 +83,10 @@ func TestIntegration_User(t *testing.T) {
 		if err != nil {
 			t.Fatalf("User.GetByID: %v", err)
 		}
-		_, _ = c.User.Groups(ctx, first.ID)
+		_, err = c.User.Groups(ctx, first.ID)
+		if err != nil {
+			requireNoErrorOrSkipStatus(t, err, 404)
+		}
 	}
 	if first.Username != "" {
 		_, err := c.User.GetByName(ctx, first.Username)
