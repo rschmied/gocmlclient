@@ -4,7 +4,7 @@ package services
 import (
 	"context"
 	"fmt"
-	"regexp"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -51,7 +51,6 @@ func NewSystemService(apiClient *api.Client) *SystemService {
 const (
 	versionConstraint      = ">=2.9.0,<3.0.0"
 	namedConfigsConstraint = ">=2.7.0"
-	versionRegexPattern    = `^(\d+\.\d+\.\d+)((-dev0)?\+build.*)?$`
 )
 
 func versionError(got string) error {
@@ -100,24 +99,34 @@ func (s *SystemService) checkVersionConstraint(version, constraintStr string) (b
 		return false, err
 	}
 
-	re := regexp.MustCompile(versionRegexPattern)
-	m := re.FindStringSubmatch(version)
-	if m == nil {
-		return false, fmt.Errorf("version %s doesn't match expected format", version)
+	normalizedVersion := normalizeVersion(version)
+	v, err := semver.NewVersion(normalizedVersion)
+	if err != nil {
+		return false, fmt.Errorf("parse version %q: %w", version, err)
 	}
 
 	logging.Info("checkVersion", "version", version, "constraint", constraintStr)
-	if len(m[3]) > 0 {
+	if strings.Contains(normalizedVersion, "-dev") {
 		logging.Warn("this is a DEV version", "version", version)
 	}
 
-	stem := m[1]
-	v, err := semver.NewVersion(stem)
+	// Compatibility checks intentionally use the stable core version so build
+	// metadata (for example +sso) and prerelease/dev suffixes do not cause an
+	// otherwise compatible controller to fail the version gate.
+	stableVersion := fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch())
+	stable, err := semver.NewVersion(stableVersion)
 	if err != nil {
 		return false, err
 	}
 
-	return constraint.Check(v), nil
+	return constraint.Check(stable), nil
+}
+
+func normalizeVersion(version string) string {
+	version = strings.TrimSpace(version)
+	version = strings.Replace(version, ".dev0+", "-dev0+", 1)
+	version = strings.Replace(version, ".dev0", "-dev0", 1)
+	return version
 }
 
 // Version returns the CML controller version

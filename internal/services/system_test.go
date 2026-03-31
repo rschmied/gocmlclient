@@ -119,6 +119,20 @@ func TestCheckVersionConstraint(t *testing.T) {
 			expected:    true,
 		},
 		{
+			name:        "version with build metadata",
+			version:     "2.11.0+sso",
+			constraint:  ">=2.9.0",
+			expectError: false,
+			expected:    true,
+		},
+		{
+			name:        "legacy dotted dev version",
+			version:     "2.4.0.dev0+build.f904bdf8",
+			constraint:  ">=2.4.0",
+			expectError: false,
+			expected:    true,
+		},
+		{
 			name:        "invalid version format",
 			version:     "invalid",
 			constraint:  ">=2.9.0",
@@ -143,6 +157,25 @@ func TestCheckVersionConstraint(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, result)
 			}
+		})
+	}
+}
+
+func TestNormalizeVersion(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{name: "plain version", input: "2.11.0", expected: "2.11.0"},
+		{name: "build metadata", input: "2.11.0+sso", expected: "2.11.0+sso"},
+		{name: "legacy dotted dev with build", input: "2.4.0.dev0+build.f904bdf8", expected: "2.4.0-dev0+build.f904bdf8"},
+		{name: "legacy dotted dev without build", input: "2.4.0.dev0", expected: "2.4.0-dev0"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, normalizeVersion(tt.input))
 		})
 	}
 }

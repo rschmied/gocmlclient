@@ -15,12 +15,12 @@ type UUID string
 
 // SystemInformation represents system information from CML
 type SystemInformation struct {
-	Version            string          `json:"version"`
-	Ready              bool            `json:"ready"`
-	AllowSSHPubkeyAuth bool            `json:"allow_ssh_pubkey_auth"`
-	OUI                *string         `json:"oui"`
-	Timeout            int             `json:"timeout,omitempty"`
-	Features           map[string]bool `json:"features,omitempty"`
+	Version            string   `json:"version"`
+	Ready              bool     `json:"ready"`
+	AllowSSHPubkeyAuth bool     `json:"allow_ssh_pubkey_auth"`
+	OUI                *string  `json:"oui"`
+	Timeout            int      `json:"timeout,omitempty"`
+	Features           []string `json:"features,omitempty"`
 }
 
 // Stub represents an empty object placeholder
