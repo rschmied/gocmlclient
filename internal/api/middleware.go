@@ -19,7 +19,8 @@ func LoggingMiddleware(logger *slog.Logger) Middleware {
 		return func(req *http.Request) (*http.Response, error) {
 			start := time.Now()
 
-			logger.Info("HTTP request",
+			logger.Info(
+				"HTTP request",
 				"method", req.Method,
 				"url", req.URL.String(),
 				"headers", req.Header,
@@ -29,7 +30,8 @@ func LoggingMiddleware(logger *slog.Logger) Middleware {
 			duration := time.Since(start)
 
 			if err != nil {
-				logger.Error("HTTP request failed",
+				logger.Error(
+					"HTTP request failed",
 					"method", req.Method,
 					"url", req.URL.String(),
 					"duration", duration,
@@ -38,7 +40,8 @@ func LoggingMiddleware(logger *slog.Logger) Middleware {
 				return res, err
 			}
 
-			logger.Info("HTTP response",
+			logger.Info(
+				"HTTP response",
 				"method", req.Method,
 				"url", req.URL.String(),
 				"status", res.StatusCode,
@@ -60,7 +63,8 @@ func LogRequestBodyMiddleware(logger *slog.Logger) Middleware {
 				if err != nil {
 					logger.Error("Failed to read request body", "error", err)
 				} else {
-					logger.Info("Request body",
+					logger.Info(
+						"Request body",
 						"method", req.Method,
 						"url", req.URL.String(),
 						"body", string(body),

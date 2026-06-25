@@ -145,7 +145,8 @@ func (m *Manager) refreshToken(ctx context.Context) (string, error) {
 		// Don't fail the refresh, just log the error
 	}
 
-	logging.Debug("Token refreshed successfully",
+	logging.Debug(
+		"Token refreshed successfully",
 		"expiry", expiry,
 		"valid_for", time.Until(expiry),
 		"storage", m.storage.Type(),

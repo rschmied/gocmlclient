@@ -2,9 +2,9 @@
 
 Lists the changes in the gocmlclient package.
 
-## Unreleased
+## Version 0.2.5
 
-- Nothing yet.
+- links: add `Link.Start` and `Link.Stop` link state control endpoints
 
 ## Version 0.2.4
 

@@ -19,7 +19,8 @@ import (
 func TestNew(t *testing.T) {
 	client := &http.Client{Timeout: 30 * time.Second}
 
-	apiClient := New("https://api.example.com",
+	apiClient := New(
+		"https://api.example.com",
 		WithHTTPClient(client),
 		WithMiddlewares(UserAgentMiddleware("test-agent")),
 	)
@@ -442,7 +443,8 @@ func TestRequestError(t *testing.T) {
 // TestDoJSONNetworkError tests doJSON with network errors
 func TestDoJSONNetworkError(t *testing.T) {
 	// Create a client with an invalid URL that will cause network errors
-	client := New("https://invalid-url-that-does-not-exist-12345.com",
+	client := New(
+		"https://invalid-url-that-does-not-exist-12345.com",
 		WithHTTPClient(&http.Client{Timeout: 1 * time.Millisecond}), // Very short timeout
 	)
 
@@ -595,7 +597,8 @@ func TestStats(t *testing.T) {
 	defer server.Close()
 
 	// Create client with stats enabled
-	client := New(server.URL,
+	client := New(
+		server.URL,
 		WithHTTPClient(&http.Client{Timeout: 10 * time.Second}),
 		WithStats(),
 	)
@@ -648,7 +651,8 @@ func TestStats(t *testing.T) {
 
 func TestNewWithOptions(t *testing.T) {
 	// Test functional options
-	client := New("https://api.example.com",
+	client := New(
+		"https://api.example.com",
 		WithHTTPClient(&http.Client{Timeout: 30 * time.Second}),
 		WithStats(),
 		WithMiddlewares(UserAgentMiddleware("test-agent")),
@@ -672,7 +676,8 @@ func TestNewWithOptions(t *testing.T) {
 	}))
 	defer server.Close()
 
-	clientWithServer := New(server.URL,
+	clientWithServer := New(
+		server.URL,
 		WithStats(),
 		WithMiddlewares(UserAgentMiddleware("test-agent")),
 	)

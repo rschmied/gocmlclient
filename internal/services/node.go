@@ -139,11 +139,11 @@ func (node nodePatchPostAlias) MarshalJSON() ([]byte, error) {
 			alias
 			NamedConfig []models.NodeConfig `json:"configuration"`
 		}{
-			(alias)(node),
+			alias(node),
 			node.Configurations,
 		})
 	}
-	return json.Marshal((alias)(node))
+	return json.Marshal(alias(node))
 }
 
 // GetNodesForLab returns all nodes for a lab.
