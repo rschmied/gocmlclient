@@ -362,6 +362,10 @@ createdLink, err := client.Link.Create(ctx, newLink)
 // Delete link
 err = client.Link.Delete(ctx, models.UUID("lab-uuid"), models.UUID("link-uuid"))
 
+// Link start/stop (state control)
+err = client.Link.Start(ctx, models.UUID("lab-uuid"), models.UUID("link-uuid"))
+err = client.Link.Stop(ctx, models.UUID("lab-uuid"), models.UUID("link-uuid"))
+
 // Link conditions (if supported)
 condition, err := client.Link.GetCondition(ctx, models.UUID("lab-uuid"), models.UUID("link-uuid"))
 err = client.Link.SetCondition(ctx, models.UUID("lab-uuid"), models.UUID("link-uuid"), conditionConfig)

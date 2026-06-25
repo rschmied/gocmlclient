@@ -70,7 +70,8 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Add authorization header
 	reqWithAuth.Header.Set("Authorization", "Bearer "+token)
 
-	logging.Debug("Adding authentication to request",
+	logging.Debug(
+		"Adding authentication to request",
 		"method", req.Method,
 		"path", req.URL.Path,
 		"has_token", token != "",

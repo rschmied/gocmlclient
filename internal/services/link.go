@@ -12,8 +12,11 @@ import (
 )
 
 const (
-	linksAPI     = "links"
-	conditionAPI = "condition"
+	linksAPI        = "links"
+	conditionAPI    = "condition"
+	stateAPI        = "state"
+	linkStartAction = "start"
+	linkStopAction  = "stop"
 )
 
 // Ensure LinkService implements interface
@@ -26,6 +29,8 @@ type LinkServiceInterface interface {
 	GetCondition(ctx context.Context, labID, linkID models.UUID) (models.ConditionResponse, error)
 	SetCondition(ctx context.Context, labID, linkID models.UUID, config *models.LinkConditionConfiguration) (models.ConditionResponse, error)
 	DeleteCondition(ctx context.Context, labID, linkID models.UUID) error
+	Start(ctx context.Context, labID, linkID models.UUID) error
+	Stop(ctx context.Context, labID, linkID models.UUID) error
 }
 
 // LinkService provides link-related operations
@@ -55,6 +60,10 @@ func linkURL(labID, linkID models.UUID) string {
 // linkConditionURL builds URL for link condition operations
 func linkConditionURL(labID, linkID models.UUID) string {
 	return fmt.Sprintf("%s/%s", linkURL(labID, linkID), conditionAPI)
+}
+
+func linkStateURL(labID, linkID models.UUID, action string) string {
+	return fmt.Sprintf("%s/%s/%s", linkURL(labID, linkID), stateAPI, action)
 }
 
 type linkList []*models.Link
@@ -226,4 +235,16 @@ func (s *LinkService) SetCondition(ctx context.Context, labID, linkID models.UUI
 func (s *LinkService) DeleteCondition(ctx context.Context, labID, linkID models.UUID) error {
 	api := linkConditionURL(labID, linkID)
 	return s.apiClient.DeleteJSON(ctx, api, nil)
+}
+
+// Start starts a link in a lab.
+func (s *LinkService) Start(ctx context.Context, labID, linkID models.UUID) error {
+	api := linkStateURL(labID, linkID, linkStartAction)
+	return s.apiClient.PutJSON(ctx, api, nil)
+}
+
+// Stop stops a link in a lab.
+func (s *LinkService) Stop(ctx context.Context, labID, linkID models.UUID) error {
+	api := linkStateURL(labID, linkID, linkStopAction)
+	return s.apiClient.PutJSON(ctx, api, nil)
 }

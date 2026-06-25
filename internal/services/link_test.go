@@ -243,6 +243,53 @@ func TestLinkCondition(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestLinkStartStop(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - requires specific lab/link setup")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	httpmock.RegisterResponder("PUT", "https://mock/api/v0/labs/lab-uuid/links/link-uuid/state/start",
+		httpmock.NewJsonResponderOrPanic(200, nil))
+	httpmock.RegisterResponder("PUT", "https://mock/api/v0/labs/lab-uuid/links/link-uuid/state/stop",
+		httpmock.NewJsonResponderOrPanic(200, nil))
+
+	service := NewLinkService(client)
+	ctx := context.Background()
+
+	assert.NoError(t, service.Start(ctx, "lab-uuid", "link-uuid"))
+	assert.NoError(t, service.Stop(ctx, "lab-uuid", "link-uuid"))
+}
+
+func TestLinkStartStop_ErrorPropagation(t *testing.T) {
+	if testutil.IsLiveTesting() {
+		t.Skip("Skipping on live server - can't force errors")
+	}
+
+	client, cleanup := testutil.NewAPIClient(t)
+	defer cleanup()
+
+	httpmock.RegisterResponder("PUT", "https://mock/api/v0/labs/lab-uuid/links/link-uuid/state/start",
+		httpmock.NewStringResponder(403, `{"message":"Forbidden"}`))
+	httpmock.RegisterResponder("PUT", "https://mock/api/v0/labs/lab-uuid/links/link-uuid/state/stop",
+		httpmock.NewStringResponder(500, `{"message":"Internal server error"}`))
+
+	service := NewLinkService(client)
+	ctx := context.Background()
+
+	err := service.Start(ctx, "lab-uuid", "link-uuid")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "403")
+	assert.Contains(t, err.Error(), "Forbidden")
+
+	err = service.Stop(ctx, "lab-uuid", "link-uuid")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "500")
+	assert.Contains(t, err.Error(), "Internal server error")
+}
+
 func TestLinkGetByID_NotFound(t *testing.T) {
 	if testutil.IsLiveTesting() {
 		t.Skip("Skipping on live server - UUID validation differs")

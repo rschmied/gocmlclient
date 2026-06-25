@@ -114,7 +114,8 @@ func (p *AuthProvider) authenticateWithPassword(ctx context.Context) (string, ti
 	// Handle authentication failure
 	if res.StatusCode >= 300 {
 		body, _ := io.ReadAll(res.Body)
-		logging.Error("Authentication failed",
+		logging.Error(
+			"Authentication failed",
 			"status", res.StatusCode,
 			"body", string(body),
 			"username", p.username,
@@ -135,7 +136,8 @@ func (p *AuthProvider) authenticateWithPassword(ctx context.Context) (string, ti
 	// Default expiry if not provided by server
 	expiry := time.Now().Add(8 * time.Hour)
 
-	logging.Debug("Authentication successful",
+	logging.Debug(
+		"Authentication successful",
 		"username", authRes.Username,
 		"admin", authRes.Admin,
 		"expiry", expiry,
